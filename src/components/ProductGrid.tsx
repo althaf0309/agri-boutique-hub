@@ -1,7 +1,15 @@
 import ProductCard from "./ProductCard";
 import { toast } from "@/hooks/use-toast";
+import productRice from "@/assets/product-rice.jpg";
+import productCoconutOil from "@/assets/product-coconut-oil.jpg";
+import productTurmeric from "@/assets/product-turmeric.jpg";
+import productAloeGel from "@/assets/product-aloe-gel.jpg";
+import productTomatoSeeds from "@/assets/product-tomato-seeds.jpg";
+import productSpinach from "@/assets/product-spinach.jpg";
+import productHoney from "@/assets/product-honey.jpg";
+import productNeemOil from "@/assets/product-neem-oil.jpg";
 
-// Sample product data
+// Sample product data with real images
 const sampleProducts = [
   {
     id: 1,
@@ -10,7 +18,7 @@ const sampleProducts = [
     originalPrice: 950,
     rating: 4.5,
     reviewCount: 123,
-    image: "/api/placeholder/300/300",
+    image: productRice,
     category: "Organic Grocery",
     weight: "5kg",
     organic: true,
@@ -23,7 +31,7 @@ const sampleProducts = [
     price: 450,
     rating: 4.8,
     reviewCount: 89,
-    image: "/api/placeholder/300/300",
+    image: productCoconutOil,
     category: "Organic Grocery",
     weight: "1L",
     organic: true,
@@ -37,7 +45,7 @@ const sampleProducts = [
     originalPrice: 320,
     rating: 4.6,
     reviewCount: 156,
-    image: "/api/placeholder/300/300",
+    image: productTurmeric,
     category: "Ruchira",
     weight: "500g",
     organic: true,
@@ -50,7 +58,7 @@ const sampleProducts = [
     price: 320,
     rating: 4.3,
     reviewCount: 67,
-    image: "/api/placeholder/300/300",
+    image: productAloeGel,
     category: "Personal Care",
     weight: "100ml",
     organic: true,
@@ -63,7 +71,7 @@ const sampleProducts = [
     price: 120,
     rating: 4.7,
     reviewCount: 234,
-    image: "/api/placeholder/300/300",
+    image: productTomatoSeeds,
     category: "Plant Nursery",
     weight: "50 seeds",
     organic: true,
@@ -76,7 +84,7 @@ const sampleProducts = [
     price: 45,
     rating: 4.4,
     reviewCount: 78,
-    image: "/api/placeholder/300/300",
+    image: productSpinach,
     category: "Fruits & Vegetables",
     weight: "250g",
     organic: true,
@@ -90,7 +98,7 @@ const sampleProducts = [
     originalPrice: 750,
     rating: 4.9,
     reviewCount: 192,
-    image: "/api/placeholder/300/300",
+    image: productHoney,
     category: "Organic Grocery",
     weight: "1kg",
     organic: true,
@@ -103,7 +111,7 @@ const sampleProducts = [
     price: 180,
     rating: 4.2,
     reviewCount: 45,
-    image: "/api/placeholder/300/300",
+    image: productNeemOil,
     category: "Plant Nursery",
     weight: "250ml",
     organic: true,

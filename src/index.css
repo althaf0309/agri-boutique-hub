@@ -6,51 +6,57 @@
 
 @layer base {
   :root {
-    /* Core agricultural color palette */
-    --background: 45 20% 97%;
-    --foreground: 120 60% 8%;
+    /* Enhanced agricultural color palette */
+    --background: 50 15% 98%;
+    --foreground: 140 100% 6%;
 
     --card: 0 0% 100%;
-    --card-foreground: 120 60% 8%;
+    --card-foreground: 140 100% 6%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 120 60% 8%;
+    --popover-foreground: 140 100% 6%;
 
-    /* Deep forest green primary */
-    --primary: 120 60% 12%;
-    --primary-foreground: 45 20% 97%;
+    /* Rich forest green primary */
+    --primary: 140 85% 15%;
+    --primary-foreground: 50 15% 98%;
     
-    /* Warm olive secondary */
-    --secondary: 75 20% 30%;
-    --secondary-foreground: 45 20% 97%;
+    /* Warm earth brown secondary */
+    --secondary: 35 45% 25%;
+    --secondary-foreground: 50 15% 98%;
 
-    /* Soft beige muted */
-    --muted: 45 20% 94%;
-    --muted-foreground: 75 15% 45%;
+    /* Soft cream muted */
+    --muted: 45 25% 92%;
+    --muted-foreground: 140 25% 35%;
 
-    /* Vibrant farm accent */
-    --accent: 168 100% 32%;
+    /* Vibrant organic accent */
+    --accent: 160 90% 35%;
     --accent-foreground: 0 0% 100%;
 
-    /* Warm brown tertiary */
-    --tertiary: 25 25% 30%;
-    --tertiary-foreground: 45 20% 97%;
+    /* Rich soil tertiary */
+    --tertiary: 25 55% 20%;
+    --tertiary-foreground: 50 15% 98%;
+
+    /* Sunset orange for highlights */
+    --highlight: 25 95% 55%;
+    --highlight-foreground: 0 0% 100%;
 
     --destructive: 0 75% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 45 20% 88%;
-    --input: 45 20% 90%;
-    --ring: 120 60% 12%;
+    --border: 45 25% 85%;
+    --input: 45 25% 88%;
+    --ring: 140 85% 15%;
 
     --radius: 0.75rem;
 
-    /* Custom design tokens */
-    --gradient-hero: linear-gradient(135deg, hsl(120 60% 12%), hsl(168 100% 32%));
-    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(45 20% 97%));
-    --shadow-card: 0 4px 20px hsl(120 60% 12% / 0.08);
-    --shadow-hover: 0 8px 30px hsl(120 60% 12% / 0.15);
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Enhanced design tokens */
+    --gradient-hero: linear-gradient(135deg, hsl(140 85% 15%), hsl(160 90% 35%), hsl(25 95% 55%));
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(45 25% 96%));
+    --gradient-feature: linear-gradient(145deg, hsl(160 90% 35%), hsl(140 85% 15%));
+    --shadow-card: 0 4px 25px hsl(140 85% 15% / 0.08);
+    --shadow-hover: 0 12px 40px hsl(140 85% 15% / 0.15);
+    --shadow-glow: 0 0 50px hsl(160 90% 35% / 0.3);
+    --transition-smooth: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 
     --sidebar-background: 0 0% 98%;
 
@@ -137,49 +143,66 @@
 }
 
 @layer components {
-  /* Farm-themed component styles */
+  /* Enhanced farm-themed component styles */
   .card-farm {
-    @apply bg-gradient-to-br from-card to-muted/50 rounded-lg p-6;
+    @apply bg-gradient-to-br from-card via-card to-muted/30 rounded-xl p-6;
     box-shadow: var(--shadow-card);
     transition: var(--transition-smooth);
+    border: 1px solid hsl(var(--border));
   }
   
   .card-farm:hover {
     box-shadow: var(--shadow-hover);
-    @apply -translate-y-1;
+    @apply -translate-y-2 scale-[1.02];
   }
   
   .btn-farm {
-    @apply bg-primary text-primary-foreground px-6 py-3 rounded-lg font-medium;
-    @apply hover:bg-primary/90 transition-all duration-300;
-    @apply focus:ring-2 focus:ring-primary/20 focus:outline-none;
+    @apply bg-primary text-primary-foreground px-8 py-4 rounded-xl font-semibold text-base;
+    @apply hover:bg-primary/90 hover:scale-105 transition-all duration-300;
+    @apply focus:ring-4 focus:ring-primary/20 focus:outline-none;
+    @apply shadow-lg hover:shadow-xl;
   }
   
   .btn-secondary-farm {
-    @apply bg-secondary text-secondary-foreground px-6 py-3 rounded-lg font-medium;
-    @apply hover:bg-secondary/90 transition-all duration-300;
-    @apply focus:ring-2 focus:ring-secondary/20 focus:outline-none;
+    @apply bg-secondary text-secondary-foreground px-8 py-4 rounded-xl font-semibold text-base;
+    @apply hover:bg-secondary/90 hover:scale-105 transition-all duration-300;
+    @apply focus:ring-4 focus:ring-secondary/20 focus:outline-none;
+    @apply shadow-lg hover:shadow-xl;
   }
   
   .btn-accent-farm {
-    @apply bg-accent text-accent-foreground px-6 py-3 rounded-lg font-medium;
-    @apply hover:bg-accent/90 transition-all duration-300;
-    @apply focus:ring-2 focus:ring-accent/20 focus:outline-none;
+    @apply bg-accent text-accent-foreground px-8 py-4 rounded-xl font-semibold text-base;
+    @apply hover:bg-accent/90 hover:scale-105 transition-all duration-300;
+    @apply focus:ring-4 focus:ring-accent/20 focus:outline-none;
+    @apply shadow-lg hover:shadow-xl;
+  }
+
+  .btn-highlight-farm {
+    @apply bg-highlight text-highlight-foreground px-8 py-4 rounded-xl font-semibold text-base;
+    @apply hover:bg-highlight/90 hover:scale-105 transition-all duration-300;
+    @apply focus:ring-4 focus:ring-highlight/20 focus:outline-none;
+    @apply shadow-lg hover:shadow-xl;
   }
   
   .pill-nav {
-    @apply px-4 py-2 rounded-full bg-muted/50 text-muted-foreground;
-    @apply hover:bg-primary hover:text-primary-foreground transition-all duration-300;
-    @apply focus:ring-2 focus:ring-primary/20 focus:outline-none;
+    @apply px-6 py-3 rounded-full bg-muted/50 text-muted-foreground font-medium;
+    @apply hover:bg-primary hover:text-primary-foreground hover:scale-105;
+    @apply transition-all duration-300 shadow-sm hover:shadow-md;
+    @apply focus:ring-4 focus:ring-primary/20 focus:outline-none;
   }
   
   .pill-nav.active {
-    @apply bg-primary text-primary-foreground;
+    @apply bg-primary text-primary-foreground shadow-md scale-105;
   }
 
   .feature-badge {
-    @apply bg-accent/10 text-accent px-3 py-1 rounded-full text-sm font-medium;
-    @apply border border-accent/20;
+    @apply bg-accent/15 text-accent px-4 py-2 rounded-full text-sm font-semibold;
+    @apply border border-accent/25 shadow-sm;
+  }
+
+  .organic-badge {
+    @apply bg-gradient-to-r from-accent to-primary text-white px-3 py-1 rounded-full text-xs font-bold;
+    @apply shadow-md;
   }
 
   .price-tag {
@@ -188,5 +211,30 @@
 
   .gradient-hero {
     background: var(--gradient-hero);
+  }
+
+  .gradient-feature {
+    background: var(--gradient-feature);
+  }
+
+  .feature-circle {
+    @apply relative w-80 h-80 mx-auto;
+    @apply bg-gradient-to-br from-primary via-accent to-highlight;
+    @apply rounded-full shadow-2xl;
+    filter: drop-shadow(0 0 30px hsl(var(--accent) / 0.3));
+  }
+
+  .feature-badge-floating {
+    @apply absolute bg-white rounded-2xl p-6 shadow-xl border border-border/50;
+    @apply hover:shadow-2xl hover:scale-110 transition-all duration-500;
+    @apply backdrop-blur-sm bg-white/95;
+  }
+
+  .glow-effect {
+    box-shadow: var(--shadow-glow);
+  }
+
+  .text-gradient {
+    @apply bg-gradient-to-r from-primary via-accent to-highlight bg-clip-text text-transparent;
   }
 }

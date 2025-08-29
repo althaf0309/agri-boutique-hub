@@ -2,6 +2,9 @@ import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import heroBanner1 from "@/assets/hero-banner-1.jpg";
+import heroBanner2 from "@/assets/hero-banner-2.jpg";
+import heroBanner3 from "@/assets/hero-banner-3.jpg";
 
 const slides = [
   {
@@ -9,7 +12,7 @@ const slides = [
     title: "Fresh Organic Produce",
     subtitle: "Farm to Table Excellence",
     description: "Discover our premium collection of organic fruits, vegetables, and grains sourced directly from sustainable farms.",
-    image: "/api/placeholder/1200/400",
+    image: heroBanner1,
     ctaText: "Shop Now",
     ctaLink: "/shop"
   },
@@ -18,7 +21,7 @@ const slides = [
     title: "100% Natural Products",
     subtitle: "Pure & Pesticide-Free",
     description: "Experience the difference with our certified organic products that are good for you and the environment.",
-    image: "/api/placeholder/1200/400",
+    image: heroBanner2,
     ctaText: "Explore Collection",
     ctaLink: "/shop?category=Organic+Grocery"
   },
@@ -27,7 +30,7 @@ const slides = [
     title: "Plant Nursery & Seeds",
     subtitle: "Grow Your Own Garden",
     description: "Start your sustainable journey with our premium seeds, seedlings, and organic fertilizers.",
-    image: "/api/placeholder/1200/400",
+    image: heroBanner3,
     ctaText: "Start Growing",
     ctaLink: "/shop?category=Plant+Nursery"
   }
@@ -62,10 +65,15 @@ export default function HeroSlider() {
         {slides.map((slide) => (
           <div
             key={slide.id}
-            className="w-full flex-shrink-0 relative gradient-hero flex items-center justify-center"
+            className="w-full flex-shrink-0 relative flex items-center justify-center"
+            style={{
+              backgroundImage: `url(${slide.image})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            }}
           >
-            {/* Background Pattern */}
-            <div className="absolute inset-0 bg-black/20"></div>
+            {/* Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/80 via-primary/60 to-accent/70"></div>
             
             {/* Content */}
             <div className="relative z-10 text-center text-white max-w-3xl mx-auto px-4">

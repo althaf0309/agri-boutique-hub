@@ -6,6 +6,7 @@ import FAQSection from "@/components/FAQSection";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import honeyBundle from "@/assets/honey-bundle.jpg";
 
 const Index = () => {
   return (
@@ -61,9 +62,9 @@ const Index = () => {
               </h2>
               <div className="bg-card rounded-2xl p-8 card-farm">
                 <div className="grid md:grid-cols-2 gap-8 items-center">
-                  <div className="aspect-square bg-muted/50 rounded-lg flex items-center justify-center">
+                  <div className="aspect-square bg-muted/50 rounded-lg overflow-hidden">
                     <img 
-                      src="/api/placeholder/400/400" 
+                      src={honeyBundle} 
                       alt="Organic Honey Bundle"
                       className="w-full h-full object-cover rounded-lg"
                     />
