@@ -1,5 +1,8 @@
+import { useState, useRef } from "react";
 import ProductCard from "./ProductCard";
 import { toast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import productRice from "@/assets/product-rice.jpg";
 import productCoconutOil from "@/assets/product-coconut-oil.jpg";
 import productTurmeric from "@/assets/product-turmeric.jpg";
@@ -132,6 +135,8 @@ export default function ProductGrid({
   showAll = false 
 }: ProductGridProps) {
   const displayProducts = showAll ? products : products.slice(0, 8);
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   const handleAddToCart = (product: typeof sampleProducts[0]) => {
     toast({
@@ -147,6 +152,22 @@ export default function ProductGrid({
     });
   };
 
+  const scrollLeft = () => {
+    if (carouselRef.current) {
+      const scrollAmount = 300;
+      carouselRef.current.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+      setCurrentIndex(Math.max(0, currentIndex - 1));
+    }
+  };
+
+  const scrollRight = () => {
+    if (carouselRef.current) {
+      const scrollAmount = 300;
+      carouselRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+      setCurrentIndex(Math.min(displayProducts.length - 1, currentIndex + 1));
+    }
+  };
+
   return (
     <section className="py-8 sm:py-10 lg:py-12">
       <div className="container mx-auto px-4 sm:px-6">
@@ -158,7 +179,60 @@ export default function ProductGrid({
           </div>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+        {/* Mobile Carousel View with Navigation */}
+        <div className="block sm:hidden relative">
+          {/* Navigation Arrows */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm shadow-md hover:bg-white border-0 rounded-full w-10 h-10 p-0"
+            onClick={scrollLeft}
+            disabled={currentIndex === 0}
+          >
+            <ChevronLeft className="w-5 h-5 text-primary" />
+          </Button>
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm shadow-md hover:bg-white border-0 rounded-full w-10 h-10 p-0"
+            onClick={scrollRight}
+            disabled={currentIndex >= displayProducts.length - 1}
+          >
+            <ChevronRight className="w-5 h-5 text-primary" />
+          </Button>
+
+          {/* Carousel Container */}
+          <div 
+            ref={carouselRef}
+            className="product-carousel px-12"
+          >
+            {displayProducts.map((product) => (
+              <div key={product.id} className="product-carousel-item">
+                <ProductCard
+                  product={product}
+                  onAddToCart={handleAddToCart}
+                  onQuickView={handleQuickView}
+                />
+              </div>
+            ))}
+          </div>
+          
+          {/* Enhanced Scroll Indicators */}
+          <div className="carousel-dots">
+            {displayProducts.map((_, index) => (
+              <div 
+                key={index} 
+                className={`carousel-dot ${
+                  Math.floor(currentIndex / 2) === Math.floor(index / 2) ? 'active' : 'inactive'
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Desktop Grid View */}
+        <div className="hidden sm:grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
           {displayProducts.map((product) => (
             <ProductCard
               key={product.id}

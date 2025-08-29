@@ -237,4 +237,56 @@
   .text-gradient {
     @apply bg-gradient-to-r from-primary via-accent to-highlight bg-clip-text text-transparent;
   }
+
+  /* Mobile Carousel Styles */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* Internet Explorer 10+ */
+    scrollbar-width: none;  /* Firefox */
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar { 
+    display: none;  /* Safari and Chrome */
+  }
+
+  /* Smooth carousel scrolling */
+  .carousel-container {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Enhanced product carousel for mobile */
+  .product-carousel {
+    @apply flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .product-carousel::-webkit-scrollbar {
+    display: none;
+  }
+
+  .product-carousel-item {
+    @apply flex-none snap-center;
+    min-width: 280px;
+    max-width: 320px;
+  }
+
+  /* Carousel navigation dots */
+  .carousel-dots {
+    @apply flex justify-center mt-4 space-x-2;
+  }
+
+  .carousel-dot {
+    @apply w-2 h-2 rounded-full transition-all duration-300;
+  }
+
+  .carousel-dot.active {
+    @apply bg-primary w-6;
+  }
+
+  .carousel-dot.inactive {
+    @apply bg-muted-foreground/30;
+  }
 }

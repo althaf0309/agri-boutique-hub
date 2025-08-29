@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ProductCard from "@/components/ProductCard";
@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
-import { Filter, Grid, List, Search } from "lucide-react";
+import { Filter, Grid, List, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 const sampleProducts = [
@@ -60,6 +60,8 @@ export default function Shop() {
   const [sortBy, setSortBy] = useState("newest");
   const [viewMode, setViewMode] = useState("grid");
   const [showFilters, setShowFilters] = useState(false);
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   const handleAddToCart = (product: typeof sampleProducts[0]) => {
     toast({
@@ -80,6 +82,22 @@ export default function Shop() {
       setSelectedTags([...selectedTags, tag]);
     } else {
       setSelectedTags(selectedTags.filter(t => t !== tag));
+    }
+  };
+
+  const scrollLeft = () => {
+    if (carouselRef.current) {
+      const scrollAmount = 300;
+      carouselRef.current.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+      setCurrentIndex(Math.max(0, currentIndex - 1));
+    }
+  };
+
+  const scrollRight = () => {
+    if (carouselRef.current) {
+      const scrollAmount = 300;
+      carouselRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+      setCurrentIndex(Math.min(sampleProducts.length - 1, currentIndex + 1));
     }
   };
 
@@ -209,10 +227,62 @@ export default function Shop() {
               Showing {sampleProducts.length} products
             </p>
 
-            {/* Product Grid */}
-            <div className={`grid gap-6 ${
+            {/* Mobile Carousel View */}
+            <div className="block sm:hidden relative mb-8">
+              {/* Navigation Arrows */}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm shadow-md hover:bg-white border-0 rounded-full w-10 h-10 p-0"
+                onClick={scrollLeft}
+                disabled={currentIndex === 0}
+              >
+                <ChevronLeft className="w-5 h-5 text-primary" />
+              </Button>
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm shadow-md hover:bg-white border-0 rounded-full w-10 h-10 p-0"
+                onClick={scrollRight}
+                disabled={currentIndex >= sampleProducts.length - 1}
+              >
+                <ChevronRight className="w-5 h-5 text-primary" />
+              </Button>
+
+              {/* Carousel Container */}
+              <div 
+                ref={carouselRef}
+                className="product-carousel px-12"
+              >
+                {sampleProducts.map((product) => (
+                  <div key={product.id} className="product-carousel-item">
+                    <ProductCard
+                      product={product}
+                      onAddToCart={handleAddToCart}
+                      onQuickView={handleQuickView}
+                    />
+                  </div>
+                ))}
+              </div>
+              
+              {/* Enhanced Scroll Indicators */}
+              <div className="carousel-dots">
+                {sampleProducts.map((_, index) => (
+                  <div 
+                    key={index} 
+                    className={`carousel-dot ${
+                      Math.floor(currentIndex / 2) === Math.floor(index / 2) ? 'active' : 'inactive'
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Desktop Grid View */}
+            <div className={`hidden sm:grid gap-6 ${
               viewMode === 'grid' 
-                ? 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-3'
+                ? 'grid-cols-2 xl:grid-cols-3'
                 : 'grid-cols-1'
             }`}>
               {sampleProducts.map((product) => (
