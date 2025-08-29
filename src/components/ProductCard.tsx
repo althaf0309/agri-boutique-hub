@@ -51,7 +51,7 @@ export default function ProductCard({ product, onAddToCart, onQuickView }: Produ
     <Link to={`/product/${product.id}`} className="group block">
       <div className="card-farm relative overflow-hidden">
         {/* Image Container */}
-        <div className="relative aspect-square mb-4 overflow-hidden rounded-lg bg-muted/50">
+        <div className="relative aspect-square mb-3 sm:mb-4 overflow-hidden rounded-lg bg-muted/50">
           <img
             src={product.image}
             alt={product.name}
@@ -59,9 +59,9 @@ export default function ProductCard({ product, onAddToCart, onQuickView }: Produ
           />
           
           {/* Badges */}
-          <div className="absolute top-3 left-3 flex flex-col gap-2">
+          <div className="absolute top-2 sm:top-3 left-2 sm:left-3 flex flex-col gap-1 sm:gap-2">
             {product.organic && (
-              <Badge variant="secondary" className="feature-badge">
+              <Badge variant="secondary" className="feature-badge text-xs">
                 Organic
               </Badge>
             )}
@@ -71,7 +71,7 @@ export default function ProductCard({ product, onAddToCart, onQuickView }: Produ
               </Badge>
             )}
             {!product.inStock && (
-              <Badge variant="secondary" className="bg-muted text-muted-foreground">
+              <Badge variant="secondary" className="bg-muted text-muted-foreground text-xs">
                 Out of Stock
               </Badge>
             )}
@@ -111,14 +111,14 @@ export default function ProductCard({ product, onAddToCart, onQuickView }: Produ
         </div>
 
         {/* Product Info */}
-        <div className="space-y-2">
-          <div className="text-sm text-muted-foreground">{product.category}</div>
+        <div className="space-y-1 sm:space-y-2">
+          <div className="text-xs sm:text-sm text-muted-foreground">{product.category}</div>
           
-          <h3 className="font-semibold text-lg leading-tight line-clamp-2 group-hover:text-primary transition-colors">
+          <h3 className="font-semibold text-sm sm:text-base lg:text-lg leading-tight line-clamp-2 group-hover:text-primary transition-colors">
             {product.name}
           </h3>
           
-          <div className="text-sm text-muted-foreground">{product.weight}</div>
+          <div className="text-xs sm:text-sm text-muted-foreground">{product.weight}</div>
 
           {/* Rating */}
           <div className="flex items-center gap-1">
@@ -126,7 +126,7 @@ export default function ProductCard({ product, onAddToCart, onQuickView }: Produ
               {[...Array(5)].map((_, i) => (
                 <Star
                   key={i}
-                  className={`w-4 h-4 ${
+                  className={`w-3 h-3 sm:w-4 sm:h-4 ${
                     i < Math.floor(product.rating)
                       ? 'fill-yellow-400 text-yellow-400'
                       : 'text-muted-foreground/30'
@@ -134,16 +134,16 @@ export default function ProductCard({ product, onAddToCart, onQuickView }: Produ
                 />
               ))}
             </div>
-            <span className="text-sm text-muted-foreground">
+            <span className="text-xs sm:text-sm text-muted-foreground">
               ({product.reviewCount})
             </span>
           </div>
 
           {/* Price */}
-          <div className="flex items-center gap-2">
-            <span className="price-tag">₹{product.price}</span>
+          <div className="flex items-center gap-1 sm:gap-2">
+            <span className="text-lg sm:text-xl lg:text-2xl font-bold text-primary">₹{product.price}</span>
             {product.originalPrice && (
-              <span className="text-sm text-muted-foreground line-through">
+              <span className="text-xs sm:text-sm text-muted-foreground line-through">
                 ₹{product.originalPrice}
               </span>
             )}

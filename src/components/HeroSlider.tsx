@@ -56,7 +56,7 @@ export default function HeroSlider() {
   };
 
   return (
-    <section className="relative h-[400px] md:h-[500px] overflow-hidden rounded-lg">
+    <section className="relative h-[300px] sm:h-[400px] md:h-[500px] overflow-hidden rounded-lg sm:rounded-xl">
       {/* Slides */}
       <div 
         className="flex transition-transform duration-500 ease-out h-full"
@@ -76,20 +76,20 @@ export default function HeroSlider() {
             <div className="absolute inset-0 bg-gradient-to-br from-primary/80 via-primary/60 to-accent/70"></div>
             
             {/* Content */}
-            <div className="relative z-10 text-center text-white max-w-3xl mx-auto px-4">
-              <h2 className="text-4xl md:text-6xl font-bold mb-4">
+            <div className="relative z-10 text-center text-white max-w-3xl mx-auto px-4 sm:px-6">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-bold mb-3 sm:mb-4 leading-tight">
                 {slide.title}
               </h2>
-              <p className="text-lg md:text-xl mb-2 opacity-90">
+              <p className="text-sm sm:text-base md:text-lg lg:text-xl mb-2 opacity-90">
                 {slide.subtitle}
               </p>
-              <p className="text-base md:text-lg mb-8 opacity-80 max-w-2xl mx-auto">
+              <p className="text-xs sm:text-sm md:text-base lg:text-lg mb-6 sm:mb-8 opacity-80 max-w-2xl mx-auto leading-relaxed">
                 {slide.description}
               </p>
               <Link to={slide.ctaLink}>
                 <Button 
-                  size="lg" 
-                  className="bg-white text-primary hover:bg-white/90 font-semibold px-8 py-3"
+                  size="default"
+                  className="bg-white text-primary hover:bg-white/90 font-semibold px-6 sm:px-8 py-2 sm:py-3 text-sm sm:text-base"
                 >
                   {slide.ctaText}
                 </Button>
