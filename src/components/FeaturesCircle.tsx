@@ -53,91 +53,104 @@ const features = [
 
 export default function FeaturesCircle() {
   return (
-    <section className="py-20 bg-gradient-to-br from-muted/20 via-background to-muted/30 relative overflow-hidden">
-      {/* Background decorative elements */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute top-10 left-10 w-32 h-32 bg-accent rounded-full blur-3xl"></div>
-        <div className="absolute bottom-10 right-10 w-40 h-40 bg-primary rounded-full blur-3xl"></div>
-        <div className="absolute top-1/2 left-1/3 w-24 h-24 bg-highlight rounded-full blur-3xl"></div>
+    <section className="py-32 bg-gradient-to-br from-muted/20 via-background to-muted/30 relative overflow-hidden">
+      {/* Enhanced background decorative elements */}
+      <div className="absolute inset-0 opacity-15">
+        <div className="absolute top-20 left-20 w-64 h-64 bg-accent rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-20 w-80 h-80 bg-primary rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
+        <div className="absolute top-1/2 left-1/4 w-48 h-48 bg-highlight rounded-full blur-3xl animate-pulse" style={{animationDelay: '2s'}}></div>
+        <div className="absolute top-1/3 right-1/3 w-56 h-56 bg-secondary rounded-full blur-3xl animate-pulse" style={{animationDelay: '3s'}}></div>
       </div>
 
       <div className="container mx-auto px-4 relative z-10">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold mb-6">
+        <div className="text-center mb-20">
+          <h2 className="text-5xl md:text-7xl font-bold mb-8">
             <span className="text-gradient">Why Choose AgriFresh?</span>
           </h2>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+          <p className="text-xl md:text-2xl text-muted-foreground max-w-4xl mx-auto leading-relaxed">
             Experience the difference with our commitment to quality, sustainability, and customer satisfaction
           </p>
         </div>
 
-        {/* Enhanced Features Circle */}
-        <div className="relative max-w-4xl mx-auto">
-          {/* Center Brand Circle with enhanced design */}
-          <div className="feature-circle glow-effect">
-            {/* Inner content */}
-            <div className="absolute inset-4 bg-white/95 backdrop-blur-sm rounded-full flex items-center justify-center shadow-inner">
-              <div className="text-center">
-                <div className="text-5xl font-bold mb-3 text-gradient">AF</div>
-                <div className="text-lg font-bold text-primary mb-1">AgriFresh</div>
-                <div className="text-sm text-muted-foreground px-4 leading-tight">
-                  Premium Organic Excellence
-                </div>
-                <div className="flex justify-center mt-3 space-x-1">
-                  <div className="w-2 h-2 bg-accent rounded-full"></div>
-                  <div className="w-2 h-2 bg-primary rounded-full"></div>
-                  <div className="w-2 h-2 bg-highlight rounded-full"></div>
+        {/* Massive Enhanced Features Circle */}
+        <div className="relative max-w-7xl mx-auto min-h-[800px] flex items-center justify-center">
+          {/* Center Brand Circle - Much Larger */}
+          <div className="relative w-96 h-96 md:w-[500px] md:h-[500px] mx-auto">
+            {/* Outer rotating ring */}
+            <div className="absolute inset-0 rounded-full border-8 border-transparent bg-gradient-to-r from-accent via-primary to-highlight animate-spin" style={{animationDuration: '30s'}}></div>
+            
+            {/* Middle rotating ring - opposite direction */}
+            <div className="absolute inset-4 rounded-full border-6 border-transparent bg-gradient-to-r from-highlight via-secondary to-accent animate-spin" style={{animationDuration: '40s', animationDirection: 'reverse'}}></div>
+            
+            {/* Main circle with enhanced gradient */}
+            <div className="absolute inset-8 rounded-full bg-gradient-to-br from-primary via-accent to-highlight shadow-2xl glow-effect">
+              {/* Inner content circle */}
+              <div className="absolute inset-6 bg-white/98 backdrop-blur-sm rounded-full flex items-center justify-center shadow-inner border-4 border-white/50">
+                <div className="text-center">
+                  <div className="text-6xl md:text-8xl font-bold mb-4 text-gradient animate-pulse">AF</div>
+                  <div className="text-2xl md:text-3xl font-bold text-primary mb-2">AgriFresh</div>
+                  <div className="text-base md:text-lg text-muted-foreground px-6 leading-tight">
+                    Premium Organic Excellence
+                  </div>
+                  <div className="text-sm md:text-base text-muted-foreground/80 mt-2">
+                    Farm to Table Quality
+                  </div>
+                  <div className="flex justify-center mt-6 space-x-2">
+                    <div className="w-4 h-4 bg-accent rounded-full animate-pulse"></div>
+                    <div className="w-4 h-4 bg-primary rounded-full animate-pulse" style={{animationDelay: '0.3s'}}></div>
+                    <div className="w-4 h-4 bg-highlight rounded-full animate-pulse" style={{animationDelay: '0.6s'}}></div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Rotating border effect */}
-            <div className="absolute inset-0 rounded-full border-4 border-transparent bg-gradient-to-r from-accent via-primary to-highlight bg-clip-border animate-spin" style={{animationDuration: '20s'}}></div>
-          </div>
-
-          {/* Enhanced Feature Badges with better positioning */}
-          {features.map((feature, index) => {
-            const Icon = feature.icon;
-            const angle = (index * 60) * (Math.PI / 180);
-            const radius = 200; // Distance from center
-            const x = Math.cos(angle - Math.PI/2) * radius;
-            const y = Math.sin(angle - Math.PI/2) * radius;
-            
-            return (
-              <div
-                key={feature.id}
-                className="feature-badge-floating"
-                style={{
-                  left: '50%',
-                  top: '50%',
-                  transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`
-                }}
-              >
-                <div className="text-center min-w-[140px]">
-                  <div className={`w-12 h-12 mx-auto mb-3 rounded-full bg-gradient-to-br from-muted to-background flex items-center justify-center ${feature.color} shadow-md`}>
-                    <Icon className="w-6 h-6" />
-                  </div>
-                  <div className="text-sm font-bold text-primary mb-1">
-                    {feature.title}
-                  </div>
-                  <div className="text-xs text-muted-foreground leading-tight">
-                    {feature.description}
+            {/* Enhanced Feature Badges - Larger and more spaced */}
+            {features.map((feature, index) => {
+              const Icon = feature.icon;
+              const angle = (index * 60) * (Math.PI / 180);
+              const radius = 320; // Much larger radius
+              const x = Math.cos(angle - Math.PI/2) * radius;
+              const y = Math.sin(angle - Math.PI/2) * radius;
+              
+              return (
+                <div
+                  key={feature.id}
+                  className="absolute"
+                  style={{
+                    left: '50%',
+                    top: '50%',
+                    transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`
+                  }}
+                >
+                  <div className="bg-white rounded-3xl p-8 shadow-2xl border border-border/50 hover:shadow-3xl transition-all duration-500 hover:scale-110 hover:-translate-y-2 backdrop-blur-sm bg-white/95 min-w-[200px]">
+                    <div className="text-center">
+                      <div className={`w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-muted to-background flex items-center justify-center ${feature.color} shadow-lg hover:shadow-xl transition-all duration-300`}>
+                        <Icon className="w-8 h-8" />
+                      </div>
+                      <div className="text-lg font-bold text-primary mb-2">
+                        {feature.title}
+                      </div>
+                      <div className="text-sm text-muted-foreground leading-tight">
+                        {feature.description}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
 
-          {/* Animated connecting lines */}
-          <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 800 600">
+          {/* Enhanced animated connecting lines with multiple layers */}
+          <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 1200 800">
             <defs>
               <radialGradient id="enhancedLineGradient" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="hsl(var(--accent))" stopOpacity="0.4" />
-                <stop offset="50%" stopColor="hsl(var(--primary))" stopOpacity="0.2" />
-                <stop offset="100%" stopColor="hsl(var(--highlight))" stopOpacity="0.1" />
+                <stop offset="0%" stopColor="hsl(var(--accent))" stopOpacity="0.6" />
+                <stop offset="30%" stopColor="hsl(var(--primary))" stopOpacity="0.4" />
+                <stop offset="70%" stopColor="hsl(var(--highlight))" stopOpacity="0.2" />
+                <stop offset="100%" stopColor="hsl(var(--secondary))" stopOpacity="0.1" />
               </radialGradient>
-              <filter id="glow">
-                <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+              <filter id="enhancedGlow">
+                <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
                 <feMerge> 
                   <feMergeNode in="coloredBlur"/>
                   <feMergeNode in="SourceGraphic"/>
@@ -146,44 +159,62 @@ export default function FeaturesCircle() {
             </defs>
             {features.map((_, index) => {
               const angle = (index * 60) * (Math.PI / 180);
-              const x1 = 400;
-              const y1 = 300;
-              const x2 = 400 + Math.cos(angle - Math.PI/2) * 180;
-              const y2 = 300 + Math.sin(angle - Math.PI/2) * 180;
+              const x1 = 600;
+              const y1 = 400;
+              const x2 = 600 + Math.cos(angle - Math.PI/2) * 280;
+              const y2 = 400 + Math.sin(angle - Math.PI/2) * 280;
               
               return (
-                <line
-                  key={index}
-                  x1={x1}
-                  y1={y1}
-                  x2={x2}
-                  y2={y2}
-                  stroke="url(#enhancedLineGradient)"
-                  strokeWidth="3"
-                  strokeDasharray="8,4"
-                  filter="url(#glow)"
-                  className="animate-pulse"
-                  style={{
-                    animationDelay: `${index * 0.2}s`,
-                    animationDuration: '3s'
-                  }}
-                />
+                <g key={index}>
+                  {/* Outer glow line */}
+                  <line
+                    x1={x1}
+                    y1={y1}
+                    x2={x2}
+                    y2={y2}
+                    stroke="url(#enhancedLineGradient)"
+                    strokeWidth="6"
+                    strokeDasharray="12,8"
+                    filter="url(#enhancedGlow)"
+                    className="animate-pulse"
+                    style={{
+                      animationDelay: `${index * 0.3}s`,
+                      animationDuration: '4s'
+                    }}
+                  />
+                  {/* Inner solid line */}
+                  <line
+                    x1={x1}
+                    y1={y1}
+                    x2={x2}
+                    y2={y2}
+                    stroke="hsl(var(--accent))"
+                    strokeWidth="2"
+                    strokeDasharray="8,4"
+                    className="animate-pulse"
+                    style={{
+                      animationDelay: `${index * 0.3 + 0.5}s`,
+                      animationDuration: '3s'
+                    }}
+                  />
+                </g>
               );
             })}
           </svg>
         </div>
 
-        {/* Trust indicators */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mt-20 max-w-4xl mx-auto">
+        {/* Enhanced trust indicators with better spacing */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-12 mt-32 max-w-6xl mx-auto">
           {[
-            { number: "10K+", label: "Happy Customers" },
-            { number: "500+", label: "Organic Products" },
-            { number: "50+", label: "Partner Farms" },
-            { number: "24/7", label: "Customer Support" }
+            { number: "10K+", label: "Happy Customers", icon: "👥" },
+            { number: "500+", label: "Organic Products", icon: "🌱" },
+            { number: "50+", label: "Partner Farms", icon: "🚜" },
+            { number: "24/7", label: "Customer Support", icon: "📞" }
           ].map((stat, index) => (
-            <div key={index} className="text-center">
-              <div className="text-3xl font-bold text-primary mb-2">{stat.number}</div>
-              <div className="text-sm text-muted-foreground">{stat.label}</div>
+            <div key={index} className="text-center bg-white/50 backdrop-blur-sm rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+              <div className="text-4xl mb-4">{stat.icon}</div>
+              <div className="text-4xl md:text-5xl font-bold text-primary mb-3">{stat.number}</div>
+              <div className="text-base md:text-lg text-muted-foreground font-medium">{stat.label}</div>
             </div>
           ))}
         </div>
