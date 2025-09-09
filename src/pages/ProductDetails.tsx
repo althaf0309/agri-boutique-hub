@@ -13,32 +13,64 @@ import { toast } from "@/hooks/use-toast";
 const productData = {
   id: 1,
   name: "Organic Basmati Rice",
-  price: 850,
-  originalPrice: 950,
+  basePrice: 850,
   rating: 4.5,
   reviewCount: 123,
   images: [
     "/api/placeholder/500/500",
-    "/api/placeholder/500/500",
+    "/api/placeholder/500/500", 
     "/api/placeholder/500/500",
     "/api/placeholder/500/500"
   ],
   category: "Organic Grocery",
-  weight: "5kg",
   organic: true,
   inStock: true,
-  stockCount: 24,
   description: "Premium aged basmati rice grown without pesticides in the foothills of Himalayas. Naturally aged for 2 years for enhanced aroma and taste.",
   highlights: [
     "100% Organic & Certified",
     "Aged for 2 years naturally",
-    "No pesticides or chemicals",
+    "No pesticides or chemicals", 
     "Long grain premium quality",
     "Rich in nutrients"
   ],
   nutrition: "Rich in carbohydrates, protein, and essential minerals. Contains no artificial additives or preservatives.",
   benefits: "Supports healthy digestion, provides sustained energy, and is naturally gluten-free.",
-  shipping: "Free delivery on orders above ₹500. Same-day delivery available in select areas."
+  shipping: "Free delivery on orders above ₹500. Same-day delivery available in select areas.",
+  // Weight variants with different pricing
+  weightVariants: [
+    {
+      id: 1,
+      weight: "1kg",
+      price: 250,
+      originalPrice: 280,
+      stockCount: 45,
+      popular: false
+    },
+    {
+      id: 2, 
+      weight: "2kg",
+      price: 450,
+      originalPrice: 520,
+      stockCount: 32,
+      popular: false
+    },
+    {
+      id: 3,
+      weight: "5kg", 
+      price: 850,
+      originalPrice: 950,
+      stockCount: 24,
+      popular: true
+    },
+    {
+      id: 4,
+      weight: "10kg",
+      price: 1600,
+      originalPrice: 1800,
+      stockCount: 15,
+      popular: false
+    }
+  ]
 };
 
 const relatedProducts = [
@@ -76,11 +108,12 @@ export default function ProductDetails() {
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const [selectedVariant, setSelectedVariant] = useState(productData.weightVariants[2]); // Default to 5kg (popular)
 
   const handleAddToCart = () => {
     toast({
       title: "Added to Cart",
-      description: `${quantity} x ${productData.name} added to your cart.`,
+      description: `${quantity} x ${productData.name} (${selectedVariant.weight}) added to your cart.`,
     });
   };
 
@@ -99,7 +132,8 @@ export default function ProductDetails() {
     });
   };
 
-  const discountPercentage = Math.round(((productData.originalPrice - productData.price) / productData.originalPrice) * 100);
+  const discountPercentage = selectedVariant.originalPrice ? 
+    Math.round(((selectedVariant.originalPrice - selectedVariant.price) / selectedVariant.originalPrice) * 100) : 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -181,20 +215,63 @@ export default function ProductDetails() {
               </div>
             </div>
 
+            {/* Weight Selection */}
+            <div className="space-y-3">
+              <h3 className="font-semibold">Select Weight:</h3>
+              <div className="grid grid-cols-2 gap-3">
+                {productData.weightVariants.map((variant) => (
+                  <button
+                    key={variant.id}
+                    onClick={() => setSelectedVariant(variant)}
+                    className={`relative p-4 border-2 rounded-lg text-left transition-all hover:border-primary/50 ${
+                      selectedVariant.id === variant.id 
+                        ? 'border-primary bg-primary/5' 
+                        : 'border-border bg-background'
+                    }`}
+                  >
+                    {variant.popular && (
+                      <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
+                        <Badge className="bg-accent text-accent-foreground text-xs">
+                          Popular
+                        </Badge>
+                      </div>
+                    )}
+                    <div className="font-medium text-foreground">{variant.weight}</div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="font-bold text-primary">₹{variant.price}</span>
+                      {variant.originalPrice && (
+                        <span className="text-sm text-muted-foreground line-through">
+                          ₹{variant.originalPrice}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {variant.stockCount} in stock
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Price */}
             <div className="space-y-2">
               <div className="flex items-center gap-4">
-                <span className="text-3xl font-bold text-primary">₹{productData.price}</span>
-                {productData.originalPrice && (
+                <span className="text-3xl font-bold text-primary">₹{selectedVariant.price}</span>
+                {selectedVariant.originalPrice && (
                   <span className="text-xl text-muted-foreground line-through">
-                    ₹{productData.originalPrice}
+                    ₹{selectedVariant.originalPrice}
                   </span>
                 )}
+                {discountPercentage > 0 && (
+                  <Badge variant="destructive" className="text-sm">
+                    -{discountPercentage}% OFF
+                  </Badge>
+                )}
               </div>
-              <p className="text-muted-foreground">Weight: {productData.weight}</p>
+              <p className="text-muted-foreground">Weight: {selectedVariant.weight}</p>
               {productData.inStock && (
                 <p className="text-sm text-muted-foreground">
-                  {productData.stockCount} items left in stock
+                  {selectedVariant.stockCount} items left in stock
                 </p>
               )}
             </div>
@@ -217,7 +294,7 @@ export default function ProductDetails() {
                     variant="ghost"
                     size="sm"
                     onClick={() => setQuantity(quantity + 1)}
-                    disabled={quantity >= productData.stockCount}
+                    disabled={quantity >= selectedVariant.stockCount}
                   >
                     <Plus className="w-4 h-4" />
                   </Button>

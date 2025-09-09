@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,6 +10,15 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Star, Heart, Share2, ShoppingCart, Eye, Minus, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+interface WeightVariant {
+  id: number;
+  weight: string;
+  price: number;
+  originalPrice?: number;
+  stockCount: number;
+  popular?: boolean;
+}
 
 interface Product {
   id: number;
@@ -27,6 +36,7 @@ interface Product {
   organic?: boolean;
   // Additional fields that might be added by the parent component
   reviews?: number;
+  weightVariants?: WeightVariant[];
 }
 
 interface QuickViewProps {
@@ -38,14 +48,31 @@ interface QuickViewProps {
 const QuickView = ({ product, isOpen, onClose }: QuickViewProps) => {
   const [quantity, setQuantity] = useState(1);
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const [selectedVariant, setSelectedVariant] = useState<WeightVariant | null>(null);
   const { toast } = useToast();
 
   if (!product) return null;
 
+  // Set default variant on product change
+  React.useEffect(() => {
+    if (product.weightVariants && product.weightVariants.length > 0) {
+      // Select popular variant or first one
+      const defaultVariant = product.weightVariants.find(v => v.popular) || product.weightVariants[0];
+      setSelectedVariant(defaultVariant);
+    } else {
+      setSelectedVariant(null);
+    }
+  }, [product]);
+
+  const currentPrice = selectedVariant ? selectedVariant.price : product.price;
+  const currentOriginalPrice = selectedVariant ? selectedVariant.originalPrice : product.originalPrice;
+  const currentWeight = selectedVariant ? selectedVariant.weight : product.weight;
+
   const handleAddToCart = () => {
+    const variantText = selectedVariant ? ` (${selectedVariant.weight})` : '';
     toast({
       title: "Added to Cart! 🛒",
-      description: `${quantity}x ${product.name} added to your cart`,
+      description: `${quantity}x ${product.name}${variantText} added to your cart`,
     });
     onClose();
   };
@@ -91,14 +118,13 @@ const QuickView = ({ product, isOpen, onClose }: QuickViewProps) => {
             >
               Quick View
             </Badge>
-            {product.originalPrice && (
               <Badge 
                 variant="destructive" 
                 className="absolute top-4 right-4 bg-accent text-accent-foreground"
               >
-                {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% OFF
+                {currentOriginalPrice ? 
+                  Math.round(((currentOriginalPrice - currentPrice) / currentOriginalPrice) * 100) : 0}% OFF
               </Badge>
-            )}
           </div>
 
           {/* Product Details */}
@@ -137,11 +163,11 @@ const QuickView = ({ product, isOpen, onClose }: QuickViewProps) => {
             {/* Price */}
             <div className="flex items-center gap-3 mb-4">
               <span className="text-3xl font-bold text-primary">
-                ${product.price.toFixed(2)}
+                ${currentPrice.toFixed(2)}
               </span>
-              {product.originalPrice && (
+              {currentOriginalPrice && (
                 <span className="text-lg text-muted-foreground line-through">
-                  ${product.originalPrice.toFixed(2)}
+                  ${currentOriginalPrice.toFixed(2)}
                 </span>
               )}
             </div>
@@ -155,6 +181,50 @@ const QuickView = ({ product, isOpen, onClose }: QuickViewProps) => {
                 {product.inStock ? "In Stock" : "Out of Stock"}
               </Badge>
             </div>
+
+            {/* Weight Selection */}
+            {product.weightVariants && product.weightVariants.length > 0 && (
+              <div className="mb-4">
+                <h4 className="font-semibold mb-2">Select Weight:</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  {product.weightVariants.map((variant) => (
+                    <button
+                      key={variant.id}
+                      onClick={() => setSelectedVariant(variant)}
+                      className={`relative p-3 border-2 rounded-lg text-left transition-all text-sm ${
+                        selectedVariant?.id === variant.id 
+                          ? 'border-primary bg-primary/5' 
+                          : 'border-border bg-background hover:border-primary/50'
+                      }`}
+                    >
+                      {variant.popular && (
+                        <div className="absolute -top-1 right-1">
+                          <Badge className="bg-accent text-accent-foreground text-xs px-1 py-0">
+                            Popular
+                          </Badge>
+                        </div>
+                      )}
+                      <div className="font-medium">{variant.weight}</div>
+                      <div className="flex items-center gap-1 mt-1">
+                        <span className="font-bold text-primary text-sm">₹{variant.price}</span>
+                        {variant.originalPrice && (
+                          <span className="text-xs text-muted-foreground line-through">
+                            ₹{variant.originalPrice}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Current Weight Display */}
+            {currentWeight && (
+              <div className="mb-4">
+                <span className="text-sm text-muted-foreground">Weight: {currentWeight}</span>
+              </div>
+            )}
 
             {/* Description */}
             {product.description && (

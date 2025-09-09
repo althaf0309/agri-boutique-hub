@@ -73,7 +73,7 @@ export default function Shop() {
   };
 
   const handleQuickView = (product: typeof sampleProducts[0]) => {
-    // Add enhanced product data for quick view
+    // Add enhanced product data for quick view including weight variants
     const enhancedProduct = {
       ...product,
       reviews: product.reviewCount,
@@ -82,6 +82,33 @@ export default function Shop() {
         "Farm Fresh Quality",
         "Sustainably Sourced", 
         "Rich in Nutrients"
+      ],
+      // Add sample weight variants for demonstration
+      weightVariants: [
+        {
+          id: 1,
+          weight: "250g",
+          price: Math.round(product.price * 0.3),
+          originalPrice: product.originalPrice ? Math.round(product.originalPrice * 0.3) : undefined,
+          stockCount: 25,
+          popular: false
+        },
+        {
+          id: 2,
+          weight: "500g",
+          price: Math.round(product.price * 0.6), 
+          originalPrice: product.originalPrice ? Math.round(product.originalPrice * 0.6) : undefined,
+          stockCount: 18,
+          popular: true
+        },
+        {
+          id: 3,
+          weight: "1kg",
+          price: product.price,
+          originalPrice: product.originalPrice,
+          stockCount: 12,
+          popular: false
+        }
       ]
     };
     setQuickViewProduct(enhancedProduct);
