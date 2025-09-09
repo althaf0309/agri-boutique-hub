@@ -2,8 +2,6 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,6 +12,10 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { CreditCard, Truck, Shield, Leaf } from "lucide-react";
+
+// Import components at the bottom to isolate any import issues
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 
 const checkoutSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
