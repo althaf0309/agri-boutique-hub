@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ProductCard from "@/components/ProductCard";
+import QuickView from "@/components/QuickView";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -62,6 +63,7 @@ export default function Shop() {
   const [showFilters, setShowFilters] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [quickViewProduct, setQuickViewProduct] = useState<typeof sampleProducts[0] | null>(null);
 
   const handleAddToCart = (product: typeof sampleProducts[0]) => {
     toast({
@@ -71,10 +73,18 @@ export default function Shop() {
   };
 
   const handleQuickView = (product: typeof sampleProducts[0]) => {
-    toast({
-      title: "Quick View",
-      description: `Opening quick view for ${product.name}`,
-    });
+    // Add enhanced product data for quick view
+    const enhancedProduct = {
+      ...product,
+      reviews: product.reviewCount,
+      features: [
+        "100% Organic & Natural",
+        "Farm Fresh Quality",
+        "Sustainably Sourced", 
+        "Rich in Nutrients"
+      ]
+    };
+    setQuickViewProduct(enhancedProduct);
   };
 
   const handleTagChange = (tag: string, checked: boolean) => {
@@ -308,6 +318,13 @@ export default function Shop() {
           </div>
         </div>
       </main>
+
+      {/* Quick View Modal */}
+      <QuickView
+        product={quickViewProduct}
+        isOpen={!!quickViewProduct}
+        onClose={() => setQuickViewProduct(null)}
+      />
 
       <Footer />
     </div>

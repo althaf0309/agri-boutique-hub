@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import ProductCard from "./ProductCard";
+import QuickView from "./QuickView";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -137,6 +138,7 @@ export default function ProductGrid({
   const displayProducts = showAll ? products : products.slice(0, 8);
   const carouselRef = useRef<HTMLDivElement>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [quickViewProduct, setQuickViewProduct] = useState<typeof sampleProducts[0] | null>(null);
 
   const handleAddToCart = (product: typeof sampleProducts[0]) => {
     toast({
@@ -146,10 +148,18 @@ export default function ProductGrid({
   };
 
   const handleQuickView = (product: typeof sampleProducts[0]) => {
-    toast({
-      title: "Quick View",
-      description: `Opening quick view for ${product.name}`,
-    });
+    // Add enhanced product data for quick view
+    const enhancedProduct = {
+      ...product,
+      reviews: product.reviewCount,
+      features: [
+        "100% Organic & Natural",
+        "Farm Fresh Quality", 
+        "Sustainably Sourced",
+        "Rich in Nutrients"
+      ]
+    };
+    setQuickViewProduct(enhancedProduct);
   };
 
   const scrollLeft = () => {
@@ -243,6 +253,13 @@ export default function ProductGrid({
           ))}
         </div>
       </div>
+
+      {/* Quick View Modal */}
+      <QuickView
+        product={quickViewProduct}
+        isOpen={!!quickViewProduct}
+        onClose={() => setQuickViewProduct(null)}
+      />
     </section>
   );
 }
