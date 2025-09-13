@@ -7,6 +7,7 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import honeyBundle from "@/assets/honey-bundle.jpg";
+import organicCenterHero from "@/assets/organic-center-hero.jpg";
 
 const Index = () => {
   return (
@@ -29,6 +30,36 @@ const Index = () => {
               Discover the finest selection of organic groceries, natural personal care products, 
               and everything you need for a sustainable lifestyle. Farm-fresh quality delivered to your doorstep.
             </p>
+          </div>
+        </section>
+
+        {/* Center Hero Image Section */}
+        <section className="py-8 sm:py-12 lg:py-16">
+          <div className="container mx-auto px-4 sm:px-6">
+            <div className="max-w-6xl mx-auto text-center">
+              <div className="relative overflow-hidden rounded-2xl shadow-2xl">
+                <img 
+                  src={organicCenterHero} 
+                  alt="Fresh Organic Vegetables and Fruits"
+                  className="w-full h-64 sm:h-80 md:h-96 lg:h-[500px] object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent flex items-end">
+                  <div className="p-6 sm:p-8 lg:p-12 text-white w-full">
+                    <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
+                      Farm Fresh Organic Goodness
+                    </h2>
+                    <p className="text-lg sm:text-xl md:text-2xl mb-6 opacity-90 max-w-3xl mx-auto">
+                      Straight from certified organic farms to your table
+                    </p>
+                    <Link to="/shop">
+                      <Button size="lg" className="bg-white text-primary hover:bg-white/90 text-lg px-8 py-3">
+                        Explore Products
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
