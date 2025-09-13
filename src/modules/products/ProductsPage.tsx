@@ -174,8 +174,8 @@ export function ProductsPage() {
                     Loading products...
                   </TableCell>
                 </TableRow>
-              ) : (
-                productsData?.results.map((product) => (
+              ) : productsData?.results ? (
+                productsData.results.map((product) => (
                   <TableRow key={product.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -253,6 +253,12 @@ export function ProductsPage() {
                     </TableCell>
                   </TableRow>
                 ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8">
+                    No products found
+                  </TableCell>
+                </TableRow>
               )}
             </TableBody>
           </Table>
