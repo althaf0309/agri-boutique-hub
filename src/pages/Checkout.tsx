@@ -26,9 +26,7 @@ const checkoutSchema = z.object({
   state: z.string().min(2, "State is required"),
   zipCode: z.string().min(5, "Please enter a valid ZIP code"),
   phone: z.string().min(10, "Please enter a valid phone number"),
-  paymentMethod: z.enum(["card", "paypal", "bank"], {
-    required_error: "Please select a payment method",
-  }),
+  paymentMethod: z.enum(["card", "paypal", "bank"]),
   specialInstructions: z.string().optional(),
 });
 
