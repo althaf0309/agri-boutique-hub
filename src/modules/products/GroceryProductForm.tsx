@@ -19,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useCategories, useCreateProduct, useUpdateProduct } from "@/api/hooks/products";
 import { ProductOptions } from "@/components/product/ProductOptions";
 import { VariantTable } from "@/components/product/VariantTable";
+import { WeightVariantManager } from "@/components/product/WeightVariantManager";
 
 // Grocery-focused validation schema
 const groceryProductSchema = z.object({
@@ -95,6 +96,7 @@ export function GroceryProductForm() {
   const [productImages, setProductImages] = useState<any[]>([]);
   const [productOptions, setProductOptions] = useState<any[]>([]);
   const [productVariants, setProductVariants] = useState<any[]>([]);
+  const [weightVariants, setWeightVariants] = useState<any[]>([]);
 
   const { data: categories } = useCategories();
   const createProduct = useCreateProduct();
@@ -490,6 +492,13 @@ export function GroceryProductForm() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Weight Variants & Pricing */}
+              <WeightVariantManager
+                variants={weightVariants}
+                onVariantsChange={setWeightVariants}
+                productName={watchedName || "Product"}
+              />
 
               {/* Options & Variants */}
               <ProductOptions

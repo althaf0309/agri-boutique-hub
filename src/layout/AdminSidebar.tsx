@@ -49,7 +49,7 @@ const menuItems = [
 
 export function AdminSidebar() {
   const location = useLocation();
-  const { open, setOpen } = useSidebar();
+  const { open } = useSidebar();
 
   const getNavClass = ({ isActive }: { isActive: boolean }) => {
     return isActive 
@@ -67,49 +67,49 @@ export function AdminSidebar() {
   return (
     <Sidebar 
       collapsible="icon"
-      className="border-r"
+      className="border-r bg-white"
     >
-      <SidebarContent className="bg-white">
+      <SidebarContent>
         {/* Header with trigger */}
         <div className="flex h-16 items-center border-b px-4">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+          <div className="flex items-center gap-2 flex-1">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground flex-shrink-0">
               <LayoutDashboard className="h-4 w-4" />
             </div>
-            {open && (
-              <div className="flex flex-col">
-                <span className="text-sm font-semibold">Admin Panel</span>
-                <span className="text-xs text-muted-foreground">E-Commerce</span>
-              </div>
-            )}
-          </div>
-          <div className="ml-auto">
-            <SidebarTrigger className="-mr-1" />
+            <div className="flex flex-col min-w-0">
+              <span className="text-sm font-semibold truncate">Admin Panel</span>
+              <span className="text-xs text-muted-foreground truncate">E-Commerce</span>
+            </div>
           </div>
         </div>
 
         {/* Navigation */}
-        <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink 
-                      to={item.url} 
-                      className={getNavClass}
-                      end={item.url === "/admin"}
-                    >
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        <div className="flex-1 overflow-auto py-4">
+          <SidebarGroup>
+            <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {menuItems.map((item) => {
+                  const itemIsActive = isActive(item.url);
+                  return (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton asChild isActive={itemIsActive}>
+                        <NavLink 
+                          to={item.url} 
+                          end={item.url === "/admin"}
+                          className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors"
+                        >
+                          <item.icon className="h-4 w-4 flex-shrink-0" />
+                          <span className="truncate">{item.title}</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </div>
       </SidebarContent>
     </Sidebar>
   );
