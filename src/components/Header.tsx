@@ -50,6 +50,14 @@ export default function Header() {
                 Home
               </Link>
               <Link 
+                to="/about" 
+                className={`text-sm hover:text-primary transition-colors ${
+                  isActive('/about') ? 'text-primary font-medium' : 'text-muted-foreground'
+                }`}
+              >
+                About
+              </Link>
+              <Link 
                 to="/blog" 
                 className={`text-sm hover:text-primary transition-colors ${
                   isActive('/blog') ? 'text-primary font-medium' : 'text-muted-foreground'
