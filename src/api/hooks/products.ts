@@ -56,7 +56,8 @@ export const useCategories = () => {
     queryFn: async (): Promise<Category[]> => {
       try {
         const { data } = await api.get('/categories/');
-        return data.results || data;
+        // Handle both array response and paginated response
+        return Array.isArray(data) ? data : (data.results || []);
       } catch (error) {
         // Return mock data for development
         return [
