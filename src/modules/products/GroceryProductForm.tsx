@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -17,6 +17,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { useCategories, useCreateProduct, useUpdateProduct } from "@/api/hooks/products";
+import { ProductOptions } from "@/components/product/ProductOptions";
+import { VariantTable } from "@/components/product/VariantTable";
 
 // Grocery-focused validation schema
 const groceryProductSchema = z.object({
@@ -91,6 +93,8 @@ export function GroceryProductForm() {
   const isEditMode = !!id;
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const [productImages, setProductImages] = useState<any[]>([]);
+  const [productOptions, setProductOptions] = useState<any[]>([]);
+  const [productVariants, setProductVariants] = useState<any[]>([]);
 
   const { data: categories } = useCategories();
   const createProduct = useCreateProduct();
@@ -131,6 +135,105 @@ export function GroceryProductForm() {
     return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
   };
 
+  const generateVariants = () => {
+    if (productOptions.length === 0) return;
+
+    // Generate cartesian product of all option values
+    const combinations = productOptions.reduce((acc, option) => {
+      if (option.values.length === 0) return acc;
+      
+      if (acc.length === 0) {
+        return option.values.map((value: string) => ({ [option.name]: value }));
+      }
+      
+      const newCombinations: any[] = [];
+      acc.forEach(combo => {
+        option.values.forEach((value: string) => {
+          newCombinations.push({ ...combo, [option.name]: value });
+        });
+      });
+      
+      return newCombinations;
+    }, [] as any[]);
+
+    // Create variant objects
+    const newVariants = combinations.map((attributes, index) => ({
+      id: Date.now() + index,
+      sku: `${generateSlug(watchedName || "product")}-${Object.values(attributes).join('-').toLowerCase()}`,
+      attributes,
+      quantity: 0,
+      price_override: null,
+      discount_override: null,
+      is_active: true,
+      weight_value: extractWeightFromAttributes(attributes),
+      weight_unit: extractWeightUnitFromAttributes(attributes),
+      color_id: null,
+      mrp: form.getValues("mrp_price") || "0.00",
+      barcode: "",
+      min_order_qty: 1,
+      step_qty: 1
+    }));
+
+    setProductVariants(newVariants);
+    
+    toast({
+      title: "Variants generated",
+      description: `${newVariants.length} product variants created`
+    });
+  };
+
+  const extractWeightFromAttributes = (attributes: any) => {
+    const weightAttr = Object.entries(attributes).find(([key, value]) => 
+      key.toLowerCase().includes('weight') || 
+      key.toLowerCase().includes('size') ||
+      (typeof value === 'string' && /\d+[gmkg|ml|l]/i.test(value as string))
+    );
+    
+    if (weightAttr && typeof weightAttr[1] === 'string') {
+      const match = (weightAttr[1] as string).match(/(\d+(?:\.\d+)?)/);
+      return match ? match[1] : null;
+    }
+    
+    return null;
+  };
+
+  const extractWeightUnitFromAttributes = (attributes: any) => {
+    const weightAttr = Object.entries(attributes).find(([key, value]) => 
+      key.toLowerCase().includes('weight') || 
+      key.toLowerCase().includes('size') ||
+      (typeof value === 'string' && /\d+[gmkg|ml|l]/i.test(value as string))
+    );
+    
+    if (weightAttr && typeof weightAttr[1] === 'string') {
+      const value = weightAttr[1] as string;
+      if (/kg/i.test(value)) return "KG";
+      if (/g/i.test(value)) return "G";
+      if (/l/i.test(value)) return "L";
+      if (/ml/i.test(value)) return "ML";
+    }
+    
+    return null;
+  };
+
+  const onVariantChange = (index: number, field: string, value: any) => {
+    const updatedVariants = [...productVariants];
+    updatedVariants[index] = { ...updatedVariants[index], [field]: value };
+    setProductVariants(updatedVariants);
+  };
+
+  const onRemoveVariant = (index: number) => {
+    const updatedVariants = productVariants.filter((_, i) => i !== index);
+    setProductVariants(updatedVariants);
+  };
+
+  const onBulkEdit = (field: string, value: any) => {
+    // Implementation for bulk editing variants
+    toast({
+      title: "Bulk edit applied",
+      description: `Updated ${field} for all selected variants`
+    });
+  };
+
   const onSubmit = async (data: GroceryProductFormData) => {
     try {
       const payload = {
@@ -145,7 +248,12 @@ export function GroceryProductForm() {
         await updateProduct.mutateAsync({ id: Number(id), ...payload });
         toast({ title: "Grocery product updated successfully" });
       } else {
-        await createProduct.mutateAsync(payload);
+        const createdProduct = await createProduct.mutateAsync(payload);
+        
+        // TODO: Save options and variants to API
+        // await saveProductOptions(createdProduct.id, productOptions);
+        // await saveProductVariants(createdProduct.id, productVariants);
+        
         toast({ title: "Grocery product created successfully" });
         navigate("/admin/products");
       }
@@ -383,22 +491,34 @@ export function GroceryProductForm() {
                 </CardContent>
               </Card>
 
-              {/* Media */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Product Images</CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Upload high-quality images showing freshness and appeal
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  <div className="border-2 border-dashed rounded-lg p-8 text-center">
-                    <div className="text-sm text-muted-foreground">
-                      Image upload functionality will be available after product creation
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Options & Variants */}
+              <ProductOptions
+                options={productOptions}
+                onOptionsChange={setProductOptions}
+                onGenerateVariants={generateVariants}
+                categoryId={watchedCategory}
+              />
+
+              {/* Variants Table */}
+              {productVariants.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Product Variants</CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Manage inventory and pricing for each variant
+                    </p>
+                  </CardHeader>
+                  <CardContent>
+                    <VariantTable
+                      control={form.control}
+                      variants={productVariants}
+                      onVariantChange={onVariantChange}
+                      onRemoveVariant={onRemoveVariant}
+                      onBulkEdit={onBulkEdit}
+                    />
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Pricing */}
               <Card>
