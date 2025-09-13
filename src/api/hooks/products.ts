@@ -43,8 +43,12 @@ export const useProduct = (id: number) => {
   return useQuery({
     queryKey: ['products', id],
     queryFn: async (): Promise<Product> => {
-      const { data } = await api.get(`/products/${id}/`);
-      return data;
+      try {
+        const { data } = await api.get(`/products/${id}/`);
+        return data;
+      } catch (error) {
+        throw error;
+      }
     },
     enabled: !!id,
   });
