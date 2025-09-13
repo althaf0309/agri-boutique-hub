@@ -2,6 +2,7 @@ import { Search, User, Bell } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,9 +14,12 @@ import {
 
 export function AdminTopbar() {
   return (
-    <header className="h-16 border-b bg-white px-6 flex items-center justify-between">
+    <header className="h-16 border-b bg-white px-6 flex items-center justify-between sticky top-0 z-10">
       <div className="flex items-center gap-4">
-        <h1 className="text-xl font-semibold">E-Commerce Admin</h1>
+        <div className="md:hidden">
+          <SidebarTrigger />
+        </div>
+        <h1 className="text-xl font-semibold text-gray-900">E-Commerce Admin</h1>
       </div>
 
       <div className="flex items-center gap-4">
