@@ -13,6 +13,7 @@ import { AdminLayout } from "./layout/AdminLayout";
 import { DashboardPage } from "./modules/dashboard/DashboardPage";
 import { ProductsPage } from "./modules/products/ProductsPage";
 import { GroceryProductForm } from "./modules/products/GroceryProductForm";
+import { AnalyticsDashboard } from "./modules/analytics/AnalyticsDashboard";
 
 const queryClient = new QueryClient();
 
@@ -32,10 +33,11 @@ const App = () => (
           
           {/* Admin Routes */}
           <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<DashboardPage />} />
+            <Route index element={<AnalyticsDashboard />} />
             <Route path="products" element={<ProductsPage />} />
             <Route path="products/new" element={<GroceryProductForm />} />
             <Route path="products/:id/edit" element={<GroceryProductForm />} />
+            <Route path="analytics" element={<AnalyticsDashboard />} />
             <Route path="categories" element={<div>Categories coming soon...</div>} />
             <Route path="orders" element={<div>Orders coming soon...</div>} />
             <Route path="reviews" element={<div>Reviews coming soon...</div>} />
