@@ -230,14 +230,14 @@ export function VariantTable({
                 </TableCell>
                 <TableCell>
                   <Select 
-                    value={variant.weight_unit || ""} 
-                    onValueChange={(value) => onVariantChange(index, "weight_unit", value || null)}
+                    value={variant.weight_unit || "none"} 
+                    onValueChange={(value) => onVariantChange(index, "weight_unit", value === "none" ? null : value)}
                   >
                     <SelectTrigger className="h-8">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
+                      <SelectItem value="none">None</SelectItem>
                       <SelectItem value="G">G</SelectItem>
                       <SelectItem value="KG">KG</SelectItem>
                       <SelectItem value="ML">ML</SelectItem>

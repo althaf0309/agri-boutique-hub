@@ -12,7 +12,7 @@ import NotFound from "./pages/NotFound";
 import { AdminLayout } from "./layout/AdminLayout";
 import { DashboardPage } from "./modules/dashboard/DashboardPage";
 import { ProductsPage } from "./modules/products/ProductsPage";
-import { ProductForm } from "./modules/products/ProductForm";
+import { ProductForm } from "./modules/products/ProductFormSimple";
 
 const queryClient = new QueryClient();
 
