@@ -51,11 +51,9 @@ const QuickView = ({ product, isOpen, onClose }: QuickViewProps) => {
   const [selectedVariant, setSelectedVariant] = useState<WeightVariant | null>(null);
   const { toast } = useToast();
 
-  if (!product) return null;
-
   // Set default variant on product change
   React.useEffect(() => {
-    if (product.weightVariants && product.weightVariants.length > 0) {
+    if (product?.weightVariants && product.weightVariants.length > 0) {
       // Select popular variant or first one
       const defaultVariant = product.weightVariants.find(v => v.popular) || product.weightVariants[0];
       setSelectedVariant(defaultVariant);
@@ -63,6 +61,8 @@ const QuickView = ({ product, isOpen, onClose }: QuickViewProps) => {
       setSelectedVariant(null);
     }
   }, [product]);
+
+  if (!product) return null;
 
   const currentPrice = selectedVariant ? selectedVariant.price : product.price;
   const currentOriginalPrice = selectedVariant ? selectedVariant.originalPrice : product.originalPrice;
