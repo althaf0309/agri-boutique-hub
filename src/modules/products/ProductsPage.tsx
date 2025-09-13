@@ -20,7 +20,7 @@ import dayjs from "dayjs";
 
 export function ProductsPage() {
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("");
+  const [category, setCategory] = useState("all");
   const [inStock, setInStock] = useState<boolean | undefined>(undefined);
   const [featured, setFeatured] = useState<boolean | undefined>(undefined);
   const [page, setPage] = useState(1);
@@ -29,7 +29,7 @@ export function ProductsPage() {
   const { data: productsData, isLoading } = useProducts({
     page,
     search,
-    category,
+    category: category === "all" ? "" : category,
     in_stock: inStock,
     featured,
     ordering,
@@ -100,7 +100,7 @@ export function ProductsPage() {
                 <SelectValue placeholder="All Categories" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Categories</SelectItem>
+                <SelectItem value="all">All Categories</SelectItem>
                 {categories?.map((cat) => (
                   <SelectItem key={cat.id} value={cat.id.toString()}>
                     {cat.name}
@@ -109,27 +109,27 @@ export function ProductsPage() {
               </SelectContent>
             </Select>
 
-            <Select value={inStock?.toString() || ""} onValueChange={(value) => 
-              setInStock(value === "" ? undefined : value === "true")
+            <Select value={inStock?.toString() || "all"} onValueChange={(value) => 
+              setInStock(value === "all" ? undefined : value === "true")
             }>
               <SelectTrigger>
                 <SelectValue placeholder="Stock Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Stock</SelectItem>
+                <SelectItem value="all">All Stock</SelectItem>
                 <SelectItem value="true">In Stock</SelectItem>
                 <SelectItem value="false">Out of Stock</SelectItem>
               </SelectContent>
             </Select>
 
-            <Select value={featured?.toString() || ""} onValueChange={(value) => 
-              setFeatured(value === "" ? undefined : value === "true")
+            <Select value={featured?.toString() || "all"} onValueChange={(value) => 
+              setFeatured(value === "all" ? undefined : value === "true")
             }>
               <SelectTrigger>
                 <SelectValue placeholder="Featured" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Products</SelectItem>
+                <SelectItem value="all">All Products</SelectItem>
                 <SelectItem value="true">Featured</SelectItem>
                 <SelectItem value="false">Not Featured</SelectItem>
               </SelectContent>
