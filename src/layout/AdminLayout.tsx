@@ -6,7 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 
 export function AdminLayout() {
   return (
-    <SidebarProvider defaultOpen={true}>
+    <SidebarProvider defaultOpen={true} open={true}>
       <div className="min-h-screen flex w-full">
         <AdminSidebar />
         <div className="flex-1 flex flex-col overflow-hidden">

@@ -49,13 +49,7 @@ const menuItems = [
 
 export function AdminSidebar() {
   const location = useLocation();
-  const { open } = useSidebar();
-
-  const getNavClass = ({ isActive }: { isActive: boolean }) => {
-    return isActive 
-      ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-      : "hover:bg-muted/50 text-muted-foreground hover:text-foreground";
-  };
+  const { open, setOpen } = useSidebar();
 
   const isActive = (url: string) => {
     if (url === "/admin") {
@@ -66,28 +60,30 @@ export function AdminSidebar() {
 
   return (
     <Sidebar 
+      side="left"
+      variant="sidebar"
       collapsible="icon"
-      className="border-r bg-white"
+      className="border-r"
     >
-      <SidebarContent>
-        {/* Header with trigger */}
+      <SidebarContent className="bg-white">
+        {/* Header with Logo and Toggle */}
         <div className="flex h-16 items-center border-b px-4">
           <div className="flex items-center gap-2 flex-1">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground flex-shrink-0">
               <LayoutDashboard className="h-4 w-4" />
             </div>
-            <div className="flex flex-col min-w-0">
+            <div className="flex flex-col min-w-0 overflow-hidden">
               <span className="text-sm font-semibold truncate">Admin Panel</span>
-              <span className="text-xs text-muted-foreground truncate">E-Commerce</span>
+              <span className="text-xs text-muted-foreground truncate">E-Commerce Dashboard</span>
             </div>
           </div>
-          <SidebarTrigger className="-mr-1" />
+          <SidebarTrigger className="-mr-1 h-8 w-8" />
         </div>
 
         {/* Navigation */}
-        <div className="flex-1 overflow-auto py-4">
+        <div className="flex-1 overflow-auto py-2">
           <SidebarGroup>
-            <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+            <SidebarGroupLabel>Main Navigation</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {menuItems.map((item) => {
@@ -98,10 +94,14 @@ export function AdminSidebar() {
                         <NavLink 
                           to={item.url} 
                           end={item.url === "/admin"}
-                          className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors"
+                          className={`flex items-center gap-3 px-3 py-2 rounded-md transition-all duration-200 ${
+                            itemIsActive 
+                              ? "bg-primary text-primary-foreground shadow-sm" 
+                              : "hover:bg-muted/50 text-muted-foreground hover:text-foreground"
+                          }`}
                         >
                           <item.icon className="h-4 w-4 flex-shrink-0" />
-                          <span className="truncate">{item.title}</span>
+                          <span className="truncate font-medium">{item.title}</span>
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -110,6 +110,16 @@ export function AdminSidebar() {
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
+        </div>
+
+        {/* Footer */}
+        <div className="border-t p-4">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="flex h-6 w-6 items-center justify-center rounded bg-muted">
+              <Settings className="h-3 w-3" />
+            </div>
+            <span className="truncate">v1.0.0</span>
+          </div>
         </div>
       </SidebarContent>
     </Sidebar>

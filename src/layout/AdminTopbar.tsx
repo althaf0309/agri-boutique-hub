@@ -16,7 +16,7 @@ export function AdminTopbar() {
   return (
     <header className="h-16 border-b bg-white px-6 flex items-center justify-between sticky top-0 z-10">
       <div className="flex items-center gap-4">
-        <SidebarTrigger className="md:hidden" />
+        <SidebarTrigger className="lg:hidden" />
         <h1 className="text-xl font-semibold text-gray-900">E-Commerce Admin</h1>
       </div>
 
