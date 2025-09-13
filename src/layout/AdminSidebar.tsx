@@ -81,6 +81,7 @@ export function AdminSidebar() {
               <span className="text-xs text-muted-foreground truncate">E-Commerce</span>
             </div>
           </div>
+          <SidebarTrigger className="-mr-1" />
         </div>
 
         {/* Navigation */}
