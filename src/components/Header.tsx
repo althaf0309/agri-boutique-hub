@@ -49,15 +49,25 @@ export default function Header() {
               >
                 Home
               </Link>
+              <Link 
+                to="/blog" 
+                className={`text-sm hover:text-primary transition-colors ${
+                  isActive('/blog') ? 'text-primary font-medium' : 'text-muted-foreground'
+                }`}
+              >
+                Blog
+              </Link>
+              <Link 
+                to="/contact" 
+                className={`text-sm hover:text-primary transition-colors ${
+                  isActive('/contact') ? 'text-primary font-medium' : 'text-muted-foreground'
+                }`}
+              >
+                Contact
+              </Link>
               <Button variant="ghost" size="sm" className="text-sm">
                 Sign In
               </Button>
-              <Link 
-                to="/faq" 
-                className="text-sm text-muted-foreground hover:text-primary transition-colors"
-              >
-                FAQ
-              </Link>
               
               {/* Language Toggle */}
               <DropdownMenu>

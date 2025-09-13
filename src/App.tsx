@@ -9,6 +9,11 @@ import ProductDetails from "./pages/ProductDetails";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import NotFound from "./pages/NotFound";
+import Blog from "./pages/Blog";
+import BlogDetails from "./pages/BlogDetails";
+import Contact from "./pages/Contact";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsConditions from "./pages/TermsConditions";
 import { AdminLayout } from "./layout/AdminLayout";
 import { DashboardPage } from "./modules/dashboard/DashboardPage";
 import { ProductsPage } from "./modules/products/ProductsPage";
@@ -30,6 +35,11 @@ const App = () => (
           <Route path="/product/:id" element={<ProductDetails />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
+          <Route path="/blog" element={<Blog />} />
+          <Route path="/blog/:id" element={<BlogDetails />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<TermsConditions />} />
           
           {/* Admin Routes */}
           <Route path="/admin" element={<AdminLayout />}>
