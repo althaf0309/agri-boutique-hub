@@ -16,8 +16,8 @@ import {
   LineChart,
   Line,
   PieChart as RechartsPieChart,
+  Pie as RechartsPie,
   Cell,
-  Pie,
   Area,
   AreaChart,
   RadialBarChart,
@@ -241,7 +241,7 @@ export function AnalyticsDashboard() {
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
                   <RechartsPieChart>
-                    <Pie
+                    <RechartsPie
                       data={categoryData}
                       cx="50%"
                       cy="50%"
@@ -253,7 +253,7 @@ export function AnalyticsDashboard() {
                       {categoryData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
-                    </Pie>
+                    </RechartsPie>
                     <Tooltip formatter={(value) => [`${value}%`, "Share"]} />
                   </RechartsPieChart>
                 </ResponsiveContainer>
