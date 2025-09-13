@@ -78,13 +78,13 @@ export function AnalyticsDashboard() {
   const [selectedPeriod, setSelectedPeriod] = useState("week");
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-6 animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Analytics Dashboard</h1>
           <p className="text-muted-foreground">
-            Track sales performance, top products, and vendor analytics
+            Comprehensive insights into your grocery store performance
           </p>
         </div>
         <div className="flex items-center gap-4">
@@ -99,64 +99,80 @@ export function AnalyticsDashboard() {
               <SelectItem value="1y">Last year</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline">
-            <Calendar className="h-4 w-4 mr-2" />
+          <Button variant="outline" className="gap-2">
+            <Calendar className="h-4 w-4" />
             Custom Range
           </Button>
         </div>
       </div>
 
-      {/* KPI Cards */}
+      {/* Enhanced KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
+        <Card className="hover-scale animate-fade-in border-l-4 border-l-green-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Sales</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <div className="p-2 bg-green-50 rounded-lg">
+              <DollarSign className="h-4 w-4 text-green-600" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">₹1,47,000</div>
-            <p className="text-xs text-muted-foreground">
-              <span className="text-green-600">+12.5%</span> from last month
-            </p>
+            <div className="flex items-center gap-1 text-xs">
+              <TrendingUp className="h-3 w-3 text-green-500" />
+              <span className="text-green-600 font-medium">+12.5%</span>
+              <span className="text-muted-foreground">from last month</span>
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover-scale animate-fade-in border-l-4 border-l-blue-500" style={{ animationDelay: "100ms" }}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
+            <div className="p-2 bg-blue-50 rounded-lg">
+              <Package className="h-4 w-4 text-blue-600" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">2,100</div>
-            <p className="text-xs text-muted-foreground">
-              <span className="text-green-600">+8.2%</span> from last month
-            </p>
+            <div className="flex items-center gap-1 text-xs">
+              <TrendingUp className="h-3 w-3 text-green-500" />
+              <span className="text-green-600 font-medium">+8.2%</span>
+              <span className="text-muted-foreground">from last month</span>
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover-scale animate-fade-in border-l-4 border-l-purple-500" style={{ animationDelay: "200ms" }}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Customers</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <div className="p-2 bg-purple-50 rounded-lg">
+              <Users className="h-4 w-4 text-purple-600" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">480</div>
-            <p className="text-xs text-muted-foreground">
-              <span className="text-green-600">+15.3%</span> from last month
-            </p>
+            <div className="flex items-center gap-1 text-xs">
+              <TrendingUp className="h-3 w-3 text-green-500" />
+              <span className="text-green-600 font-medium">+15.3%</span>
+              <span className="text-muted-foreground">from last month</span>
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover-scale animate-fade-in border-l-4 border-l-orange-500" style={{ animationDelay: "300ms" }}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Avg. Order Value</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <div className="p-2 bg-orange-50 rounded-lg">
+              <TrendingUp className="h-4 w-4 text-orange-600" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">₹700</div>
-            <p className="text-xs text-muted-foreground">
-              <span className="text-green-600">+4.1%</span> from last month
-            </p>
+            <div className="flex items-center gap-1 text-xs">
+              <TrendingUp className="h-3 w-3 text-green-500" />
+              <span className="text-green-600 font-medium">+4.1%</span>
+              <span className="text-muted-foreground">from last month</span>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -173,11 +189,10 @@ export function AnalyticsDashboard() {
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Sales Timeline */}
-            <Card>
+            <Card className="animate-fade-in" style={{ animationDelay: "400ms" }}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5" />
+                  <BarChart3 className="h-5 w-5 text-blue-600" />
                   Sales Timeline
                 </CardTitle>
                 <div className="flex gap-2">
