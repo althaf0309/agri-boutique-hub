@@ -73,9 +73,11 @@ export default function Header() {
               >
                 Contact
               </Link>
-              <Button variant="ghost" size="sm" className="text-sm">
-                Sign In
-              </Button>
+              <Link to="/login">
+                <Button variant="ghost" size="sm" className="text-sm">
+                  Sign In
+                </Button>
+              </Link>
               
               {/* Language Toggle */}
               <DropdownMenu>
