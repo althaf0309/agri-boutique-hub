@@ -179,7 +179,7 @@ export function ProductsPage() {
                   <TableRow key={product.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        {product.images[0] && (
+                        {product.images && product.images[0] && (
                           <img
                             src={product.images[0].image}
                             alt={product.name}
@@ -266,7 +266,7 @@ export function ProductsPage() {
       </Card>
 
       {/* Pagination */}
-      {productsData && (
+      {productsData && productsData.results && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
             Showing {productsData.results.length} of {productsData.count} products

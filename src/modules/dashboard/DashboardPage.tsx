@@ -123,7 +123,7 @@ export function DashboardPage() {
                   <TableRow key={product.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        {product.images[0] && (
+                        {product.images && product.images[0] && (
                           <img
                             src={product.images[0].image}
                             alt={product.name}
