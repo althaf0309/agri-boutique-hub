@@ -65,12 +65,12 @@ export function ProductsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Products</h1>
-          <p className="text-muted-foreground">Manage your product catalog</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Products</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">Manage your product catalog</p>
         </div>
-        <Button asChild>
+        <Button asChild className="w-full sm:w-auto">
           <Link to="/admin/products/new">
             <Plus className="mr-2 h-4 w-4" />
             Add Product
@@ -84,8 +84,8 @@ export function ProductsPage() {
           <CardTitle>Filters</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            <div className="relative">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            <div className="relative sm:col-span-2 md:col-span-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search products..."
@@ -155,18 +155,19 @@ export function ProductsPage() {
       {/* Products Table */}
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Product</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Stock</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Product</TableHead>
+                  <TableHead className="hidden sm:table-cell">Category</TableHead>
+                  <TableHead>Price</TableHead>
+                  <TableHead className="hidden md:table-cell">Stock</TableHead>
+                  <TableHead className="hidden lg:table-cell">Status</TableHead>
+                  <TableHead className="hidden xl:table-cell">Created</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
@@ -176,25 +177,25 @@ export function ProductsPage() {
                 </TableRow>
               ) : productsData?.results ? (
                 productsData.results.map((product) => (
-                  <TableRow key={product.id}>
+                  <TableRow>
                     <TableCell>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2 sm:gap-3">
                         {product.images && product.images[0] && (
                           <img
                             src={product.images[0].image}
                             alt={product.name}
-                            className="h-12 w-12 rounded object-cover"
+                            className="h-10 w-10 sm:h-12 sm:w-12 rounded object-cover flex-shrink-0"
                           />
                         )}
-                        <div>
-                          <p className="font-medium">{product.name}</p>
-                          <p className="text-sm text-muted-foreground">
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm sm:text-base truncate">{product.name}</p>
+                          <p className="text-xs sm:text-sm text-muted-foreground truncate">
                             SKU: {product.slug}
                           </p>
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>{product.category.name}</TableCell>
+                    <TableCell className="hidden sm:table-cell">{product.category.name}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
                         {product.discount_percent > 0 && (
@@ -202,14 +203,14 @@ export function ProductsPage() {
                             {formatCurrency(product.price, product.currency)}
                           </span>
                         )}
-                        <span className="font-medium">
+                        <span className="font-medium text-sm">
                           {formatCurrency(product.discounted_price, product.currency)}
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell">
                       <div className="flex items-center gap-2">
-                        <span className={`font-medium ${product.in_stock ? 'text-green-600' : 'text-red-600'}`}>
+                        <span className={`font-medium text-sm ${product.in_stock ? 'text-green-600' : 'text-red-600'}`}>
                           {product.quantity}
                         </span>
                         <StatusBadge 
@@ -217,37 +218,38 @@ export function ProductsPage() {
                         />
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden lg:table-cell">
                       <div className="flex gap-1 flex-wrap">
                         {product.featured && <StatusBadge status="Featured" />}
                         {product.new_arrival && <StatusBadge status="New" />}
                         {product.limited_stock && <StatusBadge status="Limited" />}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden xl:table-cell text-sm">
                       {dayjs(product.created_at).format("MMM D, YYYY")}
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon" asChild>
+                      <div className="flex items-center gap-1 justify-end">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
                           <Link to={`/admin/products/${product.id}`}>
-                            <Eye className="h-4 w-4" />
+                            <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Link>
                         </Button>
-                        <Button variant="ghost" size="icon" asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
                           <Link to={`/admin/products/${product.id}/edit`}>
-                            <Edit className="h-4 w-4" />
+                            <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Link>
                         </Button>
-                        <Button variant="ghost" size="icon">
-                          <Copy className="h-4 w-4" />
+                        <Button variant="ghost" size="icon" className="h-8 w-8 hidden sm:inline-flex">
+                          <Copy className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
                         <Button 
                           variant="ghost" 
                           size="icon"
+                          className="h-8 w-8"
                           onClick={() => handleDelete(product.id, product.name)}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
                       </div>
                     </TableCell>
@@ -261,22 +263,24 @@ export function ProductsPage() {
                 </TableRow>
               )}
             </TableBody>
-          </Table>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 
       {/* Pagination */}
       {productsData && productsData.results && (
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
             Showing {productsData.results.length} of {productsData.count} products
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <Button 
               variant="outline" 
               size="sm"
               disabled={!productsData.previous}
               onClick={() => setPage(page - 1)}
+              className="flex-1 sm:flex-none"
             >
               Previous
             </Button>
@@ -285,6 +289,7 @@ export function ProductsPage() {
               size="sm"
               disabled={!productsData.next}
               onClick={() => setPage(page + 1)}
+              className="flex-1 sm:flex-none"
             >
               Next
             </Button>

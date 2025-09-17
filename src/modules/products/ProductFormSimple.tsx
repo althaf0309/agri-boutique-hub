@@ -94,47 +94,47 @@ export function ProductForm() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-background border-b px-6 py-4">
+      <header className="sticky top-0 z-10 bg-background border-b px-3 sm:px-6 py-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
             <Button variant="ghost" size="sm" onClick={() => navigate("/admin/products")}>
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <div>
-              <h1 className="text-xl font-semibold">
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-xl font-semibold truncate">
                 {isEditMode ? "Edit Product" : "Add Product"}
               </h1>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             {isEditMode && (
               <>
-                <Button variant="outline" size="sm">
-                  <Eye className="h-4 w-4 mr-2" />
-                  Preview
+                <Button variant="outline" size="sm" className="hidden sm:inline-flex">
+                  <Eye className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Preview</span>
                 </Button>
-                <Button variant="outline" size="sm">
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete
+                <Button variant="outline" size="sm" className="hidden sm:inline-flex">
+                  <Trash2 className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Delete</span>
                 </Button>
               </>
             )}
             <Button variant="outline" size="sm" onClick={() => form.reset()}>
-              <RotateCcw className="h-4 w-4 mr-2" />
-              Discard
+              <RotateCcw className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Discard</span>
             </Button>
             <Button size="sm" onClick={form.handleSubmit(onSubmit)}>
-              <Save className="h-4 w-4 mr-2" />
-              Save
+              <Save className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Save</span>
             </Button>
           </div>
         </div>
       </header>
 
       <Form {...form}>
-        <form className="grid grid-cols-12 gap-6 p-6">
+        <form className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 p-3 sm:p-6">
           {/* Main Content */}
-          <div className="col-span-8 space-y-6">
+          <div className="lg:col-span-8 space-y-4 sm:space-y-6">
             {/* General Information */}
             <Card>
               <CardHeader>
@@ -336,7 +336,7 @@ export function ProductForm() {
           </div>
 
           {/* Sidebar */}
-          <div className="col-span-4 space-y-6">
+          <div className="lg:col-span-4 space-y-4 sm:space-y-6">
             {/* Status Card */}
             <Card>
               <CardHeader>

@@ -126,21 +126,23 @@ export function DashboardPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
             Welcome back! Here's what's happening with your store.
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" className="gap-2">
+        <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+          <Button variant="outline" className="gap-2 flex-1 sm:flex-none">
             <Calendar className="h-4 w-4" />
-            Last 7 days
+            <span className="hidden sm:inline">Last 7 days</span>
+            <span className="sm:hidden">7d</span>
           </Button>
-          <Button className="gap-2">
+          <Button className="gap-2 flex-1 sm:flex-none">
             <BarChart3 className="h-4 w-4" />
-            View Reports
+            <span className="hidden sm:inline">View Reports</span>
+            <span className="sm:hidden">Reports</span>
           </Button>
         </div>
       </div>
@@ -177,29 +179,29 @@ export function DashboardPage() {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Sales Chart */}
         <Card className="lg:col-span-2 animate-fade-in" style={{ animationDelay: "400ms" }}>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
               Sales Overview
             </CardTitle>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="revenue" className="space-y-4">
-              <TabsList>
-                <TabsTrigger value="revenue">Revenue</TabsTrigger>
-                <TabsTrigger value="orders">Orders</TabsTrigger>
-                <TabsTrigger value="customers">Customers</TabsTrigger>
+              <TabsList className="grid grid-cols-3 w-full">
+                <TabsTrigger value="revenue" className="text-xs sm:text-sm">Revenue</TabsTrigger>
+                <TabsTrigger value="orders" className="text-xs sm:text-sm">Orders</TabsTrigger>
+                <TabsTrigger value="customers" className="text-xs sm:text-sm">Customers</TabsTrigger>
               </TabsList>
               
               <TabsContent value="revenue" className="space-y-4">
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={window.innerWidth < 640 ? 250 : 300}>
                   <AreaChart data={salesData}>
                     <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                    <XAxis dataKey="name" />
-                    <YAxis />
+                    <XAxis dataKey="name" tick={{ fontSize: window.innerWidth < 640 ? 10 : 12 }} />
+                    <YAxis tick={{ fontSize: window.innerWidth < 640 ? 10 : 12 }} />
                     <Tooltip 
                       formatter={(value) => [`₹${value}`, "Revenue"]}
                       labelStyle={{ color: "#000" }}
@@ -271,18 +273,18 @@ export function DashboardPage() {
         {/* Category Distribution */}
         <Card className="animate-fade-in" style={{ animationDelay: "500ms" }}>
           <CardHeader>
-            <CardTitle>Category Sales</CardTitle>
-            <p className="text-sm text-muted-foreground">Sales by product category</p>
+            <CardTitle className="text-base sm:text-lg">Category Sales</CardTitle>
+            <p className="text-xs sm:text-sm text-muted-foreground">Sales by product category</p>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
+            <ResponsiveContainer width="100%" height={window.innerWidth < 640 ? 180 : 200}>
               <PieChart>
                 <Pie
                   data={categoryData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={40}
-                  outerRadius={80}
+                  innerRadius={window.innerWidth < 640 ? 30 : 40}
+                  outerRadius={window.innerWidth < 640 ? 60 : 80}
                   paddingAngle={5}
                   dataKey="value"
                 >
@@ -387,26 +389,26 @@ export function DashboardPage() {
       {/* Quick Actions */}
       <Card className="animate-fade-in" style={{ animationDelay: "800ms" }}>
         <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-          <p className="text-sm text-muted-foreground">Common tasks and shortcuts</p>
+          <CardTitle className="text-base sm:text-lg">Quick Actions</CardTitle>
+          <p className="text-xs sm:text-sm text-muted-foreground">Common tasks and shortcuts</p>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Button variant="outline" className="h-20 flex-col gap-2 hover-scale">
-              <Package className="h-5 w-5" />
-              <span>Add Product</span>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <Button variant="outline" className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 hover-scale">
+              <Package className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="text-xs sm:text-sm">Add Product</span>
             </Button>
-            <Button variant="outline" className="h-20 flex-col gap-2 hover-scale">
-              <Users className="h-5 w-5" />
-              <span>View Customers</span>
+            <Button variant="outline" className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 hover-scale">
+              <Users className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="text-xs sm:text-sm">View Customers</span>
             </Button>
-            <Button variant="outline" className="h-20 flex-col gap-2 hover-scale">
-              <ShoppingCart className="h-5 w-5" />
-              <span>Manage Orders</span>
+            <Button variant="outline" className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 hover-scale">
+              <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="text-xs sm:text-sm">Manage Orders</span>
             </Button>
-            <Button variant="outline" className="h-20 flex-col gap-2 hover-scale">
-              <BarChart3 className="h-5 w-5" />
-              <span>Analytics</span>
+            <Button variant="outline" className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 hover-scale">
+              <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="text-xs sm:text-sm">Analytics</span>
             </Button>
           </div>
         </CardContent>
