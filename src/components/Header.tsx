@@ -36,7 +36,7 @@ export default function Header() {
               <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
                 <span className="text-primary-foreground font-bold text-sm">PJK</span>
               </div>
-              <span className="font-bold text-lg text-primary hidden sm:block">Prakrithi Jaiva Kalavara</span>
+              <span className="font-bold text-sm sm:text-lg text-primary whitespace-nowrap">Prakrithi Jaiva Kalavara</span>
             </Link>
 
             {/* Right Links */}
@@ -136,6 +136,13 @@ export default function Header() {
               />
             </div>
 
+            {/* Shop Button */}
+            <Link to="/shop">
+              <Button variant="outline" size="sm" className="hidden sm:flex">
+                Shop
+              </Button>
+            </Link>
+
             {/* User & Cart */}
             <Button variant="ghost" size="sm">
               <User className="w-5 h-5" />
@@ -154,6 +161,15 @@ export default function Header() {
         {/* Mobile Menu */}
         {isMenuOpen && (
           <div className="md:hidden mt-4 pb-4 border-t border-border">
+            {/* Mobile Shop Button */}
+            <div className="mt-4">
+              <Link to="/shop" onClick={() => setIsMenuOpen(false)}>
+                <Button variant="outline" size="sm" className="w-full">
+                  Shop All Products
+                </Button>
+              </Link>
+            </div>
+            
             <div className="flex flex-col space-y-2 mt-4">
               {categories.map((category) => (
                 <Link
