@@ -65,7 +65,7 @@ export default function FeaturesCircle() {
       <div className="container mx-auto px-4 sm:px-6 relative z-10">
         <div className="text-center mb-12 sm:mb-16 lg:mb-20">
           <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold mb-4 sm:mb-6 lg:mb-8">
-            <span className="text-gradient">Why Choose AgriFresh?</span>
+            <span className="text-gradient">Why Choose Prakrithi Jaiva Kalavara?</span>
           </h2>
           <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-muted-foreground max-w-4xl mx-auto leading-relaxed px-4">
             Experience the difference with our commitment to quality, sustainability, and customer satisfaction
@@ -83,8 +83,8 @@ export default function FeaturesCircle() {
               <div className="absolute inset-2 bg-gradient-to-br from-primary via-accent to-highlight rounded-full shadow-xl">
                 <div className="absolute inset-3 bg-white/98 backdrop-blur-sm rounded-full flex items-center justify-center shadow-inner">
                   <div className="text-center">
-                    <div className="text-3xl sm:text-4xl font-bold mb-2 text-gradient">AF</div>
-                    <div className="text-sm sm:text-base font-bold text-primary mb-1">AgriFresh</div>
+                    <div className="text-3xl sm:text-4xl font-bold mb-2 text-gradient">PJK</div>
+                    <div className="text-sm sm:text-base font-bold text-primary mb-1">Prakrithi Jaiva Kalavara</div>
                     <div className="text-xs sm:text-sm text-muted-foreground px-2">Premium Organic</div>
                   </div>
                 </div>
@@ -129,8 +129,8 @@ export default function FeaturesCircle() {
                 {/* Inner content circle */}
                 <div className="absolute inset-6 bg-white/98 backdrop-blur-sm rounded-full flex items-center justify-center shadow-inner border-4 border-white/50">
                   <div className="text-center">
-                    <div className="text-6xl md:text-8xl font-bold mb-4 text-gradient animate-pulse">AF</div>
-                    <div className="text-2xl md:text-3xl font-bold text-primary mb-2">AgriFresh</div>
+                    <div className="text-6xl md:text-8xl font-bold mb-4 text-gradient animate-pulse">PJK</div>
+                    <div className="text-2xl md:text-3xl font-bold text-primary mb-2">Prakrithi Jaiva Kalavara</div>
                     <div className="text-base md:text-lg text-muted-foreground px-6 leading-tight">
                       Premium Organic Excellence
                     </div>

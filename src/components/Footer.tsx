@@ -36,9 +36,9 @@ export default function Footer() {
             <div>
               <div className="flex items-center space-x-2 mb-4">
                 <div className="w-8 h-8 bg-accent rounded-full flex items-center justify-center">
-                  <span className="text-accent-foreground font-bold text-sm">AF</span>
+                  <span className="text-accent-foreground font-bold text-sm">PJK</span>
                 </div>
-                <span className="font-bold text-lg">AgriFresh</span>
+                <span className="font-bold text-lg">Prakrithi Jaiva Kalavara</span>
               </div>
               <p className="text-primary-foreground/80 mb-4 leading-relaxed">
                 Your trusted partner for premium organic products sourced directly from sustainable farms across India.
@@ -119,7 +119,7 @@ export default function Footer() {
                 </div>
                 <div className="flex items-center space-x-3">
                   <Mail className="w-5 h-5 text-accent flex-shrink-0" />
-                  <span className="text-primary-foreground/80">hello@agrifresh.com</span>
+                  <span className="text-primary-foreground/80">hello@prakrithi.com</span>
                 </div>
               </div>
             </div>
@@ -132,7 +132,7 @@ export default function Footer() {
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <p className="text-primary-foreground/80 text-sm">
-              © 2024 AgriFresh. All rights reserved.
+              © 2024 Prakrithi Jaiva Kalavara. All rights reserved.
             </p>
             <div className="flex space-x-6 text-sm">
               <Link to="/privacy" className="text-primary-foreground/80 hover:text-accent transition-colors">

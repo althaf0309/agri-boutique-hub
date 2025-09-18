@@ -19,7 +19,7 @@ export function AdminTopbar() {
         <div className="flex items-center gap-2 sm:gap-4">
           <SidebarTrigger className="h-8 w-8" />
           <h1 className="text-base sm:text-lg font-semibold text-gray-900 truncate">
-            AgriFresh Admin
+            Prakrithi Jaiva Kalavara Admin
           </h1>
         </div>
         
