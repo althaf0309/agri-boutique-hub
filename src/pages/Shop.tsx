@@ -217,10 +217,10 @@ export default function Shop() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <Header />
       
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-8 max-w-full">
         {/* Breadcrumbs */}
         <nav className="text-sm text-muted-foreground mb-6">
           <span>Home</span> <span className="mx-2">/</span> <span className="text-primary">Shop</span>
@@ -343,12 +343,12 @@ export default function Shop() {
             </p>
 
             {/* Mobile Carousel View */}
-            <div className="block sm:hidden relative mb-8">
+            <div className="block sm:hidden relative mb-8 overflow-hidden max-w-full">
               {/* Navigation Arrows */}
               <Button
                 variant="ghost"
                 size="sm"
-                className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm shadow-md hover:bg-white border-0 rounded-full w-10 h-10 p-0"
+                className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm shadow-md hover:bg-white border-0 rounded-full w-10 h-10 p-0"
                 onClick={scrollLeft}
                 disabled={currentIndex === 0}
               >
@@ -358,7 +358,7 @@ export default function Shop() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm shadow-md hover:bg-white border-0 rounded-full w-10 h-10 p-0"
+                className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm shadow-md hover:bg-white border-0 rounded-full w-10 h-10 p-0"
                 onClick={scrollRight}
                 disabled={currentIndex >= sampleProducts.length - 1}
               >
@@ -368,7 +368,8 @@ export default function Shop() {
               {/* Carousel Container */}
               <div 
                 ref={carouselRef}
-                className="product-carousel px-12"
+                className="product-carousel px-12 max-w-full"
+                style={{ maxWidth: '100vw', boxSizing: 'border-box' }}
               >
                 {sampleProducts.map((product) => (
                   <div key={product.id} className="product-carousel-item">
@@ -382,7 +383,7 @@ export default function Shop() {
               </div>
               
               {/* Enhanced Scroll Indicators */}
-              <div className="carousel-dots">
+              <div className="carousel-dots max-w-full">
                 {sampleProducts.map((_, index) => (
                   <div 
                     key={index} 
