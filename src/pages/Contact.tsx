@@ -95,8 +95,8 @@ export default function Contact() {
                     <div>
                       <h3 className="font-semibold text-foreground mb-2">Email</h3>
                       <p className="text-muted-foreground">
-                        hello@agrifresh.com<br />
-                        support@agrifresh.com
+                        hello@prakrthijaivakalavara.com<br />
+                        support@prakrthijaivakalavara.com
                       </p>
                     </div>
                   </div>

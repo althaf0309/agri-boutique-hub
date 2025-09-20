@@ -17,10 +17,10 @@ const productData = {
   rating: 4.5,
   reviewCount: 123,
   images: [
-    "/api/placeholder/500/500",
-    "/api/placeholder/500/500", 
-    "/api/placeholder/500/500",
-    "/api/placeholder/500/500"
+    "/src/assets/product-rice.jpg",
+    "/src/assets/product-rice.jpg", 
+    "/src/assets/product-rice.jpg",
+    "/src/assets/product-rice.jpg"
   ],
   category: "Organic Grocery",
   organic: true,
@@ -80,7 +80,7 @@ const relatedProducts = [
     price: 450,
     rating: 4.8,
     reviewCount: 89,
-    image: "/api/placeholder/300/300",
+    image: "/src/assets/product-coconut-oil.jpg",
     category: "Organic Grocery",
     weight: "1L",
     organic: true,
@@ -94,7 +94,7 @@ const relatedProducts = [
     originalPrice: 320,
     rating: 4.6,
     reviewCount: 156,
-    image: "/api/placeholder/300/300",
+    image: "/src/assets/product-turmeric.jpg",
     category: "Ruchira",
     weight: "500g",
     organic: true,
@@ -180,7 +180,7 @@ export default function ProductDetails() {
           <div className="space-y-6">
             <div>
               <p className="text-muted-foreground mb-2">{productData.category}</p>
-              <h1 className="text-3xl font-bold text-primary mb-4">{productData.name}</h1>
+              <h1 className="text-3xl font-bold text-primary mb-4 font-heading">{productData.name}</h1>
               
               {/* Rating */}
               <div className="flex items-center gap-2 mb-4">

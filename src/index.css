@@ -124,6 +124,14 @@
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
+  .font-heading {
+    font-family: 'Playfair Display', serif;
+  }
+
+  .font-body {
+    font-family: 'Inter', sans-serif;
+  }
+
   /* Enhanced scrollbar */
   ::-webkit-scrollbar {
     width: 8px;

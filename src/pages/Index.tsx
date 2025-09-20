@@ -23,7 +23,7 @@ const Index = () => {
         {/* Main Heading Section */}
         <section className="py-8 sm:py-12 lg:py-16 text-center">
           <div className="container mx-auto px-4 sm:px-6">
-            <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-primary mb-4 sm:mb-6 leading-tight">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold font-heading text-primary mb-4 sm:mb-6 leading-tight">
               Premium Organic Products
             </h1>
             <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed px-4">
@@ -45,7 +45,7 @@ const Index = () => {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent flex items-end">
                   <div className="p-6 sm:p-8 lg:p-12 text-white w-full">
-                    <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
+                    <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold font-heading mb-4">
                       Farm Fresh Organic Goodness
                     </h2>
                     <p className="text-lg sm:text-xl md:text-2xl mb-6 opacity-90 max-w-3xl mx-auto">
@@ -72,7 +72,7 @@ const Index = () => {
         {/* Listing Products Section */}
         <section className="py-6 sm:py-8 bg-muted/30">
           <div className="container mx-auto px-4 sm:px-6 text-center">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-primary mb-3 sm:mb-4">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold font-heading text-primary mb-3 sm:mb-4">
               Listing the Product
             </h2>
             <p className="text-base sm:text-lg text-muted-foreground mb-6 sm:mb-8 px-4">
@@ -88,7 +88,7 @@ const Index = () => {
         <section className="py-8 sm:py-12 lg:py-16 bg-accent/10">
           <div className="container mx-auto px-4 sm:px-6">
             <div className="max-w-4xl mx-auto text-center">
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-primary mb-4 sm:mb-6">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold font-heading text-primary mb-4 sm:mb-6">
                 Best Seller of the Month
               </h2>
               <div className="bg-card rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 card-farm">
@@ -102,7 +102,7 @@ const Index = () => {
                   </div>
                   <div className="text-center md:text-left space-y-3 sm:space-y-4 order-2 md:order-none">
                     <div className="feature-badge inline-block">Best Seller</div>
-                    <h3 className="text-xl sm:text-2xl font-bold text-primary">
+                    <h3 className="text-xl sm:text-2xl font-bold font-heading text-primary">
                       Organic Honey Bundle Pack
                     </h3>
                     <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
