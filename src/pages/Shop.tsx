@@ -19,7 +19,7 @@ const sampleProducts = [
     originalPrice: 950,
     rating: 4.5,
     reviewCount: 123,
-    image: "/api/placeholder/300/300",
+    image: "/src/assets/product-rice.jpg",
     category: "Organic Grocery",
     weight: "5kg",
     organic: true,
@@ -32,14 +32,92 @@ const sampleProducts = [
     price: 450,
     rating: 4.8,
     reviewCount: 89,
-    image: "/api/placeholder/300/300",
+    image: "/src/assets/product-coconut-oil.jpg",
     category: "Organic Grocery",
     weight: "1L",
     organic: true,
     inStock: true,
     description: "Pure cold pressed coconut oil from Kerala"
   },
-  // Add more products...
+  {
+    id: 3,
+    name: "Pure Honey",
+    price: 650,
+    originalPrice: 750,
+    rating: 4.7,
+    reviewCount: 156,
+    image: "/src/assets/product-honey.jpg",
+    category: "Organic Grocery",
+    weight: "500g",
+    organic: true,
+    inStock: true,
+    description: "Raw unprocessed honey from organic bee farms"
+  },
+  {
+    id: 4,
+    name: "Organic Turmeric Powder",
+    price: 280,
+    rating: 4.6,
+    reviewCount: 92,
+    image: "/src/assets/product-turmeric.jpg",
+    category: "Organic Grocery",
+    weight: "250g",
+    organic: true,
+    inStock: true,
+    description: "Fresh ground turmeric powder with high curcumin content"
+  },
+  {
+    id: 5,
+    name: "Aloe Vera Gel",
+    price: 320,
+    rating: 4.4,
+    reviewCount: 78,
+    image: "/src/assets/product-aloe-gel.jpg",
+    category: "Personal Care",
+    weight: "200ml",
+    organic: true,
+    inStock: true,
+    description: "Pure aloe vera gel for skin and hair care"
+  },
+  {
+    id: 6,
+    name: "Neem Oil",
+    price: 180,
+    rating: 4.3,
+    reviewCount: 64,
+    image: "/src/assets/product-neem-oil.jpg",
+    category: "Personal Care",
+    weight: "100ml",
+    organic: true,
+    inStock: true,
+    description: "Cold pressed neem oil for natural skincare"
+  },
+  {
+    id: 7,
+    name: "Fresh Spinach",
+    price: 40,
+    rating: 4.8,
+    reviewCount: 234,
+    image: "/src/assets/product-spinach.jpg",
+    category: "Fruits & Vegetables",
+    weight: "500g",
+    organic: true,
+    inStock: true,
+    description: "Fresh organic spinach leaves picked daily"
+  },
+  {
+    id: 8,
+    name: "Tomato Seeds",
+    price: 120,
+    rating: 4.5,
+    reviewCount: 45,
+    image: "/src/assets/product-tomato-seeds.jpg",
+    category: "Plant Nursery",
+    weight: "10g",
+    organic: true,
+    inStock: true,
+    description: "Organic heirloom tomato seeds for home gardening"
+  }
 ];
 
 const categories = [
