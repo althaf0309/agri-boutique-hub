@@ -144,9 +144,9 @@ export default function Header() {
             </Link>
 
             {/* User & Cart */}
-            <Button variant="ghost" size="sm">
+            {/* <Button variant="ghost" size="sm">
               <User className="w-5 h-5" />
-            </Button>
+            </Button> */}
             <Link to="/cart">
               <Button variant="ghost" size="sm" className="relative">
                 <ShoppingCart className="w-5 h-5" />
