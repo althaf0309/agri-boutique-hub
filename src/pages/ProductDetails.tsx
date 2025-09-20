@@ -17,10 +17,10 @@ const productData = {
   rating: 4.5,
   reviewCount: 123,
   images: [
-    "/src/assets/product-rice.jpg",
-    "/src/assets/product-rice.jpg", 
-    "/src/assets/product-rice.jpg",
-    "/src/assets/product-rice.jpg"
+    "/assets/product-rice.jpg",
+    "/assets/product-rice.jpg", 
+    "/assets/product-rice.jpg",
+    "/assets/product-rice.jpg"
   ],
   category: "Organic Grocery",
   organic: true,
@@ -80,7 +80,7 @@ const relatedProducts = [
     price: 450,
     rating: 4.8,
     reviewCount: 89,
-    image: "/src/assets/product-coconut-oil.jpg",
+    image: "/assets/product-coconut-oil.jpg",
     category: "Organic Grocery",
     weight: "1L",
     organic: true,
@@ -89,17 +89,31 @@ const relatedProducts = [
   },
   {
     id: 3,
+    name: "Pure Honey",
+    price: 650,
+    originalPrice: 750,
+    rating: 4.7,
+    reviewCount: 156,
+    image: "/assets/product-honey.jpg",
+    category: "Organic Grocery",
+    weight: "500g",
+    organic: true,
+    inStock: true,
+    description: "Raw unprocessed honey from organic bee farms"
+  },
+  {
+    id: 4,
     name: "Organic Turmeric Powder",
     price: 280,
     originalPrice: 320,
     rating: 4.6,
-    reviewCount: 156,
-    image: "/src/assets/product-turmeric.jpg",
-    category: "Ruchira",
-    weight: "500g",
+    reviewCount: 92,
+    image: "/assets/product-turmeric.jpg",
+    category: "Organic Grocery",
+    weight: "250g",
     organic: true,
     inStock: true,
-    description: "High curcumin organic turmeric powder"
+    description: "Fresh ground turmeric powder with high curcumin content"
   }
 ];
 
@@ -152,7 +166,9 @@ export default function ProductDetails() {
           <div className="space-y-4">
             <div className="aspect-square bg-muted/50 rounded-lg overflow-hidden">
               <img
-                src={productData.images[selectedImage]}
+                src={productData.images[selectedImage].startsWith('/src/') ? 
+                     productData.images[selectedImage].replace('/src/', '/') : 
+                     productData.images[selectedImage]}
                 alt={productData.name}
                 className="w-full h-full object-cover"
               />
@@ -167,7 +183,7 @@ export default function ProductDetails() {
                   }`}
                 >
                   <img
-                    src={image}
+                    src={image.startsWith('/src/') ? image.replace('/src/', '/') : image}
                     alt={`${productData.name} ${index + 1}`}
                     className="w-full h-full object-cover"
                   />
