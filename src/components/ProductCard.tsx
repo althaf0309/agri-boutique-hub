@@ -53,7 +53,7 @@ export default function ProductCard({ product, onAddToCart, onQuickView }: Produ
         {/* Image Container */}
         <div className="relative aspect-square mb-3 sm:mb-4 overflow-hidden rounded-lg bg-muted/50">
           <img
-            src={product.image}
+            src={product.image.startsWith('/src/') ? product.image.replace('/src/', '/') : product.image}
             alt={product.name}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
@@ -77,28 +77,28 @@ export default function ProductCard({ product, onAddToCart, onQuickView }: Produ
             )}
           </div>
 
-          {/* Action Buttons */}
-          <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          {/* Action Buttons - Mobile: Always visible, Desktop: On hover */}
+          <div className="absolute top-2 sm:top-3 right-2 sm:right-3 flex flex-col gap-1 sm:gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300">
             <Button
               size="sm"
               variant="secondary"
-              className="w-8 h-8 p-0 rounded-full bg-white/90 hover:bg-white"
+              className="w-7 h-7 sm:w-8 sm:h-8 p-0 rounded-full bg-white/90 hover:bg-white shadow-md"
               onClick={handleWishlist}
             >
-              <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-red-500 text-red-500' : ''}`} />
+              <Heart className={`w-3 h-3 sm:w-4 sm:h-4 ${isWishlisted ? 'fill-red-500 text-red-500' : ''}`} />
             </Button>
             <Button
               size="sm"
               variant="secondary"
-              className="w-8 h-8 p-0 rounded-full bg-white/90 hover:bg-white"
+              className="w-7 h-7 sm:w-8 sm:h-8 p-0 rounded-full bg-white/90 hover:bg-white shadow-md"
               onClick={handleQuickView}
             >
-              <Eye className="w-4 h-4" />
+              <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
             </Button>
           </div>
 
-          {/* Quick Add to Cart - appears on hover */}
-          <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          {/* Quick Add to Cart - Desktop only, appears on hover */}
+          <div className="hidden sm:block absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
             <Button
               onClick={handleAddToCart}
               disabled={!product.inStock}
@@ -106,6 +106,19 @@ export default function ProductCard({ product, onAddToCart, onQuickView }: Produ
             >
               <ShoppingCart className="w-4 h-4 mr-2" />
               Add to Cart
+            </Button>
+          </div>
+
+          {/* Mobile Add to Cart - Always visible at bottom */}
+          <div className="sm:hidden absolute bottom-2 left-2 right-2">
+            <Button
+              onClick={handleAddToCart}
+              disabled={!product.inStock}
+              size="sm"
+              className="w-full btn-accent-farm text-xs"
+            >
+              <ShoppingCart className="w-3 h-3 mr-1" />
+              Add
             </Button>
           </div>
         </div>
