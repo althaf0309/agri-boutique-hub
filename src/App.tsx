@@ -20,8 +20,18 @@ import TermsConditions from "./pages/TermsConditions";
 import { AdminLayout } from "./layout/AdminLayout";
 import { DashboardPage } from "./modules/dashboard/DashboardPage";
 import { ProductsPage } from "./modules/products/ProductsPage";
-import { GroceryProductForm } from "./modules/products/GroceryProductForm";
+import { OrdersPage } from "./modules/orders/OrdersPage";
+import { OrderDetailPage } from "./modules/orders/OrderDetailPage";
+import { ReviewsPage } from "./modules/reviews/ReviewsPage";
+import { ContactsPage } from "./modules/contacts/ContactsPage";
+// 👉 use the simple form you pasted
+import { ProductForm } from "./modules/products/ProductFormSimple";
 import { AnalyticsDashboard } from "./modules/analytics/AnalyticsDashboard";
+import { CategoriesPage } from "./modules/categories/CategoriesPage";
+import { CategoryFormPage } from "./modules/categories/CategoryFormPage";
+
+
+
 
 const queryClient = new QueryClient();
 
@@ -46,21 +56,24 @@ const App = () => (
           <Route path="/register" element={<Register />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<TermsConditions />} />
-          
+
           {/* Admin Routes */}
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<DashboardPage />} />
             <Route path="products" element={<ProductsPage />} />
-            <Route path="products/new" element={<GroceryProductForm />} />
-            <Route path="products/:id/edit" element={<GroceryProductForm />} />
+            <Route path="products/new" element={<ProductForm />} />
+            <Route path="products/:id/edit" element={<ProductForm />} />
             <Route path="analytics" element={<AnalyticsDashboard />} />
-            <Route path="categories" element={<div>Categories coming soon...</div>} />
-            <Route path="orders" element={<div>Orders coming soon...</div>} />
-            <Route path="reviews" element={<div>Reviews coming soon...</div>} />
-            <Route path="contact" element={<div>Contact coming soon...</div>} />
+           <Route path="categories" element={<CategoriesPage />} />
+  <Route path="categories/new" element={<CategoryFormPage />} />
+  <Route path="categories/:id/edit" element={<CategoryFormPage />} />
+           <Route path="orders" element={<OrdersPage />} />
+<Route path="orders/:id" element={<OrderDetailPage />} />
+<Route path="reviews" element={<ReviewsPage />} />
+<Route path="contact" element={<ContactsPage />} />
             <Route path="*" element={<div>Admin page not found</div>} />
           </Route>
-          
+
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

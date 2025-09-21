@@ -1,64 +1,167 @@
-import { useState } from "react";
-import { Plus, Search, Eye, Edit, Copy, Trash2 } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Plus, Search, Eye, Edit, Copy, Trash2, Leaf, Refrigerator } from "lucide-react";
 import { Link } from "react-router-dom";
+import dayjs from "dayjs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { StatusBadge } from "@/components/admin/StatusBadge";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { useProducts, useCategories, useDeleteProduct } from "@/api/hooks/products";
+import { useProducts, useCategories, useDeleteProduct, useCreateProduct } from "@/api/hooks/products";
 import { useToast } from "@/hooks/use-toast";
-import dayjs from "dayjs";
+import type { Product } from "@/types";
+import { StatusBadge } from "@/components/admin/StatusBadge";
+
+// ---- helpers --------------------------------------------------
+
+const INR = "INR";
+const symbols: Record<string, string> = { INR: "₹", USD: "$", AED: "د.إ" };
+
+const formatCurrency = (amount?: string, currency?: string) => {
+  if (!amount) return "—";
+  const cur = currency || INR;
+  const sym = symbols[cur] || cur;
+  return `${sym} ${Number.parseFloat(amount).toFixed(2)}`;
+};
+
+const packLabel = (p: Product) => {
+  const qty = p.default_pack_qty;
+  const uom = p.default_uom;
+  if (!qty || !uom) return "—";
+  return `${qty}${uom}`;
+};
+
+// return per-unit price as string (₹/kg or ₹/L), or null if not applicable
+const pricePerUnit = (p: Product): string | null => {
+  const uom = p.default_uom;
+  const qtyStr = p.default_pack_qty;
+  const priceStr = p.discounted_price || p.price;
+
+  if (!uom || !qtyStr || !priceStr) return null;
+  const qty = Number.parseFloat(qtyStr as any);
+  const price = Number.parseFloat(String(priceStr));
+  if (!Number.isFinite(qty) || !Number.isFinite(price) || qty <= 0) return null;
+
+  // gram/kg → per kg
+  if (uom === "G") {
+    const kg = qty / 1000;
+    if (kg <= 0) return null;
+    return `${formatCurrency(String(price / kg), p.currency)} / kg`;
+  }
+  if (uom === "KG") {
+    return `${formatCurrency(String(price / qty), p.currency)} / kg`;
+  }
+
+  // ml/l → per liter
+  if (uom === "ML") {
+    const l = qty / 1000;
+    if (l <= 0) return null;
+    return `${formatCurrency(String(price / l), p.currency)} / L`;
+  }
+  if (uom === "L") {
+    return `${formatCurrency(String(price / qty), p.currency)} / L`;
+  }
+
+  return null; // PCS/BUNDLE
+};
+
+// quick keyword match for grocery categories
+const isGroceryCat = (name: string) => {
+  const n = name.toLowerCase();
+  return ["food","grocery","agriculture","vegetable","fruit","spice","grain","dairy","beverage"].some(k => n.includes(k));
+};
+
+// ---- page -----------------------------------------------------
 
 export function ProductsPage() {
+  // filters / state
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
-  const [inStock, setInStock] = useState<boolean | undefined>(undefined);
-  const [featured, setFeatured] = useState<boolean | undefined>(undefined);
-  const [page, setPage] = useState(1);
+  const [inStock, setInStock] = useState<string>("all");        // "all" | "true" | "false"
+  const [featured, setFeatured] = useState<string>("all");       // "all" | "true" | "false"
+  const [organic, setOrganic] = useState<string>("all");         // "all" | "true" | "false"
+  const [perishable, setPerishable] = useState<string>("all");   // "all" | "true" | "false"
+  const [uom, setUom] = useState<string>("all");                 // "all" | PCS | G | KG | ML | L | BUNDLE
   const [ordering, setOrdering] = useState("-created_at");
+  const [page, setPage] = useState(1);
 
-  const { data: productsData, isLoading } = useProducts({
+  const { data: categories = [] } = useCategories();
+  const groceryCategories = useMemo(
+    () => (Array.isArray(categories) ? categories.filter(c => isGroceryCat(c.name)) : []),
+    [categories]
+  );
+
+  // assemble params for DRF; it’s fine if backend ignores some
+  const params: Record<string, any> = {
     page,
-    search,
-    category: category === "all" ? "" : category,
-    in_stock: inStock,
-    featured,
+    search: search || undefined,
+    category: category !== "all" ? category : undefined,
+    in_stock: inStock !== "all" ? inStock : undefined,
+    featured: featured !== "all" ? featured : undefined,
+    is_organic: organic !== "all" ? organic : undefined,
+    is_perishable: perishable !== "all" ? perishable : undefined,
+    default_uom: uom !== "all" ? uom : undefined,
     ordering,
-  });
-
-  const { data: categories } = useCategories();
-  const deleteProduct = useDeleteProduct();
-  const { toast } = useToast();
-
-  const formatCurrency = (amount: string, currency: string) => {
-    const symbols = { INR: "₹", USD: "$", AED: "د.إ" };
-    return `${symbols[currency as keyof typeof symbols] || currency} ${amount}`;
   };
 
-  const handleDelete = async (id: number, name: string) => {
-    if (confirm(`Are you sure you want to delete "${name}"?`)) {
-      try {
-        await deleteProduct.mutateAsync(id);
-        toast({
-          title: "Success",
-          description: "Product deleted successfully",
-        });
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to delete product",
-          variant: "destructive",
-        });
-      }
+  const { data: productsData, isLoading } = useProducts(params);
+  const deleteProduct = useDeleteProduct();
+  const createProduct = useCreateProduct();
+  const { toast } = useToast();
+
+  const list: Product[] = productsData?.results ?? productsData ?? [];
+
+  const onDelete = async (id: number, name: string) => {
+    if (!confirm(`Delete "${name}" permanently?`)) return;
+    try {
+      await deleteProduct.mutateAsync({ id });
+      toast({ title: "Product deleted" });
+    } catch {
+      toast({ title: "Failed to delete", variant: "destructive" });
+    }
+  };
+
+  const onDuplicate = async (p: Product) => {
+    try {
+      // copy only simple editable fields; slug will be regenerated by backend
+      const payload: Partial<Product> = {
+        name: `${p.name} (Copy)`,
+        description: p.description ?? "",
+        category_id: p.category_id ?? p.category?.id,
+        vendor_id: p.vendor_id ?? null,
+        store_id: p.store_id ?? null,
+
+        // grocery bits
+        origin_country: (p as any).origin_country ?? "IN",
+        grade: (p as any).grade ?? "",
+        default_uom: (p as any).default_uom ?? "PCS",
+        default_pack_qty: (p as any).default_pack_qty ?? null,
+        is_organic: (p as any).is_organic ?? false,
+        is_perishable: (p as any).is_perishable ?? false,
+        shelf_life_days: (p as any).shelf_life_days ?? null,
+
+        // prices
+        price_inr: p.price_inr ?? "0.00",
+        price_usd: p.price_usd ?? "0.00",
+        aed_pricing_mode: p.aed_pricing_mode ?? "STATIC",
+        price_aed_static: p.price_aed_static ?? "0.00",
+        discount_percent: p.discount_percent ?? 0,
+
+        // flags
+        featured: p.featured ?? false,
+        new_arrival: p.new_arrival ?? false,
+        hot_deal: p.hot_deal ?? false,
+
+        // stock
+        quantity: 0, // duplicate starts with 0 so you can adjust deliberately
+      };
+
+      await createProduct.mutateAsync(payload);
+      toast({ title: "Product duplicated" });
+    } catch (e) {
+      toast({ title: "Duplicate failed", variant: "destructive" });
     }
   };
 
@@ -68,7 +171,7 @@ export function ProductsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Products</h1>
-          <p className="text-muted-foreground">Manage your product catalog</p>
+          <p className="text-muted-foreground">Manage your grocery & catalog items</p>
         </div>
         <Button asChild>
           <Link to="/admin/products/new">
@@ -84,9 +187,10 @@ export function ProductsPage() {
           <CardTitle>Filters</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+            {/* Search */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search products..."
                 value={search}
@@ -94,14 +198,26 @@ export function ProductsPage() {
                 className="pl-10"
               />
             </div>
-            
+
+            {/* Category (grocery-first) */}
             <Select value={category} onValueChange={setCategory}>
               <SelectTrigger>
                 <SelectValue placeholder="All Categories" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
-                {Array.isArray(categories) && categories.map((cat) => (
+                {groceryCategories.length > 0 && (
+                  <>
+                    <div className="px-2 py-1 text-xs text-muted-foreground">Grocery</div>
+                    {groceryCategories.map((cat) => (
+                      <SelectItem key={`g-${cat.id}`} value={cat.id.toString()}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                    <div className="px-2 py-1 text-xs text-muted-foreground">Other</div>
+                  </>
+                )}
+                {(categories || []).map((cat) => (
                   <SelectItem key={cat.id} value={cat.id.toString()}>
                     {cat.name}
                   </SelectItem>
@@ -109,12 +225,23 @@ export function ProductsPage() {
               </SelectContent>
             </Select>
 
-            <Select value={inStock?.toString() || "all"} onValueChange={(value) => 
-              setInStock(value === "all" ? undefined : value === "true")
-            }>
-              <SelectTrigger>
-                <SelectValue placeholder="Stock Status" />
-              </SelectTrigger>
+            {/* UOM */}
+            <Select value={uom} onValueChange={setUom}>
+              <SelectTrigger><SelectValue placeholder="Unit" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All UOM</SelectItem>
+                <SelectItem value="PCS">PCS</SelectItem>
+                <SelectItem value="G">G</SelectItem>
+                <SelectItem value="KG">KG</SelectItem>
+                <SelectItem value="ML">ML</SelectItem>
+                <SelectItem value="L">L</SelectItem>
+                <SelectItem value="BUNDLE">BUNDLE</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Stock */}
+            <Select value={inStock} onValueChange={setInStock}>
+              <SelectTrigger><SelectValue placeholder="Stock" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Stock</SelectItem>
                 <SelectItem value="true">In Stock</SelectItem>
@@ -122,37 +249,43 @@ export function ProductsPage() {
               </SelectContent>
             </Select>
 
-            <Select value={featured?.toString() || "all"} onValueChange={(value) => 
-              setFeatured(value === "all" ? undefined : value === "true")
-            }>
-              <SelectTrigger>
-                <SelectValue placeholder="Featured" />
-              </SelectTrigger>
+            {/* Organic */}
+            <Select value={organic} onValueChange={setOrganic}>
+              <SelectTrigger><SelectValue placeholder="Organic" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Products</SelectItem>
-                <SelectItem value="true">Featured</SelectItem>
-                <SelectItem value="false">Not Featured</SelectItem>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="true">Organic</SelectItem>
+                <SelectItem value="false">Non-Organic</SelectItem>
               </SelectContent>
             </Select>
 
-            <Select value={ordering} onValueChange={setOrdering}>
-              <SelectTrigger>
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
+            {/* Perishable */}
+            <Select value={perishable} onValueChange={setPerishable}>
+              <SelectTrigger><SelectValue placeholder="Perishable" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="true">Perishable</SelectItem>
+                <SelectItem value="false">Non-Perishable</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Ordering */}
+            <Select value={ordering} onValueChange={(v) => { setOrdering(v); setPage(1); }}>
+              <SelectTrigger><SelectValue placeholder="Sort by" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="-created_at">Newest First</SelectItem>
                 <SelectItem value="created_at">Oldest First</SelectItem>
-                <SelectItem value="name">Name A-Z</SelectItem>
-                <SelectItem value="-name">Name Z-A</SelectItem>
-                <SelectItem value="-price">Price High-Low</SelectItem>
-                <SelectItem value="price">Price Low-High</SelectItem>
+                <SelectItem value="name">Name A–Z</SelectItem>
+                <SelectItem value="-name">Name Z–A</SelectItem>
+                <SelectItem value="-price_inr">Price High–Low</SelectItem>
+                <SelectItem value="price_inr">Price Low–High</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </CardContent>
       </Card>
 
-      {/* Products Table */}
+      {/* Table */}
       <Card>
         <CardContent className="p-0">
           <Table>
@@ -160,93 +293,110 @@ export function ProductsPage() {
               <TableRow>
                 <TableHead>Product</TableHead>
                 <TableHead>Category</TableHead>
+                <TableHead>Pack</TableHead>
                 <TableHead>Price</TableHead>
+                <TableHead>Price / Unit</TableHead>
                 <TableHead>Stock</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>Flags</TableHead>
                 <TableHead>Created</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
-                    Loading products...
-                  </TableCell>
-                </TableRow>
-              ) : productsData?.results ? (
-                productsData.results.map((product) => (
-                  <TableRow key={product.id}>
+                <TableRow><TableCell colSpan={9} className="text-center py-8">Loading…</TableCell></TableRow>
+              ) : list.length ? (
+                list.map((p) => (
+                  <TableRow key={p.id}>
+                    {/* Product */}
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        {product.images && product.images[0] && (
-                          <img
-                            src={product.images[0].image}
-                            alt={product.name}
-                            className="h-12 w-12 rounded object-cover"
-                          />
+                        {p.images?.[0]?.image ? (
+                          <img src={p.images[0].image} alt={p.name} className="h-12 w-12 rounded object-cover" />
+                        ) : (
+                          <div className="h-12 w-12 rounded bg-muted" />
                         )}
                         <div>
-                          <p className="font-medium">{product.name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            SKU: {product.slug}
-                          </p>
+                          <p className="font-medium">{p.name}</p>
+                          <p className="text-xs text-muted-foreground">slug: {p.slug}</p>
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>{product.category.name}</TableCell>
+
+                    {/* Category */}
+                    <TableCell>{p.category?.name ?? "—"}</TableCell>
+
+                    {/* Pack */}
+                    <TableCell>{packLabel(p)}</TableCell>
+
+                    {/* Price */}
                     <TableCell>
                       <div className="flex items-center gap-1">
-                        {product.discount_percent > 0 && (
+                        {p.discount_percent > 0 && (
                           <span className="text-xs text-muted-foreground line-through">
-                            {formatCurrency(product.price, product.currency)}
+                            {formatCurrency(p.price, p.currency)}
                           </span>
                         )}
                         <span className="font-medium">
-                          {formatCurrency(product.discounted_price, product.currency)}
+                          {formatCurrency(p.discounted_price || p.price_inr, p.currency || INR)}
                         </span>
                       </div>
                     </TableCell>
+
+                    {/* Price per unit */}
+                    <TableCell className="text-muted-foreground">
+                      {pricePerUnit(p) ?? "—"}
+                    </TableCell>
+
+                    {/* Stock */}
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <span className={`font-medium ${product.in_stock ? 'text-green-600' : 'text-red-600'}`}>
-                          {product.quantity}
+                        <span className={p.in_stock ? "text-green-600 font-medium" : "text-red-600 font-medium"}>
+                          {p.quantity}
                         </span>
-                        <StatusBadge 
-                          status={product.in_stock ? "In Stock" : "Out of Stock"} 
-                        />
+                        <StatusBadge status={p.in_stock ? "In Stock" : "Out of Stock"} />
                       </div>
                     </TableCell>
+
+                    {/* Flags */}
                     <TableCell>
                       <div className="flex gap-1 flex-wrap">
-                        {product.featured && <StatusBadge status="Featured" />}
-                        {product.new_arrival && <StatusBadge status="New" />}
-                        {product.limited_stock && <StatusBadge status="Limited" />}
+                        {p.featured && <StatusBadge status="Featured" />}
+                        {p.new_arrival && <StatusBadge status="New" />}
+                        {p.limited_stock && <StatusBadge status="Limited" />}
+                        {(p as any).is_organic && (
+                          <span title="Organic" className="inline-flex items-center text-green-700 text-xs border rounded px-1">
+                            <Leaf className="h-3 w-3 mr-1" /> Organic
+                          </span>
+                        )}
+                        {(p as any).is_perishable && (
+                          <span title="Perishable" className="inline-flex items-center text-amber-700 text-xs border rounded px-1">
+                            <Refrigerator className="h-3 w-3 mr-1" /> Perishable
+                          </span>
+                        )}
                       </div>
                     </TableCell>
-                    <TableCell>
-                      {dayjs(product.created_at).format("MMM D, YYYY")}
-                    </TableCell>
+
+                    {/* Created */}
+                    <TableCell>{p.created_at ? dayjs(p.created_at).format("MMM D, YYYY") : "—"}</TableCell>
+
+                    {/* Actions */}
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Button variant="ghost" size="icon" asChild>
-                          <Link to={`/admin/products/${product.id}`}>
+                          <Link to={`/admin/products/${p.id}`}>
                             <Eye className="h-4 w-4" />
                           </Link>
                         </Button>
                         <Button variant="ghost" size="icon" asChild>
-                          <Link to={`/admin/products/${product.id}/edit`}>
+                          <Link to={`/admin/products/${p.id}/edit`}>
                             <Edit className="h-4 w-4" />
                           </Link>
                         </Button>
-                        <Button variant="ghost" size="icon">
+                        <Button variant="ghost" size="icon" onClick={() => onDuplicate(p)}>
                           <Copy className="h-4 w-4" />
                         </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => handleDelete(product.id, product.name)}
-                        >
+                        <Button variant="ghost" size="icon" onClick={() => onDelete(p.id, p.name)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -254,11 +404,7 @@ export function ProductsPage() {
                   </TableRow>
                 ))
               ) : (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
-                    No products found
-                  </TableCell>
-                </TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center py-8">No products found</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
@@ -266,25 +412,25 @@ export function ProductsPage() {
       </Card>
 
       {/* Pagination */}
-      {productsData && productsData.results && (
+      {productsData?.results && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
             Showing {productsData.results.length} of {productsData.count} products
           </p>
           <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               disabled={!productsData.previous}
-              onClick={() => setPage(page - 1)}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
             >
               Previous
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               disabled={!productsData.next}
-              onClick={() => setPage(page + 1)}
+              onClick={() => setPage((p) => p + 1)}
             >
               Next
             </Button>

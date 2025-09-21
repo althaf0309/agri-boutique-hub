@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -13,25 +13,46 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { useCategories, useCreateProduct, useUpdateProduct } from "@/api/hooks/products";
+import { useCategories, useCreateProduct, useUpdateProduct, useDeleteProduct } from "@/api/hooks/products";
 
-// Simple validation schema for now
+// ---------- helpers ----------
+const toNumberOrUndefined = (v: unknown) => {
+  if (v === "" || v === null || v === undefined) return undefined;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : undefined;
+};
+const toStringOrUndefined = (v: unknown) => {
+  if (v === "" || v === null || v === undefined) return undefined;
+  return String(v);
+};
+const prune = (obj: Record<string, any>) => {
+  const out: Record<string, any> = {};
+  Object.entries(obj).forEach(([k, v]) => {
+    if (v === undefined) return;
+    out[k] = v;
+  });
+  return out;
+};
+
+// ---------- schema (all optional) ----------
 const productSchema = z.object({
-  name: z.string().min(1, "Product name is required"),
+  name: z.string().optional(),
   description: z.string().optional(),
-  category_id: z.number().min(1, "Category is required"),
-  vendor_id: z.number().optional().nullable(),
-  store_id: z.number().optional().nullable(),
-  quantity: z.number().min(0, "Quantity must be non-negative"),
-  price_inr: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid price format"),
-  price_usd: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid price format"),
-  aed_pricing_mode: z.enum(["STATIC", "GOLD"]),
+  category_id: z.number().int().optional().nullable(),
+  vendor_id: z.number().int().optional().nullable(),
+  store_id: z.number().int().optional().nullable(),
+
+  quantity: z.number().int().optional(),
+  price_inr: z.string().optional().nullable(),
+  price_usd: z.string().optional().nullable(),
+  aed_pricing_mode: z.enum(["STATIC", "GOLD"]).optional(),
   price_aed_static: z.string().optional().nullable(),
-  discount_percent: z.number().min(0).max(90, "Discount must be between 0-90%"),
-  featured: z.boolean(),
-  new_arrival: z.boolean(),
-  hot_deal: z.boolean(),
-});
+  discount_percent: z.number().int().optional(),
+
+  featured: z.boolean().optional(),
+  new_arrival: z.boolean().optional(),
+  hot_deal: z.boolean().optional(),
+}).partial();
 
 type ProductFormData = z.infer<typeof productSchema>;
 
@@ -44,13 +65,14 @@ export function ProductForm() {
   const { data: categories } = useCategories();
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
+  const deleteProduct = useDeleteProduct?.(); // if you have it
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
     defaultValues: {
       name: "",
       description: "",
-      category_id: 0,
+      category_id: null,
       vendor_id: null,
       store_id: null,
       quantity: 0,
@@ -65,25 +87,63 @@ export function ProductForm() {
     }
   });
 
-  const generateSlug = (name: string) => {
-    return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-  };
+  const generateSlug = (name: string) =>
+    name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
-  const onSubmit = async (data: ProductFormData) => {
+  const onSubmit = async (raw: ProductFormData) => {
     try {
+      const payload = prune({
+        // simple scalars
+        name: toStringOrUndefined(raw.name),
+        description: toStringOrUndefined(raw.description),
+
+        // ids
+        category_id: raw.category_id ?? undefined,
+        vendor_id: raw.vendor_id ?? undefined,
+        store_id: raw.store_id ?? undefined,
+
+        // numbers / strings (backend normalizes Decimals)
+        quantity: toNumberOrUndefined(raw.quantity),
+        price_inr: toStringOrUndefined(raw.price_inr),
+        price_usd: toStringOrUndefined(raw.price_usd),
+        aed_pricing_mode: raw.aed_pricing_mode ?? "STATIC",
+        price_aed_static: toStringOrUndefined(raw.price_aed_static),
+        discount_percent: toNumberOrUndefined(raw.discount_percent),
+
+        // flags
+        featured: raw.featured ?? false,
+        new_arrival: raw.new_arrival ?? false,
+        hot_deal: raw.hot_deal ?? false,
+      });
+
       if (isEditMode) {
-        await updateProduct.mutateAsync({ id: Number(id), ...data });
-        toast({ title: "Product updated successfully" });
+        await updateProduct.mutateAsync({ id: Number(id), ...payload });
+        toast({ title: "Product updated" });
       } else {
-        await createProduct.mutateAsync(data);
-        toast({ title: "Product created successfully" });
+        await createProduct.mutateAsync(payload as any);
+        toast({ title: "Product created" });
         navigate("/admin/products");
       }
     } catch (error) {
-      toast({ 
-        title: "Error", 
+      toast({
+        title: "Error",
         description: "Failed to save product",
-        variant: "destructive" 
+        variant: "destructive",
+      });
+    }
+  };
+
+  const onDelete = async () => {
+    if (!isEditMode || !deleteProduct) return;
+    try {
+      await deleteProduct.mutateAsync({ id: Number(id) });
+      toast({ title: "Product deleted" });
+      navigate("/admin/products");
+    } catch (e) {
+      toast({
+        title: "Error",
+        description: "Failed to delete product",
+        variant: "destructive",
       });
     }
   };
@@ -113,7 +173,7 @@ export function ProductForm() {
                   <Eye className="h-4 w-4 mr-2" />
                   Preview
                 </Button>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={onDelete}>
                   <Trash2 className="h-4 w-4 mr-2" />
                   Delete
                 </Button>
@@ -148,7 +208,7 @@ export function ProductForm() {
                     <FormItem>
                       <FormLabel>Product Name</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Enter product name" />
+                        <Input {...field} placeholder="Enter product name (optional)" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -169,9 +229,9 @@ export function ProductForm() {
                     <FormItem>
                       <FormLabel>Description</FormLabel>
                       <FormControl>
-                        <Textarea 
-                          {...field} 
-                          placeholder="Product description..."
+                        <Textarea
+                          {...field}
+                          placeholder="Product description (optional)"
                           rows={4}
                         />
                       </FormControl>
@@ -186,22 +246,29 @@ export function ProductForm() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Category</FormLabel>
-                      <Select 
-                        value={field.value > 0 ? field.value.toString() : "none"} 
-                        onValueChange={(value) => field.onChange(value === "none" ? 0 : Number(value))}
+                      <Select
+                        value={
+                          field.value === null || field.value === undefined
+                            ? "none"
+                            : String(field.value)
+                        }
+                        onValueChange={(value) =>
+                          field.onChange(value === "none" ? null : Number(value))
+                        }
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select category" />
+                            <SelectValue placeholder="Select category (optional)" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="none">Select a category</SelectItem>
-                          {Array.isArray(categories) && categories.map((cat) => (
-                            <SelectItem key={cat.id} value={cat.id.toString()}>
-                              {cat.name}
-                            </SelectItem>
-                          ))}
+                          <SelectItem value="none">No category</SelectItem>
+                          {Array.isArray(categories) &&
+                            categories.map((cat) => (
+                              <SelectItem key={cat.id} value={String(cat.id)}>
+                                {cat.name}
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -225,7 +292,7 @@ export function ProductForm() {
                       <FormItem>
                         <FormLabel>Price (INR)</FormLabel>
                         <FormControl>
-                          <Input {...field} type="number" step="0.01" />
+                          <Input {...field} type="number" step="0.01" placeholder="0.00" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -239,7 +306,7 @@ export function ProductForm() {
                       <FormItem>
                         <FormLabel>Price (USD)</FormLabel>
                         <FormControl>
-                          <Input {...field} type="number" step="0.01" />
+                          <Input {...field} type="number" step="0.01" placeholder="0.00" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -253,7 +320,7 @@ export function ProductForm() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>AED Pricing Mode</FormLabel>
-                      <Select value={field.value} onValueChange={field.onChange}>
+                      <Select value={field.value ?? "STATIC"} onValueChange={field.onChange}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue />
@@ -277,7 +344,7 @@ export function ProductForm() {
                       <FormItem>
                         <FormLabel>AED Price (Static)</FormLabel>
                         <FormControl>
-                          <Input {...field} type="number" step="0.01" />
+                          <Input {...field} type="number" step="0.01" placeholder="0.00" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -292,12 +359,13 @@ export function ProductForm() {
                     <FormItem>
                       <FormLabel>Discount (%)</FormLabel>
                       <FormControl>
-                        <Input 
-                          {...field} 
-                          type="number" 
-                          min="0" 
+                        <Input
+                          {...field}
+                          type="number"
+                          min="0"
                           max="90"
-                          onChange={(e) => field.onChange(Number(e.target.value))}
+                          placeholder="0"
+                          onChange={(e) => field.onChange(toNumberOrUndefined(e.target.value) ?? 0)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -320,11 +388,12 @@ export function ProductForm() {
                     <FormItem>
                       <FormLabel>Quantity</FormLabel>
                       <FormControl>
-                        <Input 
-                          {...field} 
-                          type="number" 
+                        <Input
+                          {...field}
+                          type="number"
                           min="0"
-                          onChange={(e) => field.onChange(Number(e.target.value))}
+                          placeholder="0"
+                          onChange={(e) => field.onChange(toNumberOrUndefined(e.target.value) ?? 0)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -349,7 +418,7 @@ export function ProductForm() {
                   render={({ field }) => (
                     <div className="flex items-center justify-between">
                       <Label>Featured</Label>
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                      <Switch checked={!!field.value} onCheckedChange={field.onChange} />
                     </div>
                   )}
                 />
@@ -360,7 +429,7 @@ export function ProductForm() {
                   render={({ field }) => (
                     <div className="flex items-center justify-between">
                       <Label>New Arrival</Label>
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                      <Switch checked={!!field.value} onCheckedChange={field.onChange} />
                     </div>
                   )}
                 />
@@ -371,7 +440,7 @@ export function ProductForm() {
                   render={({ field }) => (
                     <div className="flex items-center justify-between">
                       <Label>Hot Deal</Label>
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                      <Switch checked={!!field.value} onCheckedChange={field.onChange} />
                     </div>
                   )}
                 />
@@ -390,13 +459,13 @@ export function ProductForm() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Vendor</FormLabel>
-                      <Select 
-                        value={field.value ? field.value.toString() : "none"} 
+                      <Select
+                        value={field.value ? String(field.value) : "none"}
                         onValueChange={(value) => field.onChange(value === "none" ? null : Number(value))}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select vendor" />
+                            <SelectValue placeholder="Select vendor (optional)" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -414,13 +483,13 @@ export function ProductForm() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Store</FormLabel>
-                      <Select 
-                        value={field.value ? field.value.toString() : "none"} 
+                      <Select
+                        value={field.value ? String(field.value) : "none"}
                         onValueChange={(value) => field.onChange(value === "none" ? null : Number(value))}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select store" />
+                            <SelectValue placeholder="Select store (optional)" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>

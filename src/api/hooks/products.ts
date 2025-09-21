@@ -1,118 +1,88 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import api from '../axios';
-import { Product, Category } from '@/types';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import api from "../client";
+import type { Product, Category } from "@/types";
 
-interface ProductsResponse {
-  results: Product[];
-  count: number;
-  next: string | null;
-  previous: string | null;
-}
-
-interface ProductsParams {
-  page?: number;
-  search?: string;
-  category?: string;
-  in_stock?: boolean;
-  featured?: boolean;
-  new_arrival?: boolean;
-  ordering?: string;
-}
-
-export const useProducts = (params: ProductsParams = {}) => {
-  return useQuery({
-    queryKey: ['products', params],
-    queryFn: async (): Promise<ProductsResponse> => {
-      try {
-        const { data } = await api.get('/products/', { params });
-        return data;
-      } catch (error) {
-        // Return mock data for development
-        return {
-          results: [],
-          count: 0,
-          next: null,
-          previous: null,
-        };
-      }
-    },
+// small helper to remove undefined
+const prune = (o: Record<string, any>) => {
+  const out: Record<string, any> = {};
+  Object.entries(o || {}).forEach(([k, v]) => {
+    if (v !== undefined) out[k] = v;
   });
+  return out;
 };
 
-export const useProduct = (id: number) => {
+// ------- Categories
+export function useCategories() {
   return useQuery({
-    queryKey: ['products', id],
-    queryFn: async (): Promise<Product> => {
-      try {
-        const { data } = await api.get(`/products/${id}/`);
-        return data;
-      } catch (error) {
-        throw error;
-      }
+    queryKey: ["categories"],
+    queryFn: async () => {
+      const { data } = await api.get<Category[]>("/categories/");
+      return data;
     },
+  });
+}
+
+// ------- Products
+export function useProducts(params?: Record<string, any>) {
+  return useQuery({
+    queryKey: ["products", params],
+    queryFn: async () => {
+      const { data } = await api.get("/products/", { params });
+      // DRF pagination or list — return as-is
+      return data;
+    },
+  });
+}
+
+export function useProduct(id?: number) {
+  return useQuery({
+    queryKey: ["product", id],
     enabled: !!id,
-  });
-};
-
-export const useCategories = () => {
-  return useQuery({
-    queryKey: ['categories'],
-    queryFn: async (): Promise<Category[]> => {
-      try {
-        const { data } = await api.get('/categories/');
-        // Handle both array response and paginated response
-        return Array.isArray(data) ? data : (data.results || []);
-      } catch (error) {
-        // Return mock data for development
-        return [
-          { id: 1, name: 'Electronics', slug: 'electronics', parent: null },
-          { id: 2, name: 'Clothing', slug: 'clothing', parent: null },
-          { id: 3, name: 'Home & Garden', slug: 'home-garden', parent: null },
-        ];
-      }
+    queryFn: async () => {
+      const { data } = await api.get<Product>(`/products/${id}/`);
+      return data;
     },
   });
-};
+}
 
-export const useCreateProduct = () => {
-  const queryClient = useQueryClient();
-  
+export function useCreateProduct() {
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (productData: Partial<Product>) => {
-      const { data } = await api.post('/products/', productData);
+    mutationFn: async (payload: Partial<Product>) => {
+      const body = prune(payload as Record<string, any>);
+      const { data } = await api.post<Product>("/products/", body);
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
+      qc.invalidateQueries({ queryKey: ["products"] });
     },
   });
-};
+}
 
-export const useUpdateProduct = () => {
-  const queryClient = useQueryClient();
-  
+export function useUpdateProduct() {
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...productData }: Partial<Product> & { id: number }) => {
-      const { data } = await api.patch(`/products/${id}/`, productData);
+    mutationFn: async ({ id, ...payload }: { id: number } & Partial<Product>) => {
+      const body = prune(payload as Record<string, any>);
+      const { data } = await api.patch<Product>(`/products/${id}/`, body);
       return data;
     },
-    onSuccess: (data) => {
-      queryClient.setQueryData(['products', data.id], data);
-      queryClient.invalidateQueries({ queryKey: ['products'] });
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: ["products"] });
+      qc.invalidateQueries({ queryKey: ["product", variables.id] });
     },
   });
-};
+}
 
-export const useDeleteProduct = () => {
-  const queryClient = useQueryClient();
-  
+export function useDeleteProduct() {
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async ({ id }: { id: number }) => {
       await api.delete(`/products/${id}/`);
-      return id;
+      return true;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
+      qc.invalidateQueries({ queryKey: ["products"] });
     },
   });
-};
+}
