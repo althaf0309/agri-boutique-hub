@@ -44,7 +44,7 @@ const features = [
   { 
     id: 6, 
     title: "Eat clean, Live Green", 
-    description: "Wholesome organic choices for a healtheier you",
+    description: "Wholesome organic choices for a healthier you",
     icon: RotateCcw, 
     position: "top-1/2 left-0 -translate-x-1/2 -translate-y-1/2",
     color: "text-secondary"
