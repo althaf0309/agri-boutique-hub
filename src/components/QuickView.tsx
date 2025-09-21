@@ -103,39 +103,40 @@ const QuickView = ({ product, isOpen, onClose }: QuickViewProps) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden p-0">
-        <div className="grid md:grid-cols-2 gap-0 h-full">
+      <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[95vh] overflow-hidden p-0 m-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-0 h-full max-h-[90vh]">
           {/* Product Image */}
-          <div className="relative bg-gradient-to-br from-primary/5 to-secondary/5 p-6 flex items-center justify-center">
+          <div className="relative bg-gradient-to-br from-primary/5 to-secondary/5 p-3 sm:p-6 flex items-center justify-center min-h-[200px] md:min-h-[400px]">
             <img
-              src={product.image}
+              src={product.image.startsWith('/src/') ? product.image.replace('/src/', '/') : product.image}
               alt={product.name}
-              className="w-full h-full max-h-96 object-cover rounded-lg shadow-lg animate-scale-in"
+              className="w-full h-full max-h-64 md:max-h-96 object-cover rounded-lg shadow-lg"
             />
             <Badge 
               variant="secondary" 
-              className="absolute top-4 left-4 bg-primary text-primary-foreground"
+              className="absolute top-2 sm:top-4 left-2 sm:left-4 bg-primary text-primary-foreground text-xs"
             >
               Quick View
             </Badge>
+            {currentOriginalPrice && (
               <Badge 
                 variant="destructive" 
-                className="absolute top-4 right-4 bg-accent text-accent-foreground"
+                className="absolute top-2 sm:top-4 right-2 sm:right-4 bg-accent text-accent-foreground text-xs"
               >
-                {currentOriginalPrice ? 
-                  Math.round(((currentOriginalPrice - currentPrice) / currentOriginalPrice) * 100) : 0}% OFF
+                {Math.round(((currentOriginalPrice - currentPrice) / currentOriginalPrice) * 100)}% OFF
               </Badge>
+            )}
           </div>
 
           {/* Product Details */}
-          <div className="p-6 flex flex-col h-full animate-fade-in">
-            <DialogHeader className="mb-4">
+          <div className="p-3 sm:p-6 flex flex-col h-full overflow-y-auto max-h-[60vh] md:max-h-full">
+            <DialogHeader className="mb-3 sm:mb-4">
               <div className="flex items-start justify-between">
                 <div>
-                  <Badge variant="outline" className="mb-2 text-xs">
+                  <Badge variant="outline" className="mb-1 sm:mb-2 text-xs">
                     {product.category}
                   </Badge>
-                  <DialogTitle className="text-2xl font-bold text-foreground mb-2">
+                  <DialogTitle className="text-lg sm:text-xl md:text-2xl font-bold text-foreground mb-1 sm:mb-2 leading-tight">
                     {product.name}
                   </DialogTitle>
                 </div>
@@ -161,13 +162,13 @@ const QuickView = ({ product, isOpen, onClose }: QuickViewProps) => {
             </div>
 
             {/* Price */}
-            <div className="flex items-center gap-3 mb-4">
-              <span className="text-3xl font-bold text-primary">
-                ${currentPrice.toFixed(2)}
+            <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+              <span className="text-xl sm:text-2xl md:text-3xl font-bold text-primary">
+                ₹{currentPrice}
               </span>
               {currentOriginalPrice && (
-                <span className="text-lg text-muted-foreground line-through">
-                  ${currentOriginalPrice.toFixed(2)}
+                <span className="text-sm sm:text-lg text-muted-foreground line-through">
+                  ₹{currentOriginalPrice}
                 </span>
               )}
             </div>
@@ -184,14 +185,14 @@ const QuickView = ({ product, isOpen, onClose }: QuickViewProps) => {
 
             {/* Weight Selection */}
             {product.weightVariants && product.weightVariants.length > 0 && (
-              <div className="mb-4">
-                <h4 className="font-semibold mb-2">Select Weight:</h4>
-                <div className="grid grid-cols-2 gap-2">
+              <div className="mb-3 sm:mb-4">
+                <h4 className="font-semibold mb-2 text-sm sm:text-base">Select Weight:</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {product.weightVariants.map((variant) => (
                     <button
                       key={variant.id}
                       onClick={() => setSelectedVariant(variant)}
-                      className={`relative p-3 border-2 rounded-lg text-left transition-all text-sm ${
+                      className={`relative p-2 sm:p-3 border-2 rounded-lg text-left transition-all text-sm ${
                         selectedVariant?.id === variant.id 
                           ? 'border-primary bg-primary/5' 
                           : 'border-border bg-background hover:border-primary/50'
@@ -204,9 +205,9 @@ const QuickView = ({ product, isOpen, onClose }: QuickViewProps) => {
                           </Badge>
                         </div>
                       )}
-                      <div className="font-medium">{variant.weight}</div>
+                      <div className="font-medium text-xs sm:text-sm">{variant.weight}</div>
                       <div className="flex items-center gap-1 mt-1">
-                        <span className="font-bold text-primary text-sm">₹{variant.price}</span>
+                        <span className="font-bold text-primary text-xs sm:text-sm">₹{variant.price}</span>
                         {variant.originalPrice && (
                           <span className="text-xs text-muted-foreground line-through">
                             ₹{variant.originalPrice}
@@ -253,10 +254,10 @@ const QuickView = ({ product, isOpen, onClose }: QuickViewProps) => {
             <Separator className="my-4" />
 
             {/* Quantity & Actions */}
-            <div className="mt-auto space-y-4">
+            <div className="mt-auto space-y-3 sm:space-y-4">
               {/* Quantity Selector */}
-              <div className="flex items-center gap-4">
-                <span className="font-medium">Quantity:</span>
+              <div className="flex items-center justify-between sm:gap-4">
+                <span className="font-medium text-sm sm:text-base">Quantity:</span>
                 <div className="flex items-center border rounded-lg">
                   <Button
                     variant="ghost"
@@ -267,7 +268,7 @@ const QuickView = ({ product, isOpen, onClose }: QuickViewProps) => {
                   >
                     <Minus className="w-3 h-3" />
                   </Button>
-                  <span className="w-12 text-center text-sm font-medium">
+                  <span className="w-10 sm:w-12 text-center text-sm font-medium">
                     {quantity}
                   </span>
                   <Button
@@ -282,47 +283,49 @@ const QuickView = ({ product, isOpen, onClose }: QuickViewProps) => {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex flex-col gap-2 sm:gap-3">
                 <Button
                   onClick={handleAddToCart}
                   disabled={!product.inStock}
-                  className="flex-1 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+                  className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-sm sm:text-base"
                 >
                   <ShoppingCart className="w-4 h-4 mr-2" />
                   Add to Cart
                 </Button>
                 
-                <div className="flex gap-2">
+                <div className="flex gap-2 justify-center">
                   <Button
                     variant="outline"
-                    size="icon"
+                    size="sm"
                     onClick={handleWishlist}
-                    className={`hover-scale ${isWishlisted ? "text-red-500 border-red-200" : ""}`}
+                    className={`flex-1 sm:flex-none ${isWishlisted ? "text-red-500 border-red-200" : ""}`}
                   >
-                    <Heart className={`w-4 h-4 ${isWishlisted ? "fill-current" : ""}`} />
+                    <Heart className={`w-4 h-4 mr-1 sm:mr-2 ${isWishlisted ? "fill-current" : ""}`} />
+                    <span className="hidden sm:inline">Wishlist</span>
                   </Button>
                   <Button
                     variant="outline"
-                    size="icon"
+                    size="sm"
                     onClick={handleShare}
-                    className="hover-scale"
+                    className="flex-1 sm:flex-none"
                   >
-                    <Share2 className="w-4 h-4" />
+                    <Share2 className="w-4 h-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Share</span>
                   </Button>
                 </div>
-              </div>
 
-              {/* View Full Details */}
-              <Button
-                variant="ghost"
-                className="w-full"
-                onClick={() => {
-                  window.open(`/product/${product.id}`, '_blank');
-                }}
-              >
-                <Eye className="w-4 h-4 mr-2" />
-                View Full Details
-              </Button>
+                {/* View Full Details */}
+                <Button
+                  variant="ghost"
+                  className="w-full text-sm"
+                  onClick={() => {
+                    window.open(`/product/${product.id}`, '_blank');
+                  }}
+                >
+                  <Eye className="w-4 h-4 mr-2" />
+                  View Full Details
+                </Button>
+              </div>
             </div>
           </div>
         </div>

@@ -11,69 +11,113 @@ import {
 } from "@/components/ui/table";
 import { useProducts, useCategories, useDeleteProduct, useCreateProduct } from "@/api/hooks/products";
 import { useToast } from "@/hooks/use-toast";
-import type { Product } from "@/types";
-import { StatusBadge } from "@/components/admin/StatusBadge";
+import dayjs from "dayjs";
 
-// ---- helpers --------------------------------------------------
-
-const INR = "INR";
-const symbols: Record<string, string> = { INR: "₹", USD: "$", AED: "د.إ" };
-
-const formatCurrency = (amount?: string, currency?: string) => {
-  if (!amount) return "—";
-  const cur = currency || INR;
-  const sym = symbols[cur] || cur;
-  return `${sym} ${Number.parseFloat(amount).toFixed(2)}`;
-};
-
-const packLabel = (p: Product) => {
-  const qty = p.default_pack_qty;
-  const uom = p.default_uom;
-  if (!qty || !uom) return "—";
-  return `${qty}${uom}`;
-};
-
-// return per-unit price as string (₹/kg or ₹/L), or null if not applicable
-const pricePerUnit = (p: Product): string | null => {
-  const uom = p.default_uom;
-  const qtyStr = p.default_pack_qty;
-  const priceStr = p.discounted_price || p.price;
-
-  if (!uom || !qtyStr || !priceStr) return null;
-  const qty = Number.parseFloat(qtyStr as any);
-  const price = Number.parseFloat(String(priceStr));
-  if (!Number.isFinite(qty) || !Number.isFinite(price) || qty <= 0) return null;
-
-  // gram/kg → per kg
-  if (uom === "G") {
-    const kg = qty / 1000;
-    if (kg <= 0) return null;
-    return `${formatCurrency(String(price / kg), p.currency)} / kg`;
+// Dummy product data
+const dummyProducts = [
+  {
+    id: 1,
+    name: "Premium Basmati Rice",
+    slug: "premium-basmati-rice",
+    price: "899.00",
+    discounted_price: "799.00",
+    discount_percent: 11,
+    currency: "INR",
+    quantity: 50,
+    in_stock: true,
+    featured: true,
+    new_arrival: false,
+    limited_stock: false,
+    created_at: "2024-01-15T10:30:00Z",
+    category: { id: 1, name: "Grains & Cereals" },
+    images: [{ image: "/src/assets/product-rice.jpg" }]
+  },
+  {
+    id: 2,
+    name: "Organic Coconut Oil",
+    slug: "organic-coconut-oil",
+    price: "1299.00",
+    discounted_price: "1099.00",
+    discount_percent: 15,
+    currency: "INR",
+    quantity: 25,
+    in_stock: true,
+    featured: true,
+    new_arrival: true,
+    limited_stock: false,
+    created_at: "2024-01-10T14:20:00Z",
+    category: { id: 2, name: "Oils & Spices" },
+    images: [{ image: "/src/assets/product-coconut-oil.jpg" }]
+  },
+  {
+    id: 3,
+    name: "Pure Natural Honey",
+    slug: "pure-natural-honey",
+    price: "899.00",
+    discounted_price: "799.00",
+    discount_percent: 11,
+    currency: "INR",
+    quantity: 0,
+    in_stock: false,
+    featured: false,
+    new_arrival: false,
+    limited_stock: true,
+    created_at: "2024-01-08T09:15:00Z",
+    category: { id: 3, name: "Natural Products" },
+    images: [{ image: "/src/assets/product-honey.jpg" }]
+  },
+  {
+    id: 4,
+    name: "Organic Turmeric Powder",
+    slug: "organic-turmeric-powder",
+    price: "299.00",
+    discounted_price: "249.00",
+    discount_percent: 17,
+    currency: "INR",
+    quantity: 75,
+    in_stock: true,
+    featured: false,
+    new_arrival: true,
+    limited_stock: false,
+    created_at: "2024-01-05T16:45:00Z",
+    category: { id: 2, name: "Oils & Spices" },
+    images: [{ image: "/src/assets/product-turmeric.jpg" }]
+  },
+  {
+    id: 5,
+    name: "Fresh Aloe Vera Gel",
+    slug: "fresh-aloe-vera-gel",
+    price: "599.00",
+    discounted_price: "549.00",
+    discount_percent: 8,
+    currency: "INR",
+    quantity: 30,
+    in_stock: true,
+    featured: true,
+    new_arrival: false,
+    limited_stock: true,
+    created_at: "2024-01-03T11:30:00Z",
+    category: { id: 4, name: "Health & Wellness" },
+    images: [{ image: "/src/assets/product-aloe-gel.jpg" }]
+  },
+  {
+    id: 6,
+    name: "Organic Neem Oil",
+    slug: "organic-neem-oil",
+    price: "449.00",
+    discounted_price: "399.00",
+    discount_percent: 11,
+    currency: "INR",
+    quantity: 15,
+    in_stock: true,
+    featured: false,
+    new_arrival: false,
+    limited_stock: false,
+    created_at: "2024-01-01T08:00:00Z",
+    category: { id: 2, name: "Oils & Spices" },
+    images: [{ image: "/src/assets/product-neem-oil.jpg" }]
   }
-  if (uom === "KG") {
-    return `${formatCurrency(String(price / qty), p.currency)} / kg`;
-  }
-
-  // ml/l → per liter
-  if (uom === "ML") {
-    const l = qty / 1000;
-    if (l <= 0) return null;
-    return `${formatCurrency(String(price / l), p.currency)} / L`;
-  }
-  if (uom === "L") {
-    return `${formatCurrency(String(price / qty), p.currency)} / L`;
-  }
-
-  return null; // PCS/BUNDLE
-};
-
-// quick keyword match for grocery categories
-const isGroceryCat = (name: string) => {
-  const n = name.toLowerCase();
-  return ["food","grocery","agriculture","vegetable","fruit","spice","grain","dairy","beverage"].some(k => n.includes(k));
-};
-
-// ---- page -----------------------------------------------------
+];
 
 export function ProductsPage() {
   // filters / state
@@ -104,7 +148,11 @@ export function ProductsPage() {
     is_perishable: perishable !== "all" ? perishable : undefined,
     default_uom: uom !== "all" ? uom : undefined,
     ordering,
-  };
+  });
+
+  // Use dummy data if no real data is available
+  const displayProducts = productsData?.results?.length > 0 ? productsData.results : dummyProducts;
+  const hasRealData = productsData?.results?.length > 0;
 
   const { data: productsData, isLoading } = useProducts(params);
   const deleteProduct = useDeleteProduct();
@@ -168,12 +216,12 @@ export function ProductsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Products</h1>
-          <p className="text-muted-foreground">Manage your grocery & catalog items</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Products</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">Manage your product catalog</p>
         </div>
-        <Button asChild>
+        <Button asChild className="w-full sm:w-auto">
           <Link to="/admin/products/new">
             <Plus className="mr-2 h-4 w-4" />
             Add Product
@@ -187,10 +235,9 @@ export function ProductsPage() {
           <CardTitle>Filters</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            <div className="relative sm:col-span-2 md:col-span-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search products..."
                 value={search}
@@ -288,48 +335,47 @@ export function ProductsPage() {
       {/* Table */}
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Product</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Pack</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Price / Unit</TableHead>
-                <TableHead>Stock</TableHead>
-                <TableHead>Flags</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Product</TableHead>
+                  <TableHead className="hidden sm:table-cell">Category</TableHead>
+                  <TableHead>Price</TableHead>
+                  <TableHead className="hidden md:table-cell">Stock</TableHead>
+                  <TableHead className="hidden lg:table-cell">Status</TableHead>
+                  <TableHead className="hidden xl:table-cell">Created</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={9} className="text-center py-8">Loading…</TableCell></TableRow>
-              ) : list.length ? (
-                list.map((p) => (
-                  <TableRow key={p.id}>
-                    {/* Product */}
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8">
+                    Loading products...
+                  </TableCell>
+                </TableRow>
+              ) : displayProducts.length > 0 ? (
+                displayProducts.map((product) => (
+                  <TableRow key={product.id}>
                     <TableCell>
-                      <div className="flex items-center gap-3">
-                        {p.images?.[0]?.image ? (
-                          <img src={p.images[0].image} alt={p.name} className="h-12 w-12 rounded object-cover" />
-                        ) : (
-                          <div className="h-12 w-12 rounded bg-muted" />
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        {product.images && product.images[0] && (
+                          <img
+                            src={product.images[0].image}
+                            alt={product.name}
+                            className="h-10 w-10 sm:h-12 sm:w-12 rounded object-cover flex-shrink-0"
+                          />
                         )}
-                        <div>
-                          <p className="font-medium">{p.name}</p>
-                          <p className="text-xs text-muted-foreground">slug: {p.slug}</p>
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm sm:text-base truncate">{product.name}</p>
+                          <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                            SKU: {product.slug}
+                          </p>
                         </div>
                       </div>
                     </TableCell>
-
-                    {/* Category */}
-                    <TableCell>{p.category?.name ?? "—"}</TableCell>
-
-                    {/* Pack */}
-                    <TableCell>{packLabel(p)}</TableCell>
-
-                    {/* Price */}
+                    <TableCell className="hidden sm:table-cell">{product.category.name}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
                         {p.discount_percent > 0 && (
@@ -337,29 +383,20 @@ export function ProductsPage() {
                             {formatCurrency(p.price, p.currency)}
                           </span>
                         )}
-                        <span className="font-medium">
-                          {formatCurrency(p.discounted_price || p.price_inr, p.currency || INR)}
+                        <span className="font-medium text-sm">
+                          {formatCurrency(product.discounted_price, product.currency)}
                         </span>
                       </div>
                     </TableCell>
-
-                    {/* Price per unit */}
-                    <TableCell className="text-muted-foreground">
-                      {pricePerUnit(p) ?? "—"}
-                    </TableCell>
-
-                    {/* Stock */}
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell">
                       <div className="flex items-center gap-2">
-                        <span className={p.in_stock ? "text-green-600 font-medium" : "text-red-600 font-medium"}>
-                          {p.quantity}
+                        <span className={`font-medium text-sm ${product.in_stock ? 'text-green-600' : 'text-red-600'}`}>
+                          {product.quantity}
                         </span>
                         <StatusBadge status={p.in_stock ? "In Stock" : "Out of Stock"} />
                       </div>
                     </TableCell>
-
-                    {/* Flags */}
-                    <TableCell>
+                    <TableCell className="hidden lg:table-cell">
                       <div className="flex gap-1 flex-wrap">
                         {p.featured && <StatusBadge status="Featured" />}
                         {p.new_arrival && <StatusBadge status="New" />}
@@ -376,28 +413,31 @@ export function ProductsPage() {
                         )}
                       </div>
                     </TableCell>
-
-                    {/* Created */}
-                    <TableCell>{p.created_at ? dayjs(p.created_at).format("MMM D, YYYY") : "—"}</TableCell>
-
-                    {/* Actions */}
+                    <TableCell className="hidden xl:table-cell text-sm">
+                      {dayjs(product.created_at).format("MMM D, YYYY")}
+                    </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon" asChild>
-                          <Link to={`/admin/products/${p.id}`}>
-                            <Eye className="h-4 w-4" />
+                      <div className="flex items-center gap-1 justify-end">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                          <Link to={`/admin/products/${product.id}`}>
+                            <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Link>
                         </Button>
-                        <Button variant="ghost" size="icon" asChild>
-                          <Link to={`/admin/products/${p.id}/edit`}>
-                            <Edit className="h-4 w-4" />
+                        <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                          <Link to={`/admin/products/${product.id}/edit`}>
+                            <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Link>
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => onDuplicate(p)}>
-                          <Copy className="h-4 w-4" />
+                        <Button variant="ghost" size="icon" className="h-8 w-8 hidden sm:inline-flex">
+                          <Copy className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => onDelete(p.id, p.name)}>
-                          <Trash2 className="h-4 w-4" />
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleDelete(product.id, product.name)}
+                        >
+                          <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
                       </div>
                     </TableCell>
@@ -407,30 +447,34 @@ export function ProductsPage() {
                 <TableRow><TableCell colSpan={9} className="text-center py-8">No products found</TableCell></TableRow>
               )}
             </TableBody>
-          </Table>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 
       {/* Pagination */}
-      {productsData?.results && (
-        <div className="flex items-center justify-between">
+      {displayProducts.length > 0 && (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
-            Showing {productsData.results.length} of {productsData.count} products
+            Showing {displayProducts.length} of {hasRealData ? productsData?.count || 0 : dummyProducts.length} products
+            {!hasRealData && <span className="ml-2 text-primary">(Demo Data)</span>}
           </p>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Button 
+              variant="outline" 
               size="sm"
-              disabled={!productsData.previous}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={!hasRealData || !productsData?.previous}
+              onClick={() => setPage(page - 1)}
+              className="flex-1 sm:flex-none"
             >
               Previous
             </Button>
             <Button
               variant="outline"
               size="sm"
-              disabled={!productsData.next}
-              onClick={() => setPage((p) => p + 1)}
+              disabled={!hasRealData || !productsData?.next}
+              onClick={() => setPage(page + 1)}
+              className="flex-1 sm:flex-none"
             >
               Next
             </Button>

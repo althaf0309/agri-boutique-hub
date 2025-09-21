@@ -20,6 +20,8 @@ export default {
 		extend: {
 			fontFamily: {
 				inter: ['Inter', 'system-ui', 'sans-serif'],
+				heading: ['Playfair Display', 'serif'],
+				body: ['Inter', 'system-ui', 'sans-serif'],
 			},
 			colors: {
 				border: 'hsl(var(--border))',
@@ -127,7 +129,6 @@ export default {
 	},
 	plugins: [
 		require("tailwindcss-animate"),
-		require("@tailwindcss/line-clamp"),
 		function({ addUtilities }: any) {
 			addUtilities({
 				'.hover-scale': {

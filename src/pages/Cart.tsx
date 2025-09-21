@@ -24,7 +24,7 @@ const initialCartItems: CartItem[] = [
     name: "Organic Basmati Rice",
     price: 850,
     originalPrice: 950,
-    image: "/api/placeholder/100/100",
+    image: "/src/assets/product-rice.jpg",
     weight: "5kg",
     quantity: 2,
     inStock: true
@@ -33,8 +33,18 @@ const initialCartItems: CartItem[] = [
     id: 2,
     name: "Cold Pressed Coconut Oil",
     price: 450,
-    image: "/api/placeholder/100/100",
+    image: "/src/assets/product-coconut-oil.jpg",
     weight: "1L",
+    quantity: 1,
+    inStock: true
+  },
+  {
+    id: 3,
+    name: "Pure Honey",
+    price: 650,
+    originalPrice: 750,
+    image: "/src/assets/product-honey.jpg",
+    weight: "500g",
     quantity: 1,
     inStock: true
   }
