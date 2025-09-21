@@ -389,7 +389,7 @@ export function ProductsPage() {
             <Button 
               variant="outline" 
               size="sm"
-              disabled={!productsData.previous}
+              disabled={!hasRealData || !productsData?.previous}
               onClick={() => setPage(page - 1)}
               className="flex-1 sm:flex-none"
             >
@@ -398,7 +398,7 @@ export function ProductsPage() {
             <Button 
               variant="outline" 
               size="sm"
-              disabled={!productsData.next}
+              disabled={!hasRealData || !productsData?.next}
               onClick={() => setPage(page + 1)}
               className="flex-1 sm:flex-none"
             >
