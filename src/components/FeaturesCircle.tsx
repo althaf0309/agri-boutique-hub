@@ -27,24 +27,24 @@ const features = [
   },
   { 
     id: 4, 
-    title: "Cold Chain", 
-    description: "Temperature controlled delivery",
+    title: "Better Food Brighter Future", 
+    description: "Eat well Live well. Leave well ",
     icon: Snowflake, 
     position: "bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2",
     color: "text-primary"
   },
   { 
     id: 5, 
-    title: "Fast Delivery", 
-    description: "Same-day delivery available",
+    title: "Freash. Local. Organic ", 
+    description: "Closer. Fresher. Better",
     icon: Clock, 
     position: "bottom-0 left-0 -translate-x-1/2 translate-y-1/2",
     color: "text-highlight"
   },
   { 
     id: 6, 
-    title: "Easy Returns", 
-    description: "Hassle-free return policy",
+    title: "Eat clean, Live Green", 
+    description: "Wholesome organic choices for a healtheier you",
     icon: RotateCcw, 
     position: "top-1/2 left-0 -translate-x-1/2 -translate-y-1/2",
     color: "text-secondary"
