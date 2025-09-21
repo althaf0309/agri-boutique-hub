@@ -31,6 +31,7 @@ export default {
 				foreground: 'hsl(var(--foreground))',
 				primary: {
 					DEFAULT: 'hsl(var(--primary))',
+					glow: 'hsl(var(--primary-glow))',
 					foreground: 'hsl(var(--primary-foreground))'
 				},
 				secondary: {
@@ -129,7 +130,6 @@ export default {
 	},
 	plugins: [
 		require("tailwindcss-animate"),
-		require("@tailwindcss/line-clamp"),
 		function({ addUtilities }: any) {
 			addUtilities({
 				'.hover-scale': {
