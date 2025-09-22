@@ -53,7 +53,7 @@ const features = [
 
 export default function FeaturesCircle() {
   return (
-    <section className="py-16 sm:py-20 lg:py-40 bg-gradient-to-br from-muted/20 via-background to-muted/30 relative overflow-hidden">
+    <section className="pt-24 pb-16 sm:pt-32 sm:pb-20 lg:pt-48 lg:pb-40 bg-gradient-to-br from-muted/20 via-background to-muted/30 relative overflow-hidden">
       {/* Enhanced background decorative elements */}
       <div className="absolute inset-0 opacity-15">
         <div className="absolute top-10 sm:top-20 left-10 sm:left-20 w-32 sm:w-64 h-32 sm:h-64 bg-accent rounded-full blur-3xl animate-pulse"></div>
