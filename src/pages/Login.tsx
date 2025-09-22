@@ -40,7 +40,7 @@ export default function Login() {
           <Card className="shadow-lg">
             <CardHeader className="text-center">
               <CardTitle className="text-3xl font-bold text-foreground">Welcome Back</CardTitle>
-              <p className="text-muted-foreground">Sign in to your AgriFresh account</p>
+              <p className="text-muted-foreground">Sign in to your Prakrithi Jaiva Kalavara account</p>
             </CardHeader>
             
             <CardContent className="space-y-6">
@@ -157,7 +157,7 @@ export default function Login() {
 
           {/* Features */}
           <div className="mt-8 text-center">
-            <h3 className="text-lg font-semibold text-foreground mb-4">Why choose AgriFresh?</h3>
+            <h3 className="text-lg font-semibold text-foreground mb-4">Why choose Prakrithi Jaiva Kalavara?</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-muted-foreground">
               <div className="flex flex-col items-center space-y-2">
                 <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">

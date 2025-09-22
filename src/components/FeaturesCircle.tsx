@@ -4,7 +4,7 @@ const features = [
   { 
     id: 1, 
     title: "100% Organic", 
-    description: "Certified organic products",
+    description: "Certified organic products for healthy living",
     icon: Leaf, 
     position: "top-0 left-1/2 -translate-x-1/2 -translate-y-1/2",
     color: "text-accent"
@@ -64,10 +64,10 @@ export default function FeaturesCircle() {
 
       <div className="container mx-auto px-4 sm:px-6 relative z-10">
         <div className="text-center mb-12 sm:mb-16 lg:mb-20">
-          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold mb-4 sm:mb-6 lg:mb-8">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold mb-4 sm:mb-6 lg:mb-8 text-center">
             <span className="text-gradient">Why Choose Prakrithi Jaiva Kalavara?</span>
           </h2>
-          <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-muted-foreground max-w-4xl mx-auto leading-relaxed px-4">
+          <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-muted-foreground max-w-4xl mx-auto leading-relaxed px-4 text-center">
             Experience the difference with our commitment to quality, sustainability, and customer satisfaction
           </p>
         </div>

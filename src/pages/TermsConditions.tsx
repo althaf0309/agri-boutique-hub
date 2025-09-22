@@ -26,8 +26,8 @@ export default function TermsConditions() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-muted-foreground">
-                  By accessing and using AgriFresh's website and services, you accept and agree to be 
-                  bound by the terms and provision of this agreement. If you do not agree to abide by 
+                  By accessing and using Prakrithi Jaiva Kalavara's website and services, you accept and agree to be 
+                  bound by the terms and provision of this agreement. If you do not agree to abide by
                   the above, please do not use this service.
                 </p>
               </CardContent>
@@ -39,7 +39,7 @@ export default function TermsConditions() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-muted-foreground">
-                  Permission is granted to temporarily download one copy of the materials on AgriFresh's 
+                  Permission is granted to temporarily download one copy of the materials on Prakrithi Jaiva Kalavara's 
                   website for personal, non-commercial transitory viewing only.
                 </p>
                 <div className="space-y-3">
@@ -177,8 +177,8 @@ export default function TermsConditions() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-muted-foreground">
-                  In no event shall AgriFresh or its suppliers be liable for any damages (including, 
-                  without limitation, damages for loss of data or profit, or due to business interruption) 
+                  In no event shall Prakrithi Jaiva Kalavara or its suppliers be liable for any damages (including, 
+                  without limitation, damages for loss of data or profit, or due to business interruption)
                   arising out of the use or inability to use the materials on our website.
                 </p>
               </CardContent>
@@ -203,7 +203,7 @@ export default function TermsConditions() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-muted-foreground">
-                  AgriFresh may revise these terms of service at any time without notice. By using this 
+                  Prakrithi Jaiva Kalavara may revise these terms of service at any time without notice. By using this 
                   website, you are agreeing to be bound by the then current version of these terms of service.
                 </p>
               </CardContent>
@@ -218,7 +218,7 @@ export default function TermsConditions() {
                   If you have any questions about these Terms and Conditions, please contact us:
                 </p>
                 <div className="space-y-2 text-muted-foreground">
-                  <p><strong>Email:</strong> legal@agrifresh.com</p>
+                  <p><strong>Email:</strong> legal@prakrothijaivakalavara.com</p>
                   <p><strong>Phone:</strong> +91 9876543210</p>
                   <p><strong>Address:</strong> 123 Organic Street, Green Valley, Kerala 682001, India</p>
                 </div>

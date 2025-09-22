@@ -44,7 +44,7 @@ export default function Register() {
           <Card className="shadow-lg">
             <CardHeader className="text-center">
               <CardTitle className="text-3xl font-bold text-foreground">Create Account</CardTitle>
-              <p className="text-muted-foreground">Join AgriFresh for organic goodness</p>
+              <p className="text-muted-foreground">Join Prakrithi Jaiva Kalavara for organic goodness</p>
             </CardHeader>
             
             <CardContent className="space-y-6">

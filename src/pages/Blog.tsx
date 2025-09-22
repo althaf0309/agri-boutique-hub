@@ -68,7 +68,7 @@ export default function Blog() {
         {/* Hero Section */}
         <section className="text-center mb-16">
           <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
-            AgriFresh Blog
+            Prakrithi Jaiva Kalavara Blog
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Discover insights about organic farming, sustainable living, and healthy nutrition from our experts.
