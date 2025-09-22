@@ -53,7 +53,7 @@ const features = [
 
 export default function FeaturesCircle() {
   return (
-    <section className="py-12 sm:py-16 lg:py-32 bg-gradient-to-br from-muted/20 via-background to-muted/30 relative overflow-hidden">
+    <section className="py-16 sm:py-20 lg:py-40 bg-gradient-to-br from-muted/20 via-background to-muted/30 relative overflow-hidden">
       {/* Enhanced background decorative elements */}
       <div className="absolute inset-0 opacity-15">
         <div className="absolute top-10 sm:top-20 left-10 sm:left-20 w-32 sm:w-64 h-32 sm:h-64 bg-accent rounded-full blur-3xl animate-pulse"></div>
@@ -63,8 +63,8 @@ export default function FeaturesCircle() {
       </div>
 
       <div className="container mx-auto px-4 sm:px-6 relative z-10">
-        <div className="text-center mb-12 sm:mb-16 lg:mb-20 px-4">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold mb-4 sm:mb-6 lg:mb-8 text-center leading-tight">
+        <div className="text-center mb-16 sm:mb-20 lg:mb-32 px-4">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold mb-6 sm:mb-8 lg:mb-12 text-center leading-tight">
             <span className="text-gradient block">Why Choose Prakrithi Jaiva Kalavara?</span>
           </h2>
           <div className="max-w-5xl mx-auto">
@@ -117,9 +117,9 @@ export default function FeaturesCircle() {
           </div>
 
           {/* Desktop Layout - Original circle design */}
-          <div className="hidden lg:block relative min-h-[800px] w-full flex items-center justify-center">
+          <div className="hidden lg:block relative min-h-[900px] w-full flex items-center justify-center pt-20">
             {/* Center Brand Circle - Desktop */}
-            <div className="relative w-96 md:w-[500px] h-96 md:h-[500px] mx-auto">
+            <div className="relative w-96 md:w-[450px] lg:w-[500px] h-96 md:h-[450px] lg:h-[500px] mx-auto">
               {/* Outer rotating ring */}
               <div className="absolute inset-0 rounded-full border-8 border-transparent bg-gradient-to-r from-accent via-primary to-highlight animate-spin" style={{animationDuration: '30s'}}></div>
               
@@ -130,10 +130,10 @@ export default function FeaturesCircle() {
               <div className="absolute inset-8 rounded-full bg-gradient-to-br from-primary via-accent to-highlight shadow-2xl glow-effect">
                 {/* Inner content circle */}
                 <div className="absolute inset-6 bg-white/98 backdrop-blur-sm rounded-full flex items-center justify-center shadow-inner border-4 border-white/50">
-                  <div className="text-center px-4">
-                    <div className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4 text-gradient animate-pulse">PJK</div>
-                    <div className="text-lg md:text-xl lg:text-2xl font-bold text-primary mb-2 leading-tight">Prakrithi Jaiva Kalavara</div>
-                    <div className="text-sm md:text-base text-muted-foreground px-2 leading-tight">
+                  <div className="text-center px-6">
+                    <div className="text-5xl md:text-6xl lg:text-7xl font-bold mb-4 text-gradient animate-pulse">PJK</div>
+                    <div className="text-xl md:text-2xl lg:text-3xl font-bold text-primary mb-3 leading-tight">Prakrithi Jaiva Kalavara</div>
+                    <div className="text-sm md:text-base lg:text-lg text-muted-foreground px-2 leading-tight">
                       Premium Organic Excellence
                     </div>
                     <div className="text-xs md:text-sm text-muted-foreground/80 mt-2">
@@ -152,22 +152,22 @@ export default function FeaturesCircle() {
               {features.map((feature, index) => {
                 const Icon = feature.icon;
                 const angle = (index * 60) * (Math.PI / 180);
-                const radius = 320;
+                const radius = 350;
                 const x = Math.cos(angle - Math.PI/2) * radius;
                 const y = Math.sin(angle - Math.PI/2) * radius;
                 
                 return (
                   <div
                     key={feature.id}
-                    className="absolute"
+                    className="absolute z-10"
                     style={{
                       left: '50%',
                       top: '50%',
                       transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`
                     }}
                   >
-                    <div className="bg-white rounded-3xl p-8 shadow-2xl border border-border/50 hover:shadow-3xl transition-all duration-500 hover:scale-110 hover:-translate-y-2 backdrop-blur-sm bg-white/95 min-w-[200px]">
-                      <div className="text-center px-4">
+                    <div className="bg-white/95 rounded-3xl p-6 lg:p-8 shadow-2xl border border-border/50 hover:shadow-3xl transition-all duration-500 hover:scale-110 hover:-translate-y-2 backdrop-blur-sm min-w-[200px] max-w-[240px]">
+                      <div className="text-center px-2">
                         <div className={`w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-muted to-background flex items-center justify-center ${feature.color} shadow-lg hover:shadow-xl transition-all duration-300`}>
                           <Icon className="w-8 h-8" />
                         </div>
