@@ -63,13 +63,15 @@ export default function FeaturesCircle() {
       </div>
 
       <div className="container mx-auto px-4 sm:px-6 relative z-10">
-        <div className="text-center mb-12 sm:mb-16 lg:mb-20">
-          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold mb-4 sm:mb-6 lg:mb-8 text-center">
-            <span className="text-gradient">Why Choose Prakrithi Jaiva Kalavara?</span>
+        <div className="text-center mb-12 sm:mb-16 lg:mb-20 px-4">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold mb-4 sm:mb-6 lg:mb-8 text-center leading-tight">
+            <span className="text-gradient block">Why Choose Prakrithi Jaiva Kalavara?</span>
           </h2>
-          <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-muted-foreground max-w-4xl mx-auto leading-relaxed px-4 text-center">
-            Experience the difference with our commitment to quality, sustainability, and customer satisfaction
-          </p>
+          <div className="max-w-5xl mx-auto">
+            <p className="text-sm sm:text-base md:text-lg lg:text-xl text-muted-foreground leading-relaxed text-center px-2">
+              Experience the difference with our commitment to quality, sustainability, and customer satisfaction
+            </p>
+          </div>
         </div>
 
         {/* Enhanced Features Circle - Mobile Responsive */}
@@ -97,11 +99,11 @@ export default function FeaturesCircle() {
                 const Icon = feature.icon;
                 return (
                   <div key={feature.id} className="bg-white rounded-2xl p-4 sm:p-6 shadow-lg border border-border/50 hover:shadow-xl transition-all duration-300 hover:scale-105">
-                    <div className="text-center">
+                    <div className="text-center px-2">
                       <div className={`w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 rounded-full bg-gradient-to-br from-muted to-background flex items-center justify-center ${feature.color} shadow-md`}>
                         <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
                       </div>
-                      <div className="text-sm sm:text-base font-bold text-primary mb-1">
+                      <div className="text-xs sm:text-sm md:text-base font-bold text-primary mb-2 leading-tight">
                         {feature.title}
                       </div>
                       <div className="text-xs sm:text-sm text-muted-foreground leading-tight">
@@ -128,19 +130,19 @@ export default function FeaturesCircle() {
               <div className="absolute inset-8 rounded-full bg-gradient-to-br from-primary via-accent to-highlight shadow-2xl glow-effect">
                 {/* Inner content circle */}
                 <div className="absolute inset-6 bg-white/98 backdrop-blur-sm rounded-full flex items-center justify-center shadow-inner border-4 border-white/50">
-                  <div className="text-center">
-                    <div className="text-6xl md:text-8xl font-bold mb-4 text-gradient animate-pulse">PJK</div>
-                    <div className="text-2xl md:text-3xl font-bold text-primary mb-2">Prakrithi Jaiva Kalavara</div>
-                    <div className="text-base md:text-lg text-muted-foreground px-6 leading-tight">
+                  <div className="text-center px-4">
+                    <div className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4 text-gradient animate-pulse">PJK</div>
+                    <div className="text-lg md:text-xl lg:text-2xl font-bold text-primary mb-2 leading-tight">Prakrithi Jaiva Kalavara</div>
+                    <div className="text-sm md:text-base text-muted-foreground px-2 leading-tight">
                       Premium Organic Excellence
                     </div>
-                    <div className="text-sm md:text-base text-muted-foreground/80 mt-2">
+                    <div className="text-xs md:text-sm text-muted-foreground/80 mt-2">
                       Farm to Table Quality
                     </div>
-                    <div className="flex justify-center mt-6 space-x-2">
-                      <div className="w-4 h-4 bg-accent rounded-full animate-pulse"></div>
-                      <div className="w-4 h-4 bg-primary rounded-full animate-pulse" style={{animationDelay: '0.3s'}}></div>
-                      <div className="w-4 h-4 bg-highlight rounded-full animate-pulse" style={{animationDelay: '0.6s'}}></div>
+                    <div className="flex justify-center mt-4 space-x-2">
+                      <div className="w-3 h-3 bg-accent rounded-full animate-pulse"></div>
+                      <div className="w-3 h-3 bg-primary rounded-full animate-pulse" style={{animationDelay: '0.3s'}}></div>
+                      <div className="w-3 h-3 bg-highlight rounded-full animate-pulse" style={{animationDelay: '0.6s'}}></div>
                     </div>
                   </div>
                 </div>
@@ -165,11 +167,11 @@ export default function FeaturesCircle() {
                     }}
                   >
                     <div className="bg-white rounded-3xl p-8 shadow-2xl border border-border/50 hover:shadow-3xl transition-all duration-500 hover:scale-110 hover:-translate-y-2 backdrop-blur-sm bg-white/95 min-w-[200px]">
-                      <div className="text-center">
+                      <div className="text-center px-4">
                         <div className={`w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-muted to-background flex items-center justify-center ${feature.color} shadow-lg hover:shadow-xl transition-all duration-300`}>
                           <Icon className="w-8 h-8" />
                         </div>
-                        <div className="text-lg font-bold text-primary mb-2">
+                        <div className="text-base lg:text-lg font-bold text-primary mb-2 leading-tight">
                           {feature.title}
                         </div>
                         <div className="text-sm text-muted-foreground leading-tight">
