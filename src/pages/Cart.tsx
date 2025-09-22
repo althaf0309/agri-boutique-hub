@@ -128,13 +128,13 @@ export default function Cart() {
 
         <h1 className="text-3xl font-bold text-primary mb-8">Shopping Cart</h1>
 
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div className="grid gap-8 lg:grid-cols-3">
           {/* Cart Items */}
           <div className="lg:col-span-2 space-y-4">
             {cartItems.map((item) => (
-              <div key={item.id} className="bg-card p-6 rounded-lg border border-border">
-                <div className="flex gap-4">
-                  <div className="w-24 h-24 bg-muted/50 rounded-lg overflow-hidden flex-shrink-0">
+              <div key={item.id} className="bg-card p-3 sm:p-6 rounded-lg border border-border">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="w-full sm:w-24 h-40 sm:h-24 bg-muted/50 rounded-lg overflow-hidden flex-shrink-0">
                     <img
                       src={item.image}
                       alt={item.name}
@@ -142,58 +142,64 @@ export default function Cart() {
                     />
                   </div>
                   
-                  <div className="flex-1 space-y-2">
+                  <div className="flex-1 space-y-3">
                     <div className="flex justify-between items-start">
                       <div>
-                        <h3 className="font-semibold text-lg">{item.name}</h3>
+                        <h3 className="font-semibold text-base sm:text-lg">{item.name}</h3>
                         <p className="text-sm text-muted-foreground">{item.weight}</p>
                       </div>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => removeItem(item.id)}
-                        className="text-muted-foreground hover:text-destructive"
+                        className="text-muted-foreground hover:text-destructive p-1 sm:p-2"
                       >
                         <X className="w-4 h-4" />
                       </Button>
                     </div>
 
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xl font-bold text-primary">₹{item.price}</span>
-                          {item.originalPrice && (
-                            <span className="text-sm text-muted-foreground line-through">
-                              ₹{item.originalPrice}
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-sm text-muted-foreground">per item</span>
+                    {/* Price Section - Mobile First */}
+                    <div className="flex flex-col sm:flex-row sm:justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg sm:text-xl font-bold text-primary">₹{item.price}</span>
+                        {item.originalPrice && (
+                          <span className="text-sm text-muted-foreground line-through">
+                            ₹{item.originalPrice}
+                          </span>
+                        )}
+                        <span className="text-sm text-muted-foreground hidden sm:inline">per item</span>
                       </div>
 
-                      <div className="flex items-center gap-3">
+                      {/* Mobile Layout: Quantity and Total in separate rows */}
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                         {/* Quantity Controls */}
-                        <div className="flex items-center border border-border rounded-lg">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                            disabled={item.quantity <= 1}
-                          >
-                            <Minus className="w-4 h-4" />
-                          </Button>
-                          <span className="px-4 py-2 font-medium">{item.quantity}</span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                          >
-                            <Plus className="w-4 h-4" />
-                          </Button>
+                        <div className="flex items-center justify-between sm:justify-start">
+                          <span className="text-sm text-muted-foreground sm:hidden">Quantity:</span>
+                          <div className="flex items-center border border-border rounded-lg">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                              disabled={item.quantity <= 1}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Minus className="w-3 h-3" />
+                            </Button>
+                            <span className="px-3 py-1 font-medium text-sm">{item.quantity}</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Plus className="w-3 h-3" />
+                            </Button>
+                          </div>
                         </div>
 
                         {/* Line Total */}
-                        <div className="text-right min-w-[80px]">
+                        <div className="flex justify-between sm:justify-end">
+                          <span className="text-sm text-muted-foreground sm:hidden">Total:</span>
                           <span className="text-lg font-bold text-primary">
                             ₹{item.price * item.quantity}
                           </span>
@@ -208,25 +214,26 @@ export default function Cart() {
             {/* Continue Shopping */}
             <div className="pt-4">
               <Link to="/shop">
-                <Button variant="outline">
+                <Button variant="outline" className="w-full sm:w-auto">
                   Continue Shopping
                 </Button>
               </Link>
             </div>
           </div>
 
-          {/* Order Summary */}
-          <div className="space-y-6">
+          {/* Order Summary - Mobile: Full width, Desktop: Sidebar */}
+          <div className="space-y-4 sm:space-y-6 order-first lg:order-last">
             {/* Coupon Code */}
-            <div className="bg-card p-6 rounded-lg border border-border">
-              <h3 className="font-semibold mb-4">Apply Coupon</h3>
-              <div className="flex gap-2">
+            <div className="bg-card p-4 sm:p-6 rounded-lg border border-border">
+              <h3 className="font-semibold mb-4 text-base sm:text-lg">Apply Coupon</h3>
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Input
                   placeholder="Enter coupon code"
                   value={couponCode}
                   onChange={(e) => setCouponCode(e.target.value)}
+                  className="flex-1"
                 />
-                <Button onClick={applyCoupon} variant="outline">
+                <Button onClick={applyCoupon} variant="outline" className="w-full sm:w-auto">
                   Apply
                 </Button>
               </div>
@@ -236,36 +243,36 @@ export default function Cart() {
             </div>
 
             {/* Order Summary */}
-            <div className="bg-card p-6 rounded-lg border border-border">
-              <h3 className="font-semibold text-lg mb-4">Order Summary</h3>
+            <div className="bg-card p-4 sm:p-6 rounded-lg border border-border">
+              <h3 className="font-semibold text-base sm:text-lg mb-4">Order Summary</h3>
               
               <div className="space-y-3">
-                <div className="flex justify-between">
+                <div className="flex justify-between text-sm sm:text-base">
                   <span>Subtotal</span>
                   <span>₹{subtotal}</span>
                 </div>
                 
-                <div className="flex justify-between">
+                <div className="flex justify-between text-sm sm:text-base">
                   <span>Shipping</span>
                   <span className={shipping === 0 ? "text-accent" : ""}>
                     {shipping === 0 ? "FREE" : `₹${shipping}`}
                   </span>
                 </div>
                 
-                <div className="flex justify-between">
+                <div className="flex justify-between text-sm sm:text-base">
                   <span>Tax</span>
                   <span>₹{tax}</span>
                 </div>
                 
                 {discount > 0 && (
-                  <div className="flex justify-between text-accent">
+                  <div className="flex justify-between text-accent text-sm sm:text-base">
                     <span>Discount</span>
                     <span>-₹{discount}</span>
                   </div>
                 )}
                 
                 <div className="border-t border-border pt-3">
-                  <div className="flex justify-between items-center text-lg font-bold">
+                  <div className="flex justify-between items-center text-base sm:text-lg font-bold">
                     <span>Total</span>
                     <span className="text-primary">₹{total}</span>
                   </div>
@@ -273,13 +280,13 @@ export default function Cart() {
               </div>
 
               <Link to="/checkout" className="block mt-6">
-                <Button className="w-full btn-accent-farm text-lg py-3">
+                <Button className="w-full btn-accent-farm text-base sm:text-lg py-3">
                   Proceed to Checkout
                 </Button>
               </Link>
 
               {shipping > 0 && (
-                <p className="text-sm text-muted-foreground text-center mt-3">
+                <p className="text-xs sm:text-sm text-muted-foreground text-center mt-3">
                   Add ₹{500 - subtotal} more for free shipping
                 </p>
               )}
