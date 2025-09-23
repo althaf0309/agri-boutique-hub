@@ -6,25 +6,25 @@ import Footer from "@/components/Footer";
 
 const teamMembers = [
   {
-    name: "Priya Sharma",
+    name: "Ms Vani Vijith and Mr. Vijith V C",
     role: "Founder & CEO",
     bio: "Agricultural scientist with 15+ years in sustainable farming",
     image: "/placeholder.svg"
   },
   {
-    name: "Rahul Nair",
+    name: "Vijith V C",
     role: "Head of Operations",
     bio: "Expert in supply chain and organic certification processes",
     image: "/placeholder.svg"
   },
   {
-    name: "Maya Patel",
+    name: "Vani Vijith",
     role: "Quality Assurance",
-    bio: "Food scientist ensuring the highest quality standards",
+    bio: "Agricultural scientist with 15+years in sustainable framing ensuring the highest quality standards",
     image: "/placeholder.svg"
   },
   {
-    name: "Arjun Menon",
+    name: "Vani Vijith",
     role: "Farmer Relations",
     bio: "Building partnerships with organic farmers across India",
     image: "/placeholder.svg"
@@ -86,8 +86,8 @@ export default function AboutUs() {
               <h2 className="text-3xl font-bold text-foreground mb-6">Our Story</h2>
               <div className="space-y-4 text-muted-foreground">
                 <p>
-                  Founded in 2020, Prakrithi Jaiva Kalavara began as a small initiative to bridge the gap 
-                  between organic farmers and conscious consumers. Our founder, Dr. Priya Sharma,
+                  Founded in 2010, Prakrithi Jaiva Kalavara began as a small initiative to bridge the gap 
+                  between organic farmers and conscious consumers. The founders of Prakrithi Jaiva Kalavara are Ms Vani Vijith and Mr. Vijith Vc,
                   witnessed firsthand the challenges faced by small-scale organic farmers in 
                   reaching urban markets.
                 </p>
