@@ -34,6 +34,12 @@ export default function FeaturesCircle() {
             <p className="text-sm sm:text-base md:text-lg lg:text-xl text-muted-foreground leading-relaxed">
               Experience the difference with our commitment to quality, sustainability, and customer satisfaction
             </p>
+            <p>
+            </p>
+            <p>
+            </p>
+            <p>
+            </p>
           </div>
         </div>
 
