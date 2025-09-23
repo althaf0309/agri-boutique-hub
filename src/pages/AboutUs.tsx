@@ -8,7 +8,7 @@ const teamMembers = [
   {
     name: "Ms Vani Vijith and Mr. Vijith V C",
     role: "Founder & CEO",
-    bio: "Agricultural scientist with 15+ years in sustainable farming",
+    bio: "From Soil to Soul - Organic Leadership at Work",
     image: "/placeholder.svg"
   },
   {
