@@ -10,10 +10,9 @@ const features = [
 ];
 
 export default function FeaturesCircle() {
-  // desktop geometry
-  const DESKTOP_RADIUS = 360;     // was 400 – pulls cards in slightly for nicer spacing
-  const TOP_BUMP = 18;            // pushes only the top card down to clear the heading
-  const LINE_RADIUS = 260;        // matches the new layout for connector lines
+  // desktop geometry (unchanged card placement)
+  const DESKTOP_RADIUS = 360;
+  const LINE_RADIUS = 260;
 
   return (
     <section className="pt-32 pb-16 sm:pt-40 sm:pb-20 lg:pt-60 lg:pb-40 xl:pt-72 bg-gradient-to-br from-muted/20 via-background to-muted/30 relative overflow-hidden">
@@ -26,21 +25,23 @@ export default function FeaturesCircle() {
       </div>
 
       <div className="container mx-auto px-4 sm:px-6 relative z-10">
-        <div className="text-center mb-16 sm:mb-20 lg:mb-32 px-4">
+        {/* Intro with larger bottom margin on desktop to clear the top card */}
+        <div className="text-center mb-16 sm:mb-20 lg:mb-44 xl:mb-56 px-4">
           <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold mb-6 sm:mb-8 lg:mb-12 leading-tight">
             <span className="text-gradient block">Why Choose Prakrithi Jaiva Kalavara?</span>
           </h2>
           <div className="max-w-5xl mx-auto">
             <p className="text-sm sm:text-base md:text-lg lg:text-xl text-muted-foreground leading-relaxed">
-             
+              Experience the difference with our commitment to quality, sustainability, and customer satisfaction
             </p>
           </div>
         </div>
 
-        {/* extra gap from the heading to the circle on large screens */}
-        <div className="relative max-w-7xl mx-auto flex items-center justify-center mt-8 sm:mt-10 lg:mt-16 xl:mt-20">
+        {/* Circle block */}
+        <div className="relative max-w-7xl mx-auto flex items-center justify-center">
           {/* Mobile layout */}
           <div className="block lg:hidden w-full">
+            {/* Mobile brand circle */}
             <div className="w-48 h-48 sm:w-64 sm:h-64 mx-auto mb-12 relative">
               <div className="absolute inset-0 rounded-full border-4 border-transparent bg-gradient-to-r from-accent via-primary to-highlight animate-spin" style={{ animationDuration: "20s" }} />
               <div className="absolute inset-2 bg-gradient-to-br from-primary via-accent to-highlight rounded-full shadow-xl">
@@ -54,6 +55,7 @@ export default function FeaturesCircle() {
               </div>
             </div>
 
+            {/* Mobile features grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6">
               {features.map((f) => {
                 const Icon = f.icon;
@@ -72,8 +74,9 @@ export default function FeaturesCircle() {
             </div>
           </div>
 
-          {/* Desktop circle */}
+          {/* Desktop circle (card positions unchanged) */}
           <div className="hidden lg:block relative w-full flex items-center justify-center" style={{ minHeight: "980px" }}>
+            {/* Center brand circle */}
             <div className="relative w-[500px] h-[500px] mx-auto">
               <div className="absolute inset-0 rounded-full border-8 border-transparent bg-gradient-to-r from-accent via-primary to-highlight animate-spin" style={{ animationDuration: "30s" }} />
               <div className="absolute inset-4 rounded-full border-6 border-transparent bg-gradient-to-r from-highlight via-secondary to-accent animate-spin" style={{ animationDuration: "40s", animationDirection: "reverse" }} />
@@ -88,15 +91,12 @@ export default function FeaturesCircle() {
                 </div>
               </div>
 
-              {/* badges placed at perfect 60° intervals */}
+              {/* Badges at perfect 60° intervals (no bump applied) */}
               {features.map((f, index) => {
                 const Icon = f.icon;
                 const angle = (index * 60) * (Math.PI / 180);
                 const x = Math.cos(angle - Math.PI / 2) * DESKTOP_RADIUS;
-                let  y = Math.sin(angle - Math.PI / 2) * DESKTOP_RADIUS;
-
-                // add a small downward bump only for the top card (index 0)
-                if (index === 0) y += TOP_BUMP;
+                const y = Math.sin(angle - Math.PI / 2) * DESKTOP_RADIUS;
 
                 return (
                   <div
@@ -118,7 +118,7 @@ export default function FeaturesCircle() {
               })}
             </div>
 
-            {/* connecting lines (match new radius) */}
+            {/* Connecting lines (no bump) */}
             <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 1200 800">
               <defs>
                 <radialGradient id="enhancedLineGradient" cx="50%" cy="50%" r="50%">
@@ -136,14 +136,21 @@ export default function FeaturesCircle() {
               {features.map((_, index) => {
                 const angle = (index * 60) * (Math.PI / 180);
                 const cx = 600, cy = 400; // svg center
-                let x2 = cx + Math.cos(angle - Math.PI / 2) * LINE_RADIUS;
-                let y2 = cy + Math.sin(angle - Math.PI / 2) * LINE_RADIUS;
-                if (index === 0) y2 += TOP_BUMP * 0.6;
+                const x2 = cx + Math.cos(angle - Math.PI / 2) * LINE_RADIUS;
+                const y2 = cy + Math.sin(angle - Math.PI / 2) * LINE_RADIUS;
 
                 return (
                   <g key={index}>
-                    <line x1={cx} y1={cy} x2={x2} y2={y2} stroke="url(#enhancedLineGradient)" strokeWidth="6" strokeDasharray="12,8" filter="url(#enhancedGlow)" className="animate-pulse" style={{ animationDelay: `${index * 0.3}s`, animationDuration: "4s" }} />
-                    <line x1={cx} y1={cy} x2={x2} y2={y2} stroke="hsl(var(--accent))" strokeWidth="2" strokeDasharray="8,4" className="animate-pulse" style={{ animationDelay: `${index * 0.3 + 0.5}s`, animationDuration: "3s" }} />
+                    <line
+                      x1={cx} y1={cy} x2={x2} y2={y2}
+                      stroke="url(#enhancedLineGradient)" strokeWidth="6" strokeDasharray="12,8"
+                      filter="url(#enhancedGlow)" className="animate-pulse" style={{ animationDuration: "4s" }}
+                    />
+                    <line
+                      x1={cx} y1={cy} x2={x2} y2={y2}
+                      stroke="hsl(var(--accent))" strokeWidth="2" strokeDasharray="8,4"
+                      className="animate-pulse" style={{ animationDuration: "3s" }}
+                    />
                   </g>
                 );
               })}
