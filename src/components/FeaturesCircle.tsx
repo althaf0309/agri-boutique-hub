@@ -116,10 +116,10 @@ export default function FeaturesCircle() {
             </div>
           </div>
 
-          {/* Desktop Layout - Original circle design */}
-          <div className="hidden lg:block relative min-h-[900px] w-full flex items-center justify-center pt-20">
+          {/* Desktop Layout - Perfect Aligned Circle Design */}
+          <div className="hidden lg:block relative w-full flex items-center justify-center" style={{minHeight: '1000px'}}>
             {/* Center Brand Circle - Desktop */}
-            <div className="relative w-96 md:w-[450px] lg:w-[500px] h-96 md:h-[450px] lg:h-[500px] mx-auto">
+            <div className="relative w-[500px] h-[500px] mx-auto">
               {/* Outer rotating ring */}
               <div className="absolute inset-0 rounded-full border-8 border-transparent bg-gradient-to-r from-accent via-primary to-highlight animate-spin" style={{animationDuration: '30s'}}></div>
               
@@ -131,12 +131,12 @@ export default function FeaturesCircle() {
                 {/* Inner content circle */}
                 <div className="absolute inset-6 bg-white/98 backdrop-blur-sm rounded-full flex items-center justify-center shadow-inner border-4 border-white/50">
                   <div className="text-center px-6">
-                    <div className="text-5xl md:text-6xl lg:text-7xl font-bold mb-4 text-gradient animate-pulse">PJK</div>
-                    <div className="text-xl md:text-2xl lg:text-3xl font-bold text-primary mb-3 leading-tight">Prakrithi Jaiva Kalavara</div>
-                    <div className="text-sm md:text-base lg:text-lg text-muted-foreground px-2 leading-tight">
+                    <div className="text-7xl font-bold mb-4 text-gradient animate-pulse">PJK</div>
+                    <div className="text-3xl font-bold text-primary mb-3 leading-tight">Prakrithi Jaiva Kalavara</div>
+                    <div className="text-lg text-muted-foreground px-2 leading-tight">
                       Premium Organic Excellence
                     </div>
-                    <div className="text-xs md:text-sm text-muted-foreground/80 mt-2">
+                    <div className="text-sm text-muted-foreground/80 mt-2">
                       Farm to Table Quality
                     </div>
                     <div className="flex justify-center mt-4 space-x-2">
@@ -148,11 +148,12 @@ export default function FeaturesCircle() {
                 </div>
               </div>
 
-              {/* Enhanced Feature Badges - Desktop */}
+              {/* Perfectly Aligned Feature Badges - Desktop */}
               {features.map((feature, index) => {
                 const Icon = feature.icon;
-                const angle = (index * 60) * (Math.PI / 180);
-                const radius = 350;
+                // Perfect hexagonal alignment - 6 positions around circle
+                const angle = (index * 60) * (Math.PI / 180); // 60 degrees apart
+                const radius = 400; // Distance from center
                 const x = Math.cos(angle - Math.PI/2) * radius;
                 const y = Math.sin(angle - Math.PI/2) * radius;
                 
@@ -166,12 +167,12 @@ export default function FeaturesCircle() {
                       transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`
                     }}
                   >
-                    <div className="bg-white/95 rounded-3xl p-6 lg:p-8 shadow-2xl border border-border/50 hover:shadow-3xl transition-all duration-500 hover:scale-110 hover:-translate-y-2 backdrop-blur-sm min-w-[200px] max-w-[240px]">
-                      <div className="text-center px-2">
+                    <div className="bg-white/95 rounded-3xl p-6 shadow-2xl border border-border/50 hover:shadow-3xl transition-all duration-500 hover:scale-110 hover:-translate-y-2 backdrop-blur-sm w-[220px] h-[180px] flex flex-col items-center justify-center">
+                      <div className="text-center">
                         <div className={`w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-muted to-background flex items-center justify-center ${feature.color} shadow-lg hover:shadow-xl transition-all duration-300`}>
                           <Icon className="w-8 h-8" />
                         </div>
-                        <div className="text-base lg:text-lg font-bold text-primary mb-2 leading-tight">
+                        <div className="text-lg font-bold text-primary mb-2 leading-tight">
                           {feature.title}
                         </div>
                         <div className="text-sm text-muted-foreground leading-tight">
