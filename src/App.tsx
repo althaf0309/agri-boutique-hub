@@ -17,6 +17,9 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsConditions from "./pages/TermsConditions";
+import Awards from "./pages/Awards";
+import Testimonials from "./pages/Testimonials";
+import Gallery from "./pages/Gallery";
 import { AdminLayout } from "./layout/AdminLayout";
 import { DashboardPage } from "./modules/dashboard/DashboardPage";
 import { ProductsPage } from "./modules/products/ProductsPage";
@@ -42,6 +45,9 @@ const App = () => (
           <Route path="/blog/:id" element={<BlogDetails />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/about" element={<AboutUs />} />
+          <Route path="/awards" element={<Awards />} />
+          <Route path="/testimonials" element={<Testimonials />} />
+          <Route path="/gallery" element={<Gallery />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />

@@ -63,6 +63,30 @@ export default function Header() {
                   About
                 </Link>
                 <Link 
+                  to="/awards" 
+                  className={`text-sm hover:text-primary transition-colors ${
+                    isActive('/awards') ? 'text-primary font-medium' : 'text-muted-foreground'
+                  }`}
+                >
+                  Awards
+                </Link>
+                <Link 
+                  to="/testimonials" 
+                  className={`text-sm hover:text-primary transition-colors ${
+                    isActive('/testimonials') ? 'text-primary font-medium' : 'text-muted-foreground'
+                  }`}
+                >
+                  Testimonials
+                </Link>
+                <Link 
+                  to="/gallery" 
+                  className={`text-sm hover:text-primary transition-colors ${
+                    isActive('/gallery') ? 'text-primary font-medium' : 'text-muted-foreground'
+                  }`}
+                >
+                  Gallery
+                </Link>
+                <Link 
                   to="/blog" 
                   className={`text-sm hover:text-primary transition-colors ${
                     isActive('/blog') ? 'text-primary font-medium' : 'text-muted-foreground'
@@ -81,18 +105,42 @@ export default function Header() {
               </div>
 
               {/* Mobile/Tablet Navigation */}
-              <div className="flex lg:hidden items-center space-x-1 text-xs">
+              <div className="flex lg:hidden items-center space-x-1 text-xs overflow-x-auto scrollbar-hide">
                 <Link 
                   to="/about" 
-                  className={`hover:text-primary transition-colors px-2 py-1 ${
+                  className={`hover:text-primary transition-colors px-2 py-1 whitespace-nowrap ${
                     isActive('/about') ? 'text-primary font-medium' : 'text-muted-foreground'
                   }`}
                 >
                   About
                 </Link>
                 <Link 
+                  to="/awards" 
+                  className={`hover:text-primary transition-colors px-2 py-1 whitespace-nowrap ${
+                    isActive('/awards') ? 'text-primary font-medium' : 'text-muted-foreground'
+                  }`}
+                >
+                  Awards
+                </Link>
+                <Link 
+                  to="/testimonials" 
+                  className={`hover:text-primary transition-colors px-2 py-1 whitespace-nowrap ${
+                    isActive('/testimonials') ? 'text-primary font-medium' : 'text-muted-foreground'
+                  }`}
+                >
+                  Reviews
+                </Link>
+                <Link 
+                  to="/gallery" 
+                  className={`hover:text-primary transition-colors px-2 py-1 whitespace-nowrap ${
+                    isActive('/gallery') ? 'text-primary font-medium' : 'text-muted-foreground'
+                  }`}
+                >
+                  Gallery
+                </Link>
+                <Link 
                   to="/blog" 
-                  className={`hover:text-primary transition-colors px-2 py-1 ${
+                  className={`hover:text-primary transition-colors px-2 py-1 whitespace-nowrap ${
                     isActive('/blog') ? 'text-primary font-medium' : 'text-muted-foreground'
                   }`}
                 >
@@ -100,7 +148,7 @@ export default function Header() {
                 </Link>
                 <Link 
                   to="/contact" 
-                  className={`hover:text-primary transition-colors px-2 py-1 ${
+                  className={`hover:text-primary transition-colors px-2 py-1 whitespace-nowrap ${
                     isActive('/contact') ? 'text-primary font-medium' : 'text-muted-foreground'
                   }`}
                 >
