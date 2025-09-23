@@ -34,12 +34,25 @@ export default function FeaturesCircle() {
             <p className="text-sm sm:text-base md:text-lg lg:text-xl text-muted-foreground leading-relaxed">
               Experience the difference with our commitment to quality, sustainability, and customer satisfaction
             </p>
-            <p>
+            
+          </div>
+          <div className="max-w-5xl mx-auto">
+            <p className="text-sm sm:text-base md:text-lg lg:text-xl text-muted-foreground leading-relaxed">
+              Experience the difference with our commitment to quality, sustainability, and customer satisfaction
             </p>
-            <p>
+            
+          </div>
+          <div className="max-w-5xl mx-auto">
+            <p className="text-sm sm:text-base md:text-lg lg:text-xl text-muted-foreground leading-relaxed">
+             
             </p>
-            <p>
+            
+          </div>
+          <div className="max-w-5xl mx-auto">
+            <p className="text-sm sm:text-base md:text-lg lg:text-xl text-muted-foreground leading-relaxed">
+            
             </p>
+            
           </div>
         </div>
 
