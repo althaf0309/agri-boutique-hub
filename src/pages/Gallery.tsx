@@ -143,32 +143,32 @@ export default function Gallery() {
     <div className="min-h-screen bg-background">
       <Header />
       
-      <main className="container mx-auto px-4 py-12">
+      <main className="container mx-auto px-4 py-8 sm:py-12">
         {/* Hero Section */}
-        <section className="text-center mb-16">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-primary to-accent rounded-full mb-6">
-            <Camera className="w-10 h-10 text-white" />
+        <section className="text-center mb-12 sm:mb-16">
+          <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-r from-primary to-accent rounded-full mb-4 sm:mb-6">
+            <Camera className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-4 sm:mb-6 px-2">
             Our Journey in Pictures
           </h1>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+          <p className="text-lg sm:text-xl text-muted-foreground max-w-3xl mx-auto px-2">
             Explore our visual story of organic farming excellence, community impact, 
             and the journey towards sustainable agriculture across India.
           </p>
         </section>
 
         {/* Gallery Categories */}
-        <section className="mb-16">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <section className="mb-12 sm:mb-16">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
             {categories.map((category, index) => (
               <Card key={index} className="card-farm text-center cursor-pointer">
-                <CardContent className="p-6">
-                  <div className="w-12 h-12 bg-gradient-to-r from-primary to-accent rounded-lg flex items-center justify-center mx-auto mb-4">
-                    <category.icon className="w-6 h-6 text-white" />
+                <CardContent className="p-4 sm:p-6">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-primary to-accent rounded-lg flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                    <category.icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                   </div>
-                  <h3 className="text-lg font-semibold text-foreground mb-2">{category.name}</h3>
-                  <Badge variant="secondary" className="feature-badge">
+                  <h3 className="text-sm sm:text-lg font-semibold text-foreground mb-2">{category.name}</h3>
+                  <Badge variant="secondary" className="feature-badge text-xs">
                     {category.count} Photos
                   </Badge>
                 </CardContent>
@@ -178,35 +178,35 @@ export default function Gallery() {
         </section>
 
         {/* Farming & Agriculture Gallery */}
-        <section className="mb-16">
-          <h2 className="text-3xl font-bold text-foreground mb-8 flex items-center">
-            <Leaf className="w-8 h-8 mr-3 text-primary" />
+        <section className="mb-12 sm:mb-16">
+          <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-6 sm:mb-8 flex items-center">
+            <Leaf className="w-6 h-6 sm:w-8 sm:h-8 mr-2 sm:mr-3 text-primary" />
             Farming & Agriculture
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
             {farmingGallery.map((item, index) => (
               <Card key={index} className="card-farm overflow-hidden">
                 <div className="relative">
                   <img 
                     src={item.image} 
                     alt={item.title}
-                    className="w-full h-48 object-cover"
+                    className="w-full h-40 sm:h-48 object-cover"
                   />
                   <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                    <Camera className="w-8 h-8 text-white" />
+                    <Camera className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
                   </div>
                 </div>
-                <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold text-foreground mb-2">{item.title}</h3>
-                  <div className="flex items-center text-sm text-muted-foreground mb-2">
-                    <MapPin className="w-4 h-4 mr-1" />
+                <CardContent className="p-4 sm:p-6">
+                  <h3 className="text-base sm:text-lg font-semibold text-foreground mb-2">{item.title}</h3>
+                  <div className="flex items-center text-xs sm:text-sm text-muted-foreground mb-2">
+                    <MapPin className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                     <span>{item.location}</span>
                   </div>
-                  <div className="flex items-center text-sm text-muted-foreground mb-3">
-                    <Calendar className="w-4 h-4 mr-1" />
+                  <div className="flex items-center text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3">
+                    <Calendar className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                     <span>{item.date}</span>
                   </div>
-                  <p className="text-sm text-muted-foreground">{item.description}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">{item.description}</p>
                 </CardContent>
               </Card>
             ))}
@@ -214,12 +214,12 @@ export default function Gallery() {
         </section>
 
         {/* Events & Workshops Gallery */}
-        <section className="mb-16">
-          <h2 className="text-3xl font-bold text-foreground mb-8 flex items-center">
-            <Users className="w-8 h-8 mr-3 text-primary" />
+        <section className="mb-12 sm:mb-16">
+          <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-6 sm:mb-8 flex items-center">
+            <Users className="w-6 h-6 sm:w-8 sm:h-8 mr-2 sm:mr-3 text-primary" />
             Events & Community Outreach
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
             {eventsGallery.map((item, index) => (
               <Card key={index} className="card-farm overflow-hidden">
                 <div className="relative">
@@ -250,33 +250,33 @@ export default function Gallery() {
         </section>
 
         {/* Certifications Gallery */}
-        <section className="mb-16">
-          <h2 className="text-3xl font-bold text-foreground mb-8 flex items-center">
-            <Award className="w-8 h-8 mr-3 text-primary" />
+        <section className="mb-12 sm:mb-16">
+          <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-6 sm:mb-8 flex items-center">
+            <Award className="w-6 h-6 sm:w-8 sm:h-8 mr-2 sm:mr-3 text-primary" />
             Certifications & Achievements
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             {certificationGallery.map((item, index) => (
               <Card key={index} className="card-farm overflow-hidden">
                 <div className="relative">
                   <img 
                     src={item.image} 
                     alt={item.title}
-                    className="w-full h-32 object-cover"
+                    className="w-full h-28 sm:h-32 object-cover"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                 </div>
-                <CardContent className="p-4">
-                  <h3 className="text-sm font-semibold text-foreground mb-1">{item.title}</h3>
+                <CardContent className="p-3 sm:p-4">
+                  <h3 className="text-xs sm:text-sm font-semibold text-foreground mb-1">{item.title}</h3>
                   <div className="flex items-center text-xs text-muted-foreground mb-1">
                     <MapPin className="w-3 h-3 mr-1" />
-                    <span>{item.location}</span>
+                    <span className="truncate">{item.location}</span>
                   </div>
-                  <div className="flex items-center text-xs text-muted-foreground mb-2">
+                  <div className="flex items-center text-xs text-muted-foreground mb-1 sm:mb-2">
                     <Calendar className="w-3 h-3 mr-1" />
                     <span>{item.date}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground">{item.description}</p>
+                  <p className="text-xs text-muted-foreground line-clamp-2">{item.description}</p>
                 </CardContent>
               </Card>
             ))}
@@ -284,25 +284,25 @@ export default function Gallery() {
         </section>
 
         {/* Gallery Stats */}
-        <section className="mb-16">
-          <div className="bg-gradient-to-r from-primary/5 via-accent/5 to-highlight/5 rounded-2xl p-8">
-            <h2 className="text-3xl font-bold text-foreground mb-8 text-center">Our Visual Journey</h2>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-center">
+        <section className="mb-12 sm:mb-16">
+          <div className="bg-gradient-to-r from-primary/5 via-accent/5 to-highlight/5 rounded-2xl p-6 sm:p-8">
+            <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-6 sm:mb-8 text-center">Our Visual Journey</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 text-center">
               <div>
-                <div className="text-4xl font-bold text-gradient mb-2">500+</div>
-                <p className="text-muted-foreground">Photos Captured</p>
+                <div className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gradient mb-1 sm:mb-2">500+</div>
+                <p className="text-muted-foreground text-xs sm:text-sm">Photos Captured</p>
               </div>
               <div>
-                <div className="text-4xl font-bold text-gradient mb-2">50+</div>
-                <p className="text-muted-foreground">Farm Visits</p>
+                <div className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gradient mb-1 sm:mb-2">50+</div>
+                <p className="text-muted-foreground text-xs sm:text-sm">Farm Visits</p>
               </div>
               <div>
-                <div className="text-4xl font-bold text-gradient mb-2">25+</div>
-                <p className="text-muted-foreground">Events Documented</p>
+                <div className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gradient mb-1 sm:mb-2">25+</div>
+                <p className="text-muted-foreground text-xs sm:text-sm">Events Documented</p>
               </div>
               <div>
-                <div className="text-4xl font-bold text-gradient mb-2">5</div>
-                <p className="text-muted-foreground">Years of Growth</p>
+                <div className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gradient mb-1 sm:mb-2">5</div>
+                <p className="text-muted-foreground text-xs sm:text-sm">Years of Growth</p>
               </div>
             </div>
           </div>
@@ -310,13 +310,13 @@ export default function Gallery() {
 
         {/* Call to Action */}
         <section className="text-center">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-3xl font-bold text-foreground mb-6">Visit Our Farms</h2>
-            <p className="text-xl text-muted-foreground mb-8">
+          <div className="max-w-4xl mx-auto px-4">
+            <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-4 sm:mb-6 text-center">Visit Our Farms</h2>
+            <p className="text-lg sm:text-xl text-muted-foreground mb-6 sm:mb-8 text-center">
               Experience organic farming firsthand by visiting our partner farms. 
               See where your food comes from and meet the farmers who grow it with love and care.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
               <a href="/contact" className="inline-block">
                 <button className="btn-farm">
                   Plan a Farm Visit

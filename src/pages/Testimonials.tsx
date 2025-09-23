@@ -110,32 +110,32 @@ export default function Testimonials() {
     <div className="min-h-screen bg-background">
       <Header />
       
-      <main className="container mx-auto px-4 py-12">
+      <main className="container mx-auto px-4 py-8 sm:py-12">
         {/* Hero Section */}
-        <section className="text-center mb-16">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-primary to-accent rounded-full mb-6">
-            <Heart className="w-10 h-10 text-white" />
+        <section className="text-center mb-12 sm:mb-16">
+          <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-r from-primary to-accent rounded-full mb-4 sm:mb-6">
+            <Heart className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-4 sm:mb-6 px-2">
             Customer Testimonials
           </h1>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+          <p className="text-lg sm:text-xl text-muted-foreground max-w-3xl mx-auto px-2">
             Discover how Prakrithi Jaiva Kalavara has transformed the lives of thousands of families 
             through authentic organic products and sustainable farming practices.
           </p>
         </section>
 
         {/* Statistics */}
-        <section className="mb-16">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <section className="mb-12 sm:mb-16">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
             {stats.map((stat, index) => (
               <Card key={index} className="card-farm text-center">
-                <CardContent className="p-6">
-                  <div className="w-12 h-12 bg-gradient-to-r from-primary to-accent rounded-lg flex items-center justify-center mx-auto mb-4">
-                    <stat.icon className="w-6 h-6 text-white" />
+                <CardContent className="p-4 sm:p-6">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-primary to-accent rounded-lg flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                    <stat.icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                   </div>
-                  <div className="text-3xl font-bold text-gradient mb-2">{stat.number}</div>
-                  <p className="text-muted-foreground">{stat.label}</p>
+                  <div className="text-2xl sm:text-3xl font-bold text-gradient mb-1 sm:mb-2">{stat.number}</div>
+                  <p className="text-muted-foreground text-xs sm:text-sm">{stat.label}</p>
                 </CardContent>
               </Card>
             ))}
@@ -143,51 +143,51 @@ export default function Testimonials() {
         </section>
 
         {/* Customer Reviews */}
-        <section className="mb-16">
-          <h2 className="text-3xl font-bold text-foreground mb-8 text-center">What Our Customers Say</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <section className="mb-12 sm:mb-16">
+          <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-6 sm:mb-8 text-center">What Our Customers Say</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
             {testimonials.map((review, index) => (
               <Card key={index} className="card-farm h-full">
-                <CardContent className="p-6 flex flex-col h-full">
+                <CardContent className="p-4 sm:p-6 flex flex-col h-full">
                   {/* Header */}
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center space-x-3">
+                  <div className="flex items-start justify-between mb-3 sm:mb-4">
+                    <div className="flex items-center space-x-2 sm:space-x-3">
                       <img 
                         src={review.avatar} 
                         alt={review.name}
-                        className="w-12 h-12 rounded-full object-cover"
+                        className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover"
                       />
                       <div>
-                        <h3 className="text-lg font-semibold text-foreground flex items-center">
+                        <h3 className="text-base sm:text-lg font-semibold text-foreground flex items-center">
                           {review.name}
                           {review.verified && (
-                            <Badge variant="secondary" className="ml-2 text-xs bg-accent/10 text-accent">
-                              Verified
+                            <Badge variant="secondary" className="ml-1 sm:ml-2 text-xs bg-accent/10 text-accent">
+                              ✓
                             </Badge>
                           )}
                         </h3>
-                        <p className="text-sm text-muted-foreground">{review.location}</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">{review.location}</p>
                       </div>
                     </div>
                   </div>
 
                   {/* Rating */}
-                  <div className="flex items-center mb-4">
+                  <div className="flex items-center mb-3 sm:mb-4">
                     {[...Array(review.rating)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 text-accent fill-current" />
+                      <Star key={i} className="w-3 h-3 sm:w-4 sm:h-4 text-accent fill-current" />
                     ))}
                   </div>
 
                   {/* Testimonial */}
-                  <div className="flex-1 mb-4">
-                    <Quote className="w-8 h-8 text-primary/20 mb-2" />
-                    <p className="text-muted-foreground italic leading-relaxed">
+                  <div className="flex-1 mb-3 sm:mb-4">
+                    <Quote className="w-6 h-6 sm:w-8 sm:h-8 text-primary/20 mb-2" />
+                    <p className="text-muted-foreground italic leading-relaxed text-sm sm:text-base">
                       "{review.testimonial}"
                     </p>
                   </div>
 
                   {/* Product Category */}
-                  <Badge variant="outline" className="self-start bg-primary/5 text-primary border-primary/20">
+                  <Badge variant="outline" className="self-start bg-primary/5 text-primary border-primary/20 text-xs">
                     {review.product}
                   </Badge>
                 </CardContent>
@@ -197,9 +197,9 @@ export default function Testimonials() {
         </section>
 
         {/* Video Testimonials */}
-        <section className="mb-16">
-          <h2 className="text-3xl font-bold text-foreground mb-8 text-center">Video Stories</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <section className="mb-12 sm:mb-16">
+          <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-6 sm:mb-8 text-center">Video Stories</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
             {videoTestimonials.map((video, index) => (
               <Card key={index} className="card-farm overflow-hidden">
                 <div className="relative">
