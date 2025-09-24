@@ -15,7 +15,7 @@ const categories = [
   "Ruchira",
   "Personal Care", 
   "Plant Nursery",
-  "Fruits & Vegetables"
+  "Fruits,Vegetables & Seeds"
 ];
 
 export default function Header() {
