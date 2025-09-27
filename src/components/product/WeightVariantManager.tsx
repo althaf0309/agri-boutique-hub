@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Plus, X, Weight, DollarSign, Package2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Plus, X, Weight, Package2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,9 +11,9 @@ import { useToast } from "@/hooks/use-toast";
 
 interface WeightVariant {
   id: string;
-  weight: string;
+  weight: string; // numeric in string
   unit: "G" | "KG" | "ML" | "L";
-  price: string;
+  price: string; // numeric in string
   stock: number;
   sku: string;
   isActive: boolean;
@@ -39,10 +39,10 @@ const COMMON_WEIGHTS = {
   L: ["1", "2", "5"],
 };
 
-export function WeightVariantManager({ 
-  variants, 
-  onVariantsChange, 
-  productName 
+export function WeightVariantManager({
+  variants,
+  onVariantsChange,
+  productName,
 }: WeightVariantManagerProps) {
   const [newWeight, setNewWeight] = useState("");
   const [newUnit, setNewUnit] = useState<"G" | "KG" | "ML" | "L">("KG");
@@ -50,47 +50,73 @@ export function WeightVariantManager({
   const [newStock, setNewStock] = useState("");
   const { toast } = useToast();
 
+  const baseSlug = useMemo(
+    () => productName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""),
+    [productName]
+  );
+
   const generateSKU = (weight: string, unit: string) => {
-    const baseSlug = productName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     return `${baseSlug}-${weight}${unit.toLowerCase()}`;
   };
+
+  // Regenerate SKUs if productName (slug) changes
+  useEffect(() => {
+    if (!variants.length) return;
+    const updated = variants.map((v) => ({
+      ...v,
+      sku: generateSKU(v.weight, v.unit),
+    }));
+    onVariantsChange(updated);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [baseSlug]);
 
   const addVariant = () => {
     if (!newWeight || !newPrice || !newStock) {
       toast({
         title: "Missing information",
         description: "Please fill in weight, price, and stock",
-        variant: "destructive"
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // basic numeric validation
+    const wNum = parseFloat(newWeight);
+    const pNum = parseFloat(newPrice);
+    const sNum = parseInt(newStock, 10);
+
+    if (!isFinite(wNum) || wNum <= 0 || !isFinite(pNum) || pNum < 0 || !Number.isFinite(sNum) || sNum < 0) {
+      toast({
+        title: "Invalid values",
+        description: "Weight must be > 0, price ≥ 0, stock ≥ 0.",
+        variant: "destructive",
       });
       return;
     }
 
     // Check if variant already exists
-    const existingVariant = variants.find(v => 
-      v.weight === newWeight && v.unit === newUnit
-    );
-
-    if (existingVariant) {
+    const exists = variants.find((v) => v.weight === newWeight && v.unit === newUnit);
+    if (exists) {
       toast({
         title: "Variant exists",
         description: `${newWeight}${newUnit} variant already exists`,
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
 
     const newVariant: WeightVariant = {
-      id: Date.now().toString(),
+      id: `${Date.now()}`,
       weight: newWeight,
       unit: newUnit,
       price: newPrice,
-      stock: parseInt(newStock),
+      stock: sNum,
       sku: generateSKU(newWeight, newUnit),
-      isActive: true
+      isActive: true,
     };
 
     onVariantsChange([...variants, newVariant]);
-    
+
     // Reset form
     setNewWeight("");
     setNewPrice("");
@@ -98,33 +124,29 @@ export function WeightVariantManager({
 
     toast({
       title: "Variant added",
-      description: `${newWeight}${newUnit} variant created successfully`
+      description: `${newWeight}${newUnit} variant created successfully`,
     });
   };
 
   const updateVariant = (id: string, field: keyof WeightVariant, value: any) => {
-    const updatedVariants = variants.map(variant => {
-      if (variant.id === id) {
-        const updated = { ...variant, [field]: value };
-        // Regenerate SKU if weight or unit changes
-        if (field === 'weight' || field === 'unit') {
-          updated.sku = generateSKU(updated.weight, updated.unit);
-        }
-        return updated;
+    const updated = variants.map((v) => {
+      if (v.id !== id) return v;
+      const next = { ...v, [field]: value };
+      if (field === "weight" || field === "unit") {
+        next.sku = generateSKU(next.weight, next.unit);
       }
-      return variant;
+      if (field === "stock") {
+        const num = Number(value);
+        next.stock = Number.isFinite(num) && num >= 0 ? num : 0;
+      }
+      return next;
     });
-    onVariantsChange(updatedVariants);
+    onVariantsChange(updated);
   };
 
   const removeVariant = (id: string) => {
-    const updatedVariants = variants.filter(variant => variant.id !== id);
-    onVariantsChange(updatedVariants);
-    
-    toast({
-      title: "Variant removed",
-      description: "Weight variant has been removed"
-    });
+    onVariantsChange(variants.filter((v) => v.id !== id));
+    toast({ title: "Variant removed", description: "Weight variant has been removed" });
   };
 
   const addQuickWeight = (weight: string, unit: "G" | "KG" | "ML" | "L") => {
@@ -135,21 +157,19 @@ export function WeightVariantManager({
   const calculatePricePerKg = (price: string, weight: string, unit: string) => {
     const priceNum = parseFloat(price);
     const weightNum = parseFloat(weight);
-    
-    if (!priceNum || !weightNum) return "—";
-    
+    if (!isFinite(priceNum) || !isFinite(weightNum) || weightNum <= 0) return "—";
+
     let weightInKg = weightNum;
     if (unit === "G") weightInKg = weightNum / 1000;
-    else if (unit === "ML") weightInKg = weightNum / 1000; // Approximate for liquids
-    else if (unit === "L") weightInKg = weightNum; // Approximate for liquids
-    
+    else if (unit === "ML") weightInKg = weightNum / 1000; // density-agnostic approx
+    else if (unit === "L") weightInKg = weightNum; // approx
+    // KG stays as is
+
     const pricePerKg = priceNum / weightInKg;
     return `₹${pricePerKg.toFixed(2)}/kg`;
   };
 
-  const getTotalStock = () => {
-    return variants.reduce((total, variant) => total + variant.stock, 0);
-  };
+  const totalStock = variants.reduce((t, v) => t + (Number.isFinite(v.stock) ? v.stock : 0), 0);
 
   return (
     <Card>
@@ -167,19 +187,20 @@ export function WeightVariantManager({
         <div>
           <Label className="text-sm font-medium mb-2 block">Quick Add Common Weights</Label>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-            {WEIGHT_UNITS.map(unit => (
+            {WEIGHT_UNITS.map((unit) => (
               <div key={unit.value} className="space-y-1">
                 <Label className="text-xs text-muted-foreground">{unit.label}</Label>
                 <div className="flex flex-wrap gap-1">
-                  {COMMON_WEIGHTS[unit.value as keyof typeof COMMON_WEIGHTS].map(weight => (
+                  {COMMON_WEIGHTS[unit.value as keyof typeof COMMON_WEIGHTS].map((w) => (
                     <Button
-                      key={`${weight}-${unit.value}`}
+                      key={`${w}-${unit.value}`}
                       variant="outline"
                       size="sm"
                       className="h-6 px-2 text-xs"
-                      onClick={() => addQuickWeight(weight, unit.value as any)}
+                      onClick={() => addQuickWeight(w, unit.value as any)}
                     >
-                      {weight}{unit.value}
+                      {w}
+                      {unit.value}
                     </Button>
                   ))}
                 </div>
@@ -206,14 +227,14 @@ export function WeightVariantManager({
             </div>
             <div>
               <Label className="text-xs text-muted-foreground">Unit</Label>
-              <Select value={newUnit} onValueChange={(value: any) => setNewUnit(value)}>
+              <Select value={newUnit} onValueChange={(v: any) => setNewUnit(v)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {WEIGHT_UNITS.map(unit => (
-                    <SelectItem key={unit.value} value={unit.value}>
-                      {unit.value}
+                  {WEIGHT_UNITS.map((u) => (
+                    <SelectItem key={u.value} value={u.value}>
+                      {u.value}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -248,7 +269,7 @@ export function WeightVariantManager({
         </div>
 
         {/* Existing Variants */}
-        {variants.length > 0 && (
+        {variants.length > 0 ? (
           <>
             <Separator />
             <div className="space-y-4">
@@ -256,7 +277,7 @@ export function WeightVariantManager({
                 <Label className="text-sm font-medium">Weight Variants ({variants.length})</Label>
                 <Badge variant="outline" className="gap-1">
                   <Package2 className="h-3 w-3" />
-                  Total Stock: {getTotalStock()}
+                  Total Stock: {totalStock}
                 </Badge>
               </div>
 
@@ -271,20 +292,20 @@ export function WeightVariantManager({
                             type="number"
                             step="0.01"
                             value={variant.weight}
-                            onChange={(e) => updateVariant(variant.id, 'weight', e.target.value)}
+                            onChange={(e) => updateVariant(variant.id, "weight", e.target.value)}
                             className="h-8"
                           />
-                          <Select 
-                            value={variant.unit} 
-                            onValueChange={(value) => updateVariant(variant.id, 'unit', value)}
+                          <Select
+                            value={variant.unit}
+                            onValueChange={(v) => updateVariant(variant.id, "unit", v)}
                           >
                             <SelectTrigger className="h-8 w-16">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              {WEIGHT_UNITS.map(unit => (
-                                <SelectItem key={unit.value} value={unit.value}>
-                                  {unit.value}
+                              {WEIGHT_UNITS.map((u) => (
+                                <SelectItem key={u.value} value={u.value}>
+                                  {u.value}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -298,7 +319,7 @@ export function WeightVariantManager({
                           type="number"
                           step="0.01"
                           value={variant.price}
-                          onChange={(e) => updateVariant(variant.id, 'price', e.target.value)}
+                          onChange={(e) => updateVariant(variant.id, "price", e.target.value)}
                           className="h-8"
                         />
                       </div>
@@ -308,7 +329,9 @@ export function WeightVariantManager({
                         <Input
                           type="number"
                           value={variant.stock}
-                          onChange={(e) => updateVariant(variant.id, 'stock', parseInt(e.target.value) || 0)}
+                          onChange={(e) =>
+                            updateVariant(variant.id, "stock", parseInt(e.target.value, 10) || 0)
+                          }
                           className="h-8"
                         />
                       </div>
@@ -324,7 +347,7 @@ export function WeightVariantManager({
                         <Label className="text-xs text-muted-foreground">SKU</Label>
                         <Input
                           value={variant.sku}
-                          onChange={(e) => updateVariant(variant.id, 'sku', e.target.value)}
+                          onChange={(e) => updateVariant(variant.id, "sku", e.target.value)}
                           className="h-8 text-xs"
                         />
                       </div>
@@ -338,16 +361,20 @@ export function WeightVariantManager({
                           size="sm"
                           onClick={() => removeVariant(variant.id)}
                           className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                          title="Remove"
                         >
                           <X className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
 
-                    {/* Variant Summary */}
                     <div className="mt-3 pt-3 border-t flex items-center gap-4 text-xs text-muted-foreground">
                       <span>
-                        <strong>{variant.weight}{variant.unit}</strong> - ₹{variant.price}
+                        <strong>
+                          {variant.weight}
+                          {variant.unit}
+                        </strong>{" "}
+                        - ₹{variant.price}
                       </span>
                       <span>•</span>
                       <span>Stock: {variant.stock} units</span>
@@ -359,9 +386,7 @@ export function WeightVariantManager({
               </div>
             </div>
           </>
-        )}
-
-        {variants.length === 0 && (
+        ) : (
           <div className="text-center py-8 text-muted-foreground">
             <Weight className="h-8 w-8 mx-auto mb-2 opacity-50" />
             <p>No weight variants added yet</p>

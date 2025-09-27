@@ -3,6 +3,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+
+// Public pages
 import Index from "./pages/Index";
 import Shop from "./pages/Shop";
 import ProductDetails from "./pages/ProductDetails";
@@ -17,6 +19,8 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsConditions from "./pages/TermsConditions";
+
+// Admin pages
 import { AdminLayout } from "./layout/AdminLayout";
 import { DashboardPage } from "./modules/dashboard/DashboardPage";
 import { ProductsPage } from "./modules/products/ProductsPage";
@@ -24,14 +28,18 @@ import { OrdersPage } from "./modules/orders/OrdersPage";
 import { OrderDetailPage } from "./modules/orders/OrderDetailPage";
 import { ReviewsPage } from "./modules/reviews/ReviewsPage";
 import { ContactsPage } from "./modules/contacts/ContactsPage";
-// 👉 use the simple form you pasted
+
+// Forms
+// Simple (general) product form
 import { ProductForm } from "./modules/products/ProductFormSimple";
+// Grocery-focused product form (make sure this file exports the component;
+// named export is fine; if you also add `export default`, you can import it either way)
+import { GroceryProductForm } from "./modules/products/GroceryProductForm";
+
+// Analytics & Categories
 import { AnalyticsDashboard } from "./modules/analytics/AnalyticsDashboard";
 import { CategoriesPage } from "./modules/categories/CategoriesPage";
 import { CategoryFormPage } from "./modules/categories/CategoryFormPage";
-
-
-
 
 const queryClient = new QueryClient();
 
@@ -60,20 +68,39 @@ const App = () => (
           {/* Admin Routes */}
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<DashboardPage />} />
+
+            {/* Catalog */}
             <Route path="products" element={<ProductsPage />} />
-            <Route path="products/new" element={<ProductForm />} />
-            <Route path="products/:id/edit" element={<ProductForm />} />
+            {/* General products */}
+           <Route path="products/new" element={<ProductForm />} />
+<Route path="products/:id/edit" element={<ProductForm />} />
+<Route path="products/new-grocery" element={<GroceryProductForm />} />
+<Route path="products/:id/edit-grocery" element={<GroceryProductForm />} />
+            {/* Grocery products (now visible) */}
+            <Route path="products/new-grocery" element={<GroceryProductForm />} />
+            <Route path="products/:id/edit-grocery" element={<GroceryProductForm />} />
+
+            {/* Analytics */}
             <Route path="analytics" element={<AnalyticsDashboard />} />
-           <Route path="categories" element={<CategoriesPage />} />
-  <Route path="categories/new" element={<CategoryFormPage />} />
-  <Route path="categories/:id/edit" element={<CategoryFormPage />} />
-           <Route path="orders" element={<OrdersPage />} />
-<Route path="orders/:id" element={<OrderDetailPage />} />
-<Route path="reviews" element={<ReviewsPage />} />
-<Route path="contact" element={<ContactsPage />} />
+
+            {/* Categories */}
+            <Route path="categories" element={<CategoriesPage />} />
+            <Route path="categories/new" element={<CategoryFormPage />} />
+            <Route path="categories/:id/edit" element={<CategoryFormPage />} />
+
+            {/* Orders */}
+            <Route path="orders" element={<OrdersPage />} />
+            <Route path="orders/:id" element={<OrderDetailPage />} />
+
+            {/* Reviews & Contacts */}
+            <Route path="reviews" element={<ReviewsPage />} />
+            <Route path="contact" element={<ContactsPage />} />
+
+            {/* Fallback inside Admin */}
             <Route path="*" element={<div>Admin page not found</div>} />
           </Route>
 
+          {/* Global 404 */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

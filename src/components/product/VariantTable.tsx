@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useFieldArray, Control } from "react-hook-form";
 import { Edit, Trash2, Image as ImageIcon, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useToast } from "@/hooks/use-toast";
 import {
   Table,
   TableBody,
@@ -41,74 +41,93 @@ interface Variant {
 }
 
 interface VariantTableProps {
-  control: Control<any>;
+  control: any; // unused here but kept for API parity
   variants: Variant[];
   onVariantChange: (index: number, field: string, value: any) => void;
   onRemoveVariant: (index: number) => void;
   onBulkEdit: (field: string, value: any) => void;
 }
 
-export function VariantTable({ 
-  control, 
-  variants, 
-  onVariantChange, 
+export function VariantTable({
+  control,
+  variants,
+  onVariantChange,
   onRemoveVariant,
-  onBulkEdit 
+  onBulkEdit,
 }: VariantTableProps) {
   const [selectedVariants, setSelectedVariants] = useState<number[]>([]);
   const [bulkEditField, setBulkEditField] = useState("");
   const [bulkEditValue, setBulkEditValue] = useState("");
-  const [editingVariant, setEditingVariant] = useState<number | null>(null);
+  const { toast } = useToast();
 
-  const selectAllVariants = () => {
-    if (selectedVariants.length === variants.length) {
-      setSelectedVariants([]);
-    } else {
+  const selectAllVariants = (checked: boolean | "indeterminate") => {
+    if (checked === true) {
       setSelectedVariants(variants.map((_, index) => index));
+    } else {
+      setSelectedVariants([]);
     }
   };
 
   const toggleVariantSelection = (index: number) => {
-    setSelectedVariants(prev => 
-      prev.includes(index) 
-        ? prev.filter(i => i !== index)
-        : [...prev, index]
+    setSelectedVariants((prev) =>
+      prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
     );
   };
 
   const applyBulkEdit = () => {
-    if (!bulkEditField || !bulkEditValue || selectedVariants.length === 0) return;
-    
-    selectedVariants.forEach(index => {
-      onVariantChange(index, bulkEditField, bulkEditValue);
+    if (!bulkEditField || selectedVariants.length === 0) return;
+
+    selectedVariants.forEach((index) => {
+      if (bulkEditField === "is_active") {
+        const boolVal = bulkEditValue === "true" || bulkEditValue === "1";
+        onVariantChange(index, "is_active", boolVal);
+      } else if (bulkEditField === "quantity") {
+        onVariantChange(index, "quantity", Number(bulkEditValue) || 0);
+      } else if (bulkEditField === "discount_override") {
+        onVariantChange(
+          index,
+          "discount_override",
+          bulkEditValue === "" ? null : Number(bulkEditValue)
+        );
+      } else if (bulkEditField === "price_override") {
+        onVariantChange(
+          index,
+          "price_override",
+          bulkEditValue === "" ? null : bulkEditValue
+        );
+      }
     });
-    
+
+    onBulkEdit(bulkEditField, bulkEditValue);
     setSelectedVariants([]);
     setBulkEditField("");
     setBulkEditValue("");
+    toast({ title: "Bulk edit applied" });
   };
 
   const duplicateVariant = (index: number) => {
-    const variant = variants[index];
-    const newVariant = {
-      ...variant,
-      id: undefined,
-      sku: `${variant.sku}-copy`
-    };
-    // This would need to be handled by parent component
+    // This table doesn't own the variants array; inform parent to add one instead.
+    // For now, just notify.
+    toast({
+      title: "Duplicate variant",
+      description: "Implement duplication in parent: add a new variant based on this row.",
+    });
   };
+
+  const allChecked = selectedVariants.length === variants.length && variants.length > 0;
 
   return (
     <div className="space-y-4">
       {/* Bulk Actions */}
       {selectedVariants.length > 0 && (
         <div className="bg-muted p-4 rounded-lg">
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3">
             <span className="text-sm font-medium">
               {selectedVariants.length} variants selected
             </span>
+
             <Select value={bulkEditField} onValueChange={setBulkEditField}>
-              <SelectTrigger className="w-32">
+              <SelectTrigger className="w-36">
                 <SelectValue placeholder="Edit field" />
               </SelectTrigger>
               <SelectContent>
@@ -118,21 +137,31 @@ export function VariantTable({
                 <SelectItem value="is_active">Status</SelectItem>
               </SelectContent>
             </Select>
-            <Input
-              placeholder="Value"
-              value={bulkEditValue}
-              onChange={(e) => setBulkEditValue(e.target.value)}
-              className="w-24"
-            />
+
+            {bulkEditField === "is_active" ? (
+              <Select value={bulkEditValue} onValueChange={setBulkEditValue}>
+                <SelectTrigger className="w-28">
+                  <SelectValue placeholder="Choose" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="true">Active</SelectItem>
+                  <SelectItem value="false">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                placeholder={bulkEditField === "price_override" ? "Auto" : "Value"}
+                value={bulkEditValue}
+                onChange={(e) => setBulkEditValue(e.target.value)}
+                className="w-28"
+              />
+            )}
+
             <Button size="sm" onClick={applyBulkEdit}>
               Apply
             </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => setSelectedVariants([])}
-            >
-              Clear Selection
+            <Button variant="outline" size="sm" onClick={() => setSelectedVariants([])}>
+              Clear
             </Button>
           </div>
         </div>
@@ -144,10 +173,7 @@ export function VariantTable({
           <TableHeader>
             <TableRow>
               <TableHead className="w-12">
-                <Checkbox
-                  checked={selectedVariants.length === variants.length && variants.length > 0}
-                  onCheckedChange={selectAllVariants}
-                />
+                <Checkbox checked={allChecked} onCheckedChange={selectAllVariants} />
               </TableHead>
               <TableHead className="w-32">SKU</TableHead>
               <TableHead>Attributes</TableHead>
@@ -163,13 +189,14 @@ export function VariantTable({
           </TableHeader>
           <TableBody>
             {variants.map((variant, index) => (
-              <TableRow key={variant.id || index}>
+              <TableRow key={variant.id ?? index}>
                 <TableCell>
                   <Checkbox
                     checked={selectedVariants.includes(index)}
                     onCheckedChange={() => toggleVariantSelection(index)}
                   />
                 </TableCell>
+
                 <TableCell>
                   <Input
                     value={variant.sku}
@@ -177,6 +204,7 @@ export function VariantTable({
                     className="h-8"
                   />
                 </TableCell>
+
                 <TableCell>
                   <div className="flex flex-wrap gap-1">
                     {Object.entries(variant.attributes || {}).map(([key, value]) => (
@@ -189,49 +217,66 @@ export function VariantTable({
                     )}
                   </div>
                 </TableCell>
+
                 <TableCell>
                   <Input
                     type="number"
                     value={variant.quantity}
-                    onChange={(e) => onVariantChange(index, "quantity", Number(e.target.value))}
+                    onChange={(e) => onVariantChange(index, "quantity", Number(e.target.value) || 0)}
                     className="h-8"
                     min="0"
                   />
                 </TableCell>
+
                 <TableCell>
                   <Input
                     type="number"
                     step="0.01"
-                    value={variant.price_override || ""}
-                    onChange={(e) => onVariantChange(index, "price_override", e.target.value || null)}
+                    value={variant.price_override ?? ""}
+                    onChange={(e) =>
+                      onVariantChange(index, "price_override", e.target.value === "" ? null : e.target.value)
+                    }
                     className="h-8"
                     placeholder="Auto"
                   />
                 </TableCell>
+
                 <TableCell>
                   <Input
                     type="number"
                     min="0"
                     max="100"
-                    value={variant.discount_override || ""}
-                    onChange={(e) => onVariantChange(index, "discount_override", e.target.value ? Number(e.target.value) : null)}
+                    value={variant.discount_override ?? ""}
+                    onChange={(e) =>
+                      onVariantChange(
+                        index,
+                        "discount_override",
+                        e.target.value === "" ? null : Number(e.target.value)
+                      )
+                    }
                     className="h-8"
                     placeholder="Auto"
                   />
                 </TableCell>
+
                 <TableCell>
                   <Input
                     type="number"
                     step="0.01"
-                    value={variant.weight_value || ""}
-                    onChange={(e) => onVariantChange(index, "weight_value", e.target.value || null)}
+                    value={variant.weight_value ?? ""}
+                    onChange={(e) =>
+                      onVariantChange(index, "weight_value", e.target.value === "" ? null : e.target.value)
+                    }
                     className="h-8"
                   />
                 </TableCell>
+
                 <TableCell>
-                  <Select 
-                    value={variant.weight_unit || "none"} 
-                    onValueChange={(value) => onVariantChange(index, "weight_unit", value === "none" ? null : value)}
+                  <Select
+                    value={variant.weight_unit ?? "none"}
+                    onValueChange={(value) =>
+                      onVariantChange(index, "weight_unit", value === "none" ? null : (value as Variant["weight_unit"]))
+                    }
                   >
                     <SelectTrigger className="h-8">
                       <SelectValue />
@@ -245,22 +290,24 @@ export function VariantTable({
                     </SelectContent>
                   </Select>
                 </TableCell>
+
                 <TableCell>
                   <Switch
                     checked={variant.is_active}
-                    onCheckedChange={(checked) => onVariantChange(index, "is_active", checked)}
+                    onCheckedChange={(checked) => onVariantChange(index, "is_active", !!checked)}
                   />
                 </TableCell>
+
                 <TableCell>
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Manage variant images">
                         <ImageIcon className="h-4 w-4" />
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-md">
                       <DialogHeader>
-                        <DialogTitle>Variant Images - {variant.sku}</DialogTitle>
+                        <DialogTitle>Variant Images — {variant.sku}</DialogTitle>
                       </DialogHeader>
                       <div className="text-center py-8 text-muted-foreground">
                         <ImageIcon className="h-8 w-8 mx-auto mb-2" />
@@ -269,6 +316,7 @@ export function VariantTable({
                     </DialogContent>
                   </Dialog>
                 </TableCell>
+
                 <TableCell>
                   <div className="flex gap-1">
                     <Button
@@ -276,6 +324,7 @@ export function VariantTable({
                       size="sm"
                       className="h-8 w-8 p-0"
                       onClick={() => duplicateVariant(index)}
+                      title="Duplicate"
                     >
                       <Copy className="h-4 w-4" />
                     </Button>
@@ -284,6 +333,7 @@ export function VariantTable({
                       size="sm"
                       className="h-8 w-8 p-0"
                       onClick={() => onRemoveVariant(index)}
+                      title="Remove"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

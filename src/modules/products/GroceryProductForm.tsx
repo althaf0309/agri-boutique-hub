@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Save, Eye, Trash2, RotateCcw, Info, Calendar, ChevronDown, ChevronRight } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,52 +17,45 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { useCategories, useCreateProduct, useUpdateProduct } from "@/api/hooks/products";
+
+import { useCategories, useCreateProduct, useUpdateProduct, useDeleteProduct } from "@/api/hooks/products";
 import { ProductOptions } from "@/components/product/ProductOptions";
 import { VariantTable } from "@/components/product/VariantTable";
 import { WeightVariantManager } from "@/components/product/WeightVariantManager";
 
-// Grocery-focused validation schema
+/* ---------- schema (grocery-focused) ---------- */
 const groceryProductSchema = z.object({
-  // Basic Information
   name: z.string().min(1, "Product name is required"),
   description: z.string().optional(),
   category_id: z.number().min(1, "Category is required"),
-  
-  // Grocery Classification
+
   vendor_id: z.number().optional().nullable(),
   store_id: z.number().optional().nullable(),
   origin_country: z.string().default("IN"),
   grade: z.string().optional(),
-  
-  // Inventory & Freshness
+
   quantity: z.number().min(0, "Quantity must be non-negative"),
   manufacture_date: z.string().optional().nullable(),
   is_perishable: z.boolean().default(false),
   is_organic: z.boolean().default(false),
   shelf_life_days: z.number().min(0).optional().nullable(),
-  
-  // Packaging & UOM
+
   default_uom: z.enum(["PCS", "G", "KG", "ML", "L", "BUNDLE"]),
   default_pack_qty: z.string().optional().nullable(),
-  
-  // Pricing (INR only)
+
   price_inr: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid price format"),
   discount_percent: z.number().min(0).max(90, "Discount must be between 0-90%"),
-  
-  // Tax & Cost
+
   hsn_sac: z.string().optional(),
   gst_rate: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid GST rate"),
   mrp_price: z.string().optional(),
   cost_price: z.string().optional(),
-  
-  // Sales Flags
+
   featured: z.boolean().default(false),
   new_arrival: z.boolean().default(false),
   hot_deal: z.boolean().default(false),
   hot_deal_ends_at: z.string().optional().nullable(),
-  
-  // Advanced (non-grocery fields)
+
   warranty_months: z.number().min(0).optional(),
 });
 
@@ -92,8 +86,8 @@ export function GroceryProductForm() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const isEditMode = !!id;
+
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
-  const [productImages, setProductImages] = useState<any[]>([]);
   const [productOptions, setProductOptions] = useState<any[]>([]);
   const [productVariants, setProductVariants] = useState<any[]>([]);
   const [weightVariants, setWeightVariants] = useState<any[]>([]);
@@ -101,13 +95,14 @@ export function GroceryProductForm() {
   const { data: categories } = useCategories();
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
+  const deleteProduct = useDeleteProduct();
 
   const form = useForm<GroceryProductFormData>({
     resolver: zodResolver(groceryProductSchema),
     defaultValues: {
       name: "",
       description: "",
-      category_id: 0,
+      category_id: 0, // will force user to select
       vendor_id: null,
       store_id: null,
       origin_country: "IN",
@@ -130,118 +125,19 @@ export function GroceryProductForm() {
       hot_deal: false,
       hot_deal_ends_at: null,
       warranty_months: 0,
-    }
+    },
+    mode: "onBlur",
   });
 
-  const generateSlug = (name: string) => {
-    return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-  };
-
-  const generateVariants = () => {
-    if (productOptions.length === 0) return;
-
-    // Generate cartesian product of all option values
-    const combinations = productOptions.reduce((acc, option) => {
-      if (option.values.length === 0) return acc;
-      
-      if (acc.length === 0) {
-        return option.values.map((value: string) => ({ [option.name]: value }));
-      }
-      
-      const newCombinations: any[] = [];
-      acc.forEach(combo => {
-        option.values.forEach((value: string) => {
-          newCombinations.push({ ...combo, [option.name]: value });
-        });
-      });
-      
-      return newCombinations;
-    }, [] as any[]);
-
-    // Create variant objects
-    const newVariants = combinations.map((attributes, index) => ({
-      id: Date.now() + index,
-      sku: `${generateSlug(watchedName || "product")}-${Object.values(attributes).join('-').toLowerCase()}`,
-      attributes,
-      quantity: 0,
-      price_override: null,
-      discount_override: null,
-      is_active: true,
-      weight_value: extractWeightFromAttributes(attributes),
-      weight_unit: extractWeightUnitFromAttributes(attributes),
-      color_id: null,
-      mrp: form.getValues("mrp_price") || "0.00",
-      barcode: "",
-      min_order_qty: 1,
-      step_qty: 1
-    }));
-
-    setProductVariants(newVariants);
-    
-    toast({
-      title: "Variants generated",
-      description: `${newVariants.length} product variants created`
-    });
-  };
-
-  const extractWeightFromAttributes = (attributes: any) => {
-    const weightAttr = Object.entries(attributes).find(([key, value]) => 
-      key.toLowerCase().includes('weight') || 
-      key.toLowerCase().includes('size') ||
-      (typeof value === 'string' && /\d+[gmkg|ml|l]/i.test(value as string))
-    );
-    
-    if (weightAttr && typeof weightAttr[1] === 'string') {
-      const match = (weightAttr[1] as string).match(/(\d+(?:\.\d+)?)/);
-      return match ? match[1] : null;
-    }
-    
-    return null;
-  };
-
-  const extractWeightUnitFromAttributes = (attributes: any) => {
-    const weightAttr = Object.entries(attributes).find(([key, value]) => 
-      key.toLowerCase().includes('weight') || 
-      key.toLowerCase().includes('size') ||
-      (typeof value === 'string' && /\d+[gmkg|ml|l]/i.test(value as string))
-    );
-    
-    if (weightAttr && typeof weightAttr[1] === 'string') {
-      const value = weightAttr[1] as string;
-      if (/kg/i.test(value)) return "KG";
-      if (/g/i.test(value)) return "G";
-      if (/l/i.test(value)) return "L";
-      if (/ml/i.test(value)) return "ML";
-    }
-    
-    return null;
-  };
-
-  const onVariantChange = (index: number, field: string, value: any) => {
-    const updatedVariants = [...productVariants];
-    updatedVariants[index] = { ...updatedVariants[index], [field]: value };
-    setProductVariants(updatedVariants);
-  };
-
-  const onRemoveVariant = (index: number) => {
-    const updatedVariants = productVariants.filter((_, i) => i !== index);
-    setProductVariants(updatedVariants);
-  };
-
-  const onBulkEdit = (field: string, value: any) => {
-    // Implementation for bulk editing variants
-    toast({
-      title: "Bulk edit applied",
-      description: `Updated ${field} for all selected variants`
-    });
-  };
+  const generateSlug = (name: string) =>
+    name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
   const onSubmit = async (data: GroceryProductFormData) => {
     try {
       const payload = {
         ...data,
-        // Convert string fields to proper types for API
-        price_usd: "0.00", // Always 0 for grocery-only
+        // lock non-grocery currencies as 0
+        price_usd: "0.00",
         aed_pricing_mode: "STATIC" as const,
         price_aed_static: "0.00",
       };
@@ -250,21 +146,29 @@ export function GroceryProductForm() {
         await updateProduct.mutateAsync({ id: Number(id), ...payload });
         toast({ title: "Grocery product updated successfully" });
       } else {
-        const createdProduct = await createProduct.mutateAsync(payload);
-        
-        // TODO: Save options and variants to API
-        // await saveProductOptions(createdProduct.id, productOptions);
-        // await saveProductVariants(createdProduct.id, productVariants);
-        
+        const created = await createProduct.mutateAsync(payload);
+        // TODO: save options / variants via API when backend is ready
         toast({ title: "Grocery product created successfully" });
         navigate("/admin/products");
       }
-    } catch (error) {
-      toast({ 
-        title: "Error", 
+    } catch {
+      toast({
+        title: "Error",
         description: "Failed to save grocery product",
-        variant: "destructive" 
+        variant: "destructive",
       });
+    }
+  };
+
+  const onDelete = async () => {
+    if (!isEditMode) return;
+    if (!confirm("Delete this product permanently?")) return;
+    try {
+      await deleteProduct.mutateAsync({ id: Number(id) });
+      toast({ title: "Product deleted" });
+      navigate("/admin/products");
+    } catch {
+      toast({ title: "Error", description: "Failed to delete product", variant: "destructive" });
     }
   };
 
@@ -276,29 +180,86 @@ export function GroceryProductForm() {
   const watchedIsPerishable = form.watch("is_perishable");
   const watchedCategory = form.watch("category_id");
 
-  // Filter categories to grocery/food only
-  const groceryCategories = Array.isArray(categories) 
-    ? categories.filter(cat => 
-        cat.name.toLowerCase().includes('food') || 
-        cat.name.toLowerCase().includes('grocery') ||
-        cat.name.toLowerCase().includes('agriculture') ||
-        cat.name.toLowerCase().includes('vegetable') ||
-        cat.name.toLowerCase().includes('fruit') ||
-        cat.name.toLowerCase().includes('spice') ||
-        cat.name.toLowerCase().includes('grain') ||
-        cat.name.toLowerCase().includes('dairy') ||
-        cat.name.toLowerCase().includes('beverage')
-      )
+  const groceryCategories = Array.isArray(categories)
+    ? categories.filter((cat) => {
+        const n = (cat.name || "").toLowerCase();
+        return (
+          n.includes("food") ||
+          n.includes("grocery") ||
+          n.includes("agriculture") ||
+          n.includes("vegetable") ||
+          n.includes("fruit") ||
+          n.includes("spice") ||
+          n.includes("grain") ||
+          n.includes("dairy") ||
+          n.includes("beverage")
+        );
+      })
     : [];
 
-  // Calculate suggested best-before date
-  const suggestedBestBefore = watchedManufactureDate && watchedShelfLife 
-    ? new Date(new Date(watchedManufactureDate).getTime() + watchedShelfLife * 24 * 60 * 60 * 1000).toLocaleDateString()
-    : null;
+  // Best-before calc (safe)
+  const suggestedBestBefore =
+    watchedManufactureDate && watchedShelfLife != null
+      ? new Date(
+          new Date(watchedManufactureDate).getTime() +
+            Number(watchedShelfLife || 0) * 24 * 60 * 60 * 1000
+        ).toLocaleDateString()
+      : null;
 
-  // Calculate discounted price
   const basePrice = parseFloat(watchedPrice || "0");
-  const discountedPrice = basePrice * (1 - watchedDiscount / 100);
+  const discountedPrice =
+    basePrice && watchedDiscount
+      ? basePrice * (1 - Number(watchedDiscount) / 100)
+      : basePrice;
+
+  const generateVariants = () => {
+    if (productOptions.length === 0) return;
+
+    const combinations = productOptions.reduce((acc: any[], option: any) => {
+      if (!option.values?.length) return acc;
+      if (!acc.length) return option.values.map((v: string) => ({ [option.name]: v }));
+      const out: any[] = [];
+      acc.forEach((combo) => {
+        option.values.forEach((v: string) => out.push({ ...combo, [option.name]: v }));
+      });
+      return out;
+    }, []);
+
+    const toSlug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    const newVariants = combinations.map((attributes: any, i: number) => {
+      const attrValues = Object.values(attributes);
+      const sku =
+        (watchedName ? toSlug(watchedName) : "product") +
+        "-" +
+        (attrValues.length ? attrValues.join("-").toLowerCase() : `var-${i + 1}`);
+
+      // weight parse
+      const joined = attrValues.join(" ");
+      const m = joined.match(/(\d+(?:\.\d+)?)\s*(kg|g|ml|l)\b/i);
+      const weight_value = m ? m[1] : null;
+      const weight_unit = m ? (m[2] as string).toUpperCase() : null;
+
+      return {
+        id: Date.now() + i,
+        sku,
+        attributes,
+        quantity: 0,
+        price_override: null,
+        discount_override: null,
+        is_active: true,
+        weight_value,
+        weight_unit,
+        color_id: null,
+        mrp: form.getValues("mrp_price") || "0.00",
+        barcode: "",
+        min_order_qty: 1,
+        step_qty: 1,
+      };
+    });
+
+    setProductVariants(newVariants);
+    toast({ title: "Variants generated", description: `${newVariants.length} product variants created` });
+  };
 
   return (
     <TooltipProvider>
@@ -326,7 +287,7 @@ export function GroceryProductForm() {
                     <Eye className="h-4 w-4 sm:mr-2" />
                     <span className="hidden sm:inline">Preview</span>
                   </Button>
-                  <Button variant="outline" size="sm" className="hidden md:inline-flex">
+                  <Button variant="outline" size="sm" className="hidden md:inline-flex" onClick={onDelete}>
                     <Trash2 className="h-4 w-4 sm:mr-2" />
                     <span className="hidden sm:inline">Delete</span>
                   </Button>
@@ -347,9 +308,9 @@ export function GroceryProductForm() {
 
         <Form {...form}>
           <form className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 p-3 sm:p-6">
-            {/* Main Content */}
+            {/* Main */}
             <div className="lg:col-span-8 space-y-4 sm:space-y-6">
-              {/* Title & Description */}
+              {/* Info */}
               <Card>
                 <CardHeader>
                   <CardTitle>Product Information</CardTitle>
@@ -377,7 +338,13 @@ export function GroceryProductForm() {
                     <code className="bg-muted px-2 py-1 rounded">
                       {generateSlug(watchedName || "")}
                     </code>
-                    <Button variant="ghost" size="sm" className="h-6 px-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2"
+                      type="button"
+                      onClick={() => form.setValue("name", "")}
+                    >
                       <RotateCcw className="h-3 w-3" />
                     </Button>
                   </div>
@@ -389,8 +356,8 @@ export function GroceryProductForm() {
                       <FormItem>
                         <FormLabel>Description</FormLabel>
                         <FormControl>
-                          <Textarea 
-                            {...field} 
+                          <Textarea
+                            {...field}
                             placeholder="Describe origin, grade, freshness, harvest details, nutritional benefits..."
                             rows={4}
                           />
@@ -405,13 +372,11 @@ export function GroceryProductForm() {
                 </CardContent>
               </Card>
 
-              {/* Grocery Classification */}
+              {/* Classification */}
               <Card>
                 <CardHeader>
                   <CardTitle>Grocery Classification</CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Categorize and classify your grocery product
-                  </p>
+                  <p className="text-sm text-muted-foreground">Categorize and classify your grocery product</p>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <FormField
@@ -420,8 +385,8 @@ export function GroceryProductForm() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Category</FormLabel>
-                        <Select 
-                          value={field.value > 0 ? field.value.toString() : "none"} 
+                        <Select
+                          value={field.value > 0 ? field.value.toString() : "none"}
                           onValueChange={(value) => field.onChange(value === "none" ? 0 : Number(value))}
                         >
                           <FormControl>
@@ -462,9 +427,9 @@ export function GroceryProductForm() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {COUNTRIES.map((country) => (
-                                <SelectItem key={country.code} value={country.code}>
-                                  {country.name}
+                              {COUNTRIES.map((c) => (
+                                <SelectItem key={c.code} value={c.code}>
+                                  {c.name}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -473,7 +438,6 @@ export function GroceryProductForm() {
                         </FormItem>
                       )}
                     />
-
                     <FormField
                       control={form.control}
                       name="grade"
@@ -483,9 +447,7 @@ export function GroceryProductForm() {
                           <FormControl>
                             <Input {...field} placeholder="A, AA, AAA, Organic, Premium..." />
                           </FormControl>
-                          <p className="text-xs text-muted-foreground">
-                            Quality grade or certification
-                          </p>
+                          <p className="text-xs text-muted-foreground">Quality grade or certification</p>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -494,7 +456,7 @@ export function GroceryProductForm() {
                 </CardContent>
               </Card>
 
-              {/* Weight Variants & Pricing */}
+              {/* Weight Variants */}
               <WeightVariantManager
                 variants={weightVariants}
                 onVariantsChange={setWeightVariants}
@@ -509,22 +471,25 @@ export function GroceryProductForm() {
                 categoryId={watchedCategory}
               />
 
-              {/* Variants Table */}
               {productVariants.length > 0 && (
                 <Card>
                   <CardHeader>
                     <CardTitle>Product Variants</CardTitle>
-                    <p className="text-sm text-muted-foreground">
-                      Manage inventory and pricing for each variant
-                    </p>
+                    <p className="text-sm text-muted-foreground">Manage inventory and pricing for each variant</p>
                   </CardHeader>
                   <CardContent>
                     <VariantTable
                       control={form.control}
                       variants={productVariants}
-                      onVariantChange={onVariantChange}
-                      onRemoveVariant={onRemoveVariant}
-                      onBulkEdit={onBulkEdit}
+                      onVariantChange={(idx, field, value) => {
+                        const updated = [...productVariants];
+                        updated[idx] = { ...updated[idx], [field]: value };
+                        setProductVariants(updated);
+                      }}
+                      onRemoveVariant={(idx) => {
+                        setProductVariants((arr) => arr.filter((_, i) => i !== idx));
+                      }}
+                      onBulkEdit={() => {}}
                     />
                   </CardContent>
                 </Card>
@@ -553,7 +518,6 @@ export function GroceryProductForm() {
                         </FormItem>
                       )}
                     />
-
                     <FormField
                       control={form.control}
                       name="discount_percent"
@@ -561,12 +525,12 @@ export function GroceryProductForm() {
                         <FormItem>
                           <FormLabel>Discount (%)</FormLabel>
                           <FormControl>
-                            <Input 
-                              {...field} 
-                              type="number" 
-                              min="0" 
+                            <Input
+                              {...field}
+                              type="number"
+                              min="0"
                               max="90"
-                              onChange={(e) => field.onChange(Number(e.target.value))}
+                              onChange={(e) => field.onChange(Number(e.target.value || 0))}
                             />
                           </FormControl>
                           <FormMessage />
@@ -575,12 +539,11 @@ export function GroceryProductForm() {
                     />
                   </div>
 
-                  {/* Price Preview */}
                   {basePrice > 0 && (
                     <div className="p-4 bg-muted rounded-lg">
                       <h4 className="font-medium mb-2">Price Preview</h4>
                       <div className="flex items-center gap-4">
-                        {watchedDiscount > 0 ? (
+                        {Number(watchedDiscount) > 0 ? (
                           <>
                             <span className="text-lg line-through text-muted-foreground">
                               ₹{basePrice.toFixed(2)}
@@ -611,7 +574,6 @@ export function GroceryProductForm() {
                         </FormItem>
                       )}
                     />
-
                     <FormField
                       control={form.control}
                       name="cost_price"
@@ -625,7 +587,6 @@ export function GroceryProductForm() {
                         </FormItem>
                       )}
                     />
-
                     <FormField
                       control={form.control}
                       name="gst_rate"
@@ -661,9 +622,7 @@ export function GroceryProductForm() {
               <Card>
                 <CardHeader>
                   <CardTitle>Inventory & Freshness</CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Manage stock levels and freshness indicators
-                  </p>
+                  <p className="text-sm text-muted-foreground">Manage stock levels and freshness indicators</p>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <FormField
@@ -673,11 +632,11 @@ export function GroceryProductForm() {
                       <FormItem>
                         <FormLabel>Available Quantity</FormLabel>
                         <FormControl>
-                          <Input 
-                            {...field} 
-                            type="number" 
+                          <Input
+                            {...field}
+                            type="number"
                             min="0"
-                            onChange={(e) => field.onChange(Number(e.target.value))}
+                            onChange={(e) => field.onChange(Number(e.target.value || 0))}
                           />
                         </FormControl>
                         <FormMessage />
@@ -689,32 +648,23 @@ export function GroceryProductForm() {
                     <div className="flex items-center justify-between">
                       <div>
                         <Label>Perishable Product</Label>
-                        <p className="text-xs text-muted-foreground">
-                          Requires special storage/handling
-                        </p>
+                        <p className="text-xs text-muted-foreground">Requires special storage/handling</p>
                       </div>
                       <FormField
                         control={form.control}
                         name="is_perishable"
-                        render={({ field }) => (
-                          <Switch checked={field.value} onCheckedChange={field.onChange} />
-                        )}
+                        render={({ field }) => <Switch checked={field.value} onCheckedChange={field.onChange} />}
                       />
                     </div>
-
                     <div className="flex items-center justify-between">
                       <div>
                         <Label>Organic Certified</Label>
-                        <p className="text-xs text-muted-foreground">
-                          Organic certification
-                        </p>
+                        <p className="text-xs text-muted-foreground">Organic certification</p>
                       </div>
                       <FormField
                         control={form.control}
                         name="is_organic"
-                        render={({ field }) => (
-                          <Switch checked={field.value} onCheckedChange={field.onChange} />
-                        )}
+                        render={({ field }) => <Switch checked={field.value} onCheckedChange={field.onChange} />}
                       />
                     </div>
                   </div>
@@ -733,7 +683,6 @@ export function GroceryProductForm() {
                         </FormItem>
                       )}
                     />
-
                     <FormField
                       control={form.control}
                       name="shelf_life_days"
@@ -741,9 +690,9 @@ export function GroceryProductForm() {
                         <FormItem>
                           <FormLabel>Shelf Life (Days)</FormLabel>
                           <FormControl>
-                            <Input 
-                              {...field} 
-                              type="number" 
+                            <Input
+                              {...field}
+                              type="number"
                               min="0"
                               onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
                             />
@@ -782,9 +731,7 @@ export function GroceryProductForm() {
               <Card>
                 <CardHeader>
                   <CardTitle>Packaging & Unit of Measure</CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Define how the product is packaged and sold
-                  </p>
+                  <p className="text-sm text-muted-foreground">Define how the product is packaged and sold</p>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="grid grid-cols-2 gap-4">
@@ -801,9 +748,9 @@ export function GroceryProductForm() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {UOM_OPTIONS.map((uom) => (
-                                <SelectItem key={uom.value} value={uom.value}>
-                                  {uom.label}
+                              {UOM_OPTIONS.map((u) => (
+                                <SelectItem key={u.value} value={u.value}>
+                                  {u.label}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -812,7 +759,6 @@ export function GroceryProductForm() {
                         </FormItem>
                       )}
                     />
-
                     <FormField
                       control={form.control}
                       name="default_pack_qty"
@@ -822,19 +768,17 @@ export function GroceryProductForm() {
                           <FormControl>
                             <Input {...field} placeholder="e.g., 500, 1.0, 750" />
                           </FormControl>
-                          <p className="text-xs text-muted-foreground">
-                            Standard pack size (e.g., 500G, 1KG, 750ML)
-                          </p>
+                          <p className="text-xs text-muted-foreground">Standard pack size (e.g., 500G, 1KG, 750ML)</p>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
                   </div>
 
-                  <div className="p-3 bg-info-50 rounded-lg border border-info-200">
+                  <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
                     <div className="flex items-center gap-2">
-                      <Info className="h-4 w-4 text-info-600" />
-                      <span className="text-sm text-info-900">
+                      <Info className="h-4 w-4 text-blue-600" />
+                      <span className="text-sm text-blue-900">
                         Customers will see price per KG/L on variant listings
                       </span>
                     </div>
@@ -842,7 +786,7 @@ export function GroceryProductForm() {
                 </CardContent>
               </Card>
 
-              {/* Advanced Section (Collapsed) */}
+              {/* Advanced */}
               <Collapsible open={isAdvancedOpen} onOpenChange={setIsAdvancedOpen}>
                 <Card>
                   <CollapsibleTrigger asChild>
@@ -853,9 +797,7 @@ export function GroceryProductForm() {
                             Advanced Settings
                             {isAdvancedOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                           </CardTitle>
-                          <p className="text-sm text-muted-foreground">
-                            Non-grocery fields (rarely used for food products)
-                          </p>
+                          <p className="text-sm text-muted-foreground">Non-grocery fields (rarely used for food products)</p>
                         </div>
                       </div>
                     </CardHeader>
@@ -870,8 +812,10 @@ export function GroceryProductForm() {
                             <FormLabel className="flex items-center gap-2">
                               Warranty (Months)
                               <Tooltip>
-                                <TooltipTrigger>
-                                  <Info className="h-4 w-4 text-amber-600" />
+                                <TooltipTrigger asChild>
+                                  <button type="button" aria-label="Warranty help">
+                                    <Info className="h-4 w-4 text-amber-600" />
+                                  </button>
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <p>Usually not used for food products</p>
@@ -879,16 +823,14 @@ export function GroceryProductForm() {
                               </Tooltip>
                             </FormLabel>
                             <FormControl>
-                              <Input 
-                                {...field} 
-                                type="number" 
+                              <Input
+                                {...field}
+                                type="number"
                                 min="0"
-                                onChange={(e) => field.onChange(Number(e.target.value))}
+                                onChange={(e) => field.onChange(Number(e.target.value || 0))}
                               />
                             </FormControl>
-                            <p className="text-xs text-amber-600">
-                              ⚠️ Usually not applicable for food products
-                            </p>
+                            <p className="text-xs text-amber-600">⚠️ Usually not applicable for food products</p>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -901,7 +843,6 @@ export function GroceryProductForm() {
 
             {/* Sidebar */}
             <div className="lg:col-span-4 space-y-4 sm:space-y-6">
-              {/* Visibility & Status */}
               <Card>
                 <CardHeader>
                   <CardTitle>Visibility & Status</CardTitle>
@@ -910,16 +851,13 @@ export function GroceryProductForm() {
                   <div className="flex items-center justify-between">
                     <div>
                       <Label>Published</Label>
-                      <p className="text-xs text-muted-foreground">
-                        Visible to customers
-                      </p>
+                      <p className="text-xs text-muted-foreground">Visible to customers</p>
                     </div>
                     <Switch defaultChecked />
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Sales Flags */}
               <Card>
                 <CardHeader>
                   <CardTitle>Sales Badges</CardTitle>
@@ -935,7 +873,6 @@ export function GroceryProductForm() {
                       </div>
                     )}
                   />
-
                   <FormField
                     control={form.control}
                     name="new_arrival"
@@ -946,7 +883,6 @@ export function GroceryProductForm() {
                       </div>
                     )}
                   />
-
                   <FormField
                     control={form.control}
                     name="hot_deal"
@@ -957,7 +893,6 @@ export function GroceryProductForm() {
                       </div>
                     )}
                   />
-
                   <FormField
                     control={form.control}
                     name="hot_deal_ends_at"
@@ -974,7 +909,6 @@ export function GroceryProductForm() {
                 </CardContent>
               </Card>
 
-              {/* Organization */}
               <Card>
                 <CardHeader>
                   <CardTitle>Organization</CardTitle>
@@ -986,8 +920,8 @@ export function GroceryProductForm() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Vendor/Supplier</FormLabel>
-                        <Select 
-                          value={field.value ? field.value.toString() : "none"} 
+                        <Select
+                          value={field.value ? field.value.toString() : "none"}
                           onValueChange={(value) => field.onChange(value === "none" ? null : Number(value))}
                         >
                           <FormControl>
@@ -1003,15 +937,14 @@ export function GroceryProductForm() {
                       </FormItem>
                     )}
                   />
-
                   <FormField
                     control={form.control}
                     name="store_id"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Store/Location</FormLabel>
-                        <Select 
-                          value={field.value ? field.value.toString() : "none"} 
+                        <Select
+                          value={field.value ? field.value.toString() : "none"}
                           onValueChange={(value) => field.onChange(value === "none" ? null : Number(value))}
                         >
                           <FormControl>
@@ -1029,40 +962,6 @@ export function GroceryProductForm() {
                   />
                 </CardContent>
               </Card>
-
-              {/* Stats (Read-only) */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Product Statistics</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="text-center p-2 bg-muted rounded">
-                      <div className="text-lg font-semibold">0</div>
-                      <div className="text-xs text-muted-foreground">Views</div>
-                    </div>
-                    <div className="text-center p-2 bg-muted rounded">
-                      <div className="text-lg font-semibold">0</div>
-                      <div className="text-xs text-muted-foreground">Sold</div>
-                    </div>
-                    <div className="text-center p-2 bg-muted rounded">
-                      <div className="text-lg font-semibold">0</div>
-                      <div className="text-xs text-muted-foreground">Reviews</div>
-                    </div>
-                    <div className="text-center p-2 bg-muted rounded">
-                      <div className="text-lg font-semibold">—</div>
-                      <div className="text-xs text-muted-foreground">Rating</div>
-                    </div>
-                  </div>
-
-                  {isEditMode && (
-                    <div className="pt-3 border-t text-xs text-muted-foreground space-y-1">
-                      <div>Created: —</div>
-                      <div>Updated: —</div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
             </div>
           </form>
         </Form>
@@ -1070,3 +969,5 @@ export function GroceryProductForm() {
     </TooltipProvider>
   );
 }
+
+export default GroceryProductForm;
