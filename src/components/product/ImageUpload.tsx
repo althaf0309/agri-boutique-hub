@@ -1,4 +1,5 @@
-import { useState, useCallback } from "react";
+// src/components/product/ImageUpload.tsx
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Upload, X, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +9,8 @@ interface ProductImage {
   id?: number;
   image: string;
   is_primary: boolean;
+  file?: File;
+  __preview?: boolean;
 }
 
 interface ImageUploadProps {
@@ -15,17 +18,50 @@ interface ImageUploadProps {
   onImagesChange: (images: ProductImage[]) => void;
   onUpload?: (files: File[]) => Promise<void>;
   productId?: number;
+  maxSizeMB?: number;
+  accept?: string;
 }
 
-export function ImageUpload({ images, onImagesChange, onUpload, productId }: ImageUploadProps) {
+export function ImageUpload({
+  images,
+  onImagesChange,
+  onUpload,
+  productId,
+  maxSizeMB = 10,
+  accept = "image/*",
+}: ImageUploadProps) {
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
+  const createdUrlsRef = useRef<string[]>([]);
+
+  useEffect(() => {
+    return () => {
+      createdUrlsRef.current.forEach((u) => URL.revokeObjectURL(u));
+      createdUrlsRef.current = [];
+    };
+  }, []);
+
+  const validateFiles = (files: File[]) => {
+    const maxBytes = maxSizeMB * 1024 * 1024;
+    const imageFiles = files.filter((f) => f.type.startsWith("image/"));
+    const tooLarge = imageFiles.filter((f) => f.size > maxBytes);
+    if (imageFiles.length === 0) {
+      toast({ title: "Invalid files", description: "Please select image files only.", variant: "destructive" });
+      return { ok: false, filtered: [] as File[] };
+    }
+    if (tooLarge.length) {
+      toast({ title: "File too large", description: `Each image must be ≤ ${maxSizeMB} MB.`, variant: "destructive" });
+      return { ok: false, filtered: [] as File[] };
+    }
+    return { ok: true, filtered: imageFiles };
+  };
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (e.type === "dragenter" || e.type === "dragover") {
+      (e.dataTransfer as DataTransfer).dropEffect = "copy";
       setDragActive(true);
     } else if (e.type === "dragleave") {
       setDragActive(false);
@@ -36,166 +72,126 @@ export function ImageUpload({ images, onImagesChange, onUpload, productId }: Ima
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+    if (e.dataTransfer.files && e.dataTransfer.files.length) {
       handleFiles(Array.from(e.dataTransfer.files));
     }
   }, []);
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
-    if (e.target.files && e.target.files[0]) {
+    if (e.target.files && e.target.files.length) {
       handleFiles(Array.from(e.target.files));
+      e.currentTarget.value = "";
     }
   }, []);
 
   const handleFiles = async (files: File[]) => {
-    const imageFiles = files.filter(file => file.type.startsWith('image/'));
-    
-    if (imageFiles.length === 0) {
-      toast({
-        title: "Invalid files",
-        description: "Please select image files only",
-        variant: "destructive"
-      });
-      return;
-    }
+    const { ok, filtered } = validateFiles(files);
+    if (!ok) return;
 
     setUploading(true);
     try {
       if (onUpload) {
-        await onUpload(imageFiles);
+        await onUpload(filtered);
       } else {
-        // Create preview URLs for new images
-        const newImages = imageFiles.map(file => ({
-          image: URL.createObjectURL(file),
-          is_primary: images.length === 0
-        }));
-        onImagesChange([...images, ...newImages]);
+        const newImages = filtered.map((file, idx) => {
+          const url = URL.createObjectURL(file);
+          createdUrlsRef.current.push(url);
+          return {
+            image: url,
+            is_primary: images.length === 0 && idx === 0,
+            file,
+            __preview: true,
+          } as ProductImage;
+        });
+
+        const combined = [...images, ...newImages];
+        const hasPrimary = combined.some((im) => im.is_primary);
+        if (!hasPrimary && combined.length) combined[0].is_primary = true;
+        let seen = false;
+        for (const im of combined) {
+          if (im.is_primary && !seen) { seen = true; }
+          else { im.is_primary = false; }
+        }
+        onImagesChange(combined);
       }
-      
-      toast({
-        title: "Images uploaded",
-        description: `${imageFiles.length} image(s) uploaded successfully`
-      });
-    } catch (error) {
-      toast({
-        title: "Upload failed",
-        description: "Failed to upload images",
-        variant: "destructive"
-      });
+      toast({ title: "Images added", description: `${filtered.length} image(s) ready to upload.` });
+    } catch {
+      toast({ title: "Upload failed", description: "Failed to upload images.", variant: "destructive" });
     } finally {
       setUploading(false);
     }
   };
 
   const setPrimary = (index: number) => {
-    const updatedImages = images.map((img, i) => ({
-      ...img,
-      is_primary: i === index
-    }));
-    onImagesChange(updatedImages);
+    const updated = images.map((img, i) => ({ ...img, is_primary: i === index }));
+    onImagesChange(updated);
   };
 
   const removeImage = (index: number) => {
-    const updatedImages = images.filter((_, i) => i !== index);
-    // If we removed the primary image and there are still images, make the first one primary
-    if (images[index].is_primary && updatedImages.length > 0) {
-      updatedImages[0].is_primary = true;
+    const toRemove = images[index];
+    if (toRemove?.__preview && toRemove.image.startsWith("blob:")) {
+      URL.revokeObjectURL(toRemove.image);
+      createdUrlsRef.current = createdUrlsRef.current.filter((u) => u !== toRemove.image);
     }
-    onImagesChange(updatedImages);
+    const updated = images.filter((_, i) => i !== index);
+    if (toRemove?.is_primary && updated.length > 0) {
+      updated[0] = { ...updated[0], is_primary: true };
+      for (let i = 1; i < updated.length; i++) updated[i].is_primary = false;
+    }
+    onImagesChange(updated);
   };
 
   return (
     <div className="space-y-4">
-      {/* Upload Area */}
       <div
-        className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-          dragActive 
-            ? "border-primary bg-primary/5" 
-            : "border-muted-foreground/25 hover:border-muted-foreground/50"
+        className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
+          dragActive ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-muted-foreground/50"
         }`}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
         onDragOver={handleDrag}
         onDrop={handleDrop}
+        onClick={() => document.getElementById("image-upload")?.click()}
+        role="button"
+        aria-label="Upload images"
       >
         <Upload className="h-8 w-8 mx-auto mb-4 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground mb-2">
-          Drag and drop images here, or click to browse
-        </p>
-        <input
-          type="file"
-          multiple
-          accept="image/*"
-          onChange={handleChange}
-          className="hidden"
-          id="image-upload"
-        />
-        <Button 
-          variant="outline" 
-          size="sm" 
-          asChild
-          disabled={uploading}
-        >
+        <p className="text-sm text-muted-foreground mb-2">Drag and drop images here, or click to browse</p>
+        <input type="file" multiple accept={accept} onChange={handleChange} className="hidden" id="image-upload" />
+        <Button type="button" variant="outline" size="sm" disabled={uploading} asChild>
           <label htmlFor="image-upload" className="cursor-pointer">
             {uploading ? "Uploading..." : "Add Images"}
           </label>
         </Button>
+        <div className="mt-2 text-xs text-muted-foreground">Max size: {maxSizeMB}MB per image</div>
       </div>
 
-      {/* Image Grid */}
       {images.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {images.map((img, index) => (
-            <div key={img.id || index} className="relative group">
+            <div key={img.id ?? `${img.image}-${index}`} className="relative group">
               <div className="aspect-square overflow-hidden rounded border">
-                <img 
-                  src={img.image} 
-                  alt={`Product image ${index + 1}`}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              
-              {/* Badges */}
-              <div className="absolute top-2 left-2 flex gap-1">
-                {img.is_primary && (
-                  <Badge variant="default" className="text-xs">
-                    Primary
-                  </Badge>
-                )}
+                <img src={img.image} alt={`Product image ${index + 1}`} className="w-full h-full object-cover" draggable={false} />
               </div>
 
-              {/* Actions */}
+              <div className="absolute top-2 left-2 flex gap-1">
+                {img.is_primary && <Badge variant="default" className="text-xs">Primary</Badge>}
+              </div>
+
               <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
                 {!img.is_primary && (
-                  <Button 
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setPrimary(index)}
-                    className="h-6 w-6 p-0"
-                  >
+                  <Button type="button" variant="secondary" size="sm" onClick={() => setPrimary(index)} className="h-6 w-6 p-0" title="Set as primary">
                     <Star className="h-3 w-3" />
                   </Button>
                 )}
-                <Button 
-                  variant="destructive" 
-                  size="sm"
-                  onClick={() => removeImage(index)}
-                  className="h-6 w-6 p-0"
-                >
+                <Button type="button" variant="destructive" size="sm" onClick={() => removeImage(index)} className="h-6 w-6 p-0" title="Remove image">
                   <X className="h-3 w-3" />
                 </Button>
               </div>
 
-              {/* Primary Image Button */}
               {!img.is_primary && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="absolute bottom-2 left-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={() => setPrimary(index)}
-                >
+                <Button type="button" variant="outline" size="sm" className="absolute bottom-2 left-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setPrimary(index)}>
                   Set as Primary
                 </Button>
               )}

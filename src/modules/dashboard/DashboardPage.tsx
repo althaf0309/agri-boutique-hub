@@ -1,16 +1,14 @@
-import { useState } from "react";
-import { 
-  TrendingUp, 
-  Package, 
-  Users, 
-  DollarSign, 
-  ShoppingCart, 
-  Eye, 
-  AlertCircle,
+import { useMemo, useState } from "react";
+import {
+  TrendingUp,
+  Package,
+  Users,
+  DollarSign,
+  ShoppingCart,
   ArrowUpRight,
   ArrowDownRight,
   Calendar,
-  BarChart3
+  BarChart3,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -32,94 +30,142 @@ import {
   Pie,
   Cell,
 } from "recharts";
+import { Skeleton } from "@/components/ui/skeleton";
 
-// Mock data for dashboard
-const kpiData = [
-  {
-    title: "Total Revenue",
-    value: "₹2,47,500",
-    change: "+12.5%",
-    trend: "up",
-    icon: DollarSign,
-    color: "text-green-600",
-    bgColor: "bg-green-50",
-    description: "Total sales this month"
-  },
-  {
-    title: "Total Orders",
-    value: "1,247",
-    change: "+8.2%", 
-    trend: "up",
-    icon: ShoppingCart,
-    color: "text-blue-600",
-    bgColor: "bg-blue-50",
-    description: "Orders completed"
-  },
-  {
-    title: "Active Products",
-    value: "156",
-    change: "+3.1%",
-    trend: "up", 
-    icon: Package,
-    color: "text-purple-600",
-    bgColor: "bg-purple-50",
-    description: "Products in stock"
-  },
-  {
-    title: "Customer Growth",
-    value: "892",
-    change: "-2.4%",
-    trend: "down",
-    icon: Users,
-    color: "text-orange-600", 
-    bgColor: "bg-orange-50",
-    description: "Active customers"
-  }
-];
-
-const salesData = [
-  { name: "Jan", sales: 45000, orders: 120, customers: 89 },
-  { name: "Feb", sales: 52000, orders: 145, customers: 102 },
-  { name: "Mar", sales: 48000, orders: 130, customers: 95 },
-  { name: "Apr", sales: 61000, orders: 170, customers: 125 },
-  { name: "May", sales: 68000, orders: 185, customers: 140 },
-  { name: "Jun", sales: 71000, orders: 195, customers: 156 },
-];
-
-const recentOrders = [
-  { id: "#ORD-001", customer: "John Doe", amount: "₹1,299", status: "completed", time: "2 mins ago" },
-  { id: "#ORD-002", customer: "Sarah Smith", amount: "₹899", status: "pending", time: "5 mins ago" },
-  { id: "#ORD-003", customer: "Mike Johnson", amount: "₹2,150", status: "processing", time: "12 mins ago" },
-  { id: "#ORD-004", customer: "Emma Wilson", amount: "₹750", status: "completed", time: "1 hour ago" },
-  { id: "#ORD-005", customer: "David Brown", amount: "₹1,850", status: "shipped", time: "2 hours ago" },
-];
-
-const topProducts = [
-  { name: "Organic Alphonso Mangoes", sales: 450, revenue: "₹31,500", trend: "+15%" },
-  { name: "Premium Basmati Rice", sales: 320, revenue: "₹25,600", trend: "+8%" },
-  { name: "Fresh Spinach Bundle", sales: 280, revenue: "₹8,400", trend: "+12%" },
-  { name: "Cold Pressed Coconut Oil", sales: 220, revenue: "₹17,600", trend: "+5%" },
-];
-
-const categoryData = [
-  { name: "Fruits", value: 35, color: "#10b981" },
-  { name: "Vegetables", value: 28, color: "#f59e0b" },
-  { name: "Grains", value: 20, color: "#ef4444" },
-  { name: "Others", value: 17, color: "#8b5cf6" },
-];
+import {
+  useDashboardKpis,
+  useTopProducts,
+  useSalesSeries,
+  type SalesRange,
+  type SalesGranularity,
+} from "@/api/hooks/dashboard";
+import { useOrders } from "@/api/hooks/orders";
 
 const COLORS = ["#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
+const up = (v?: string) => v?.startsWith("+");
+const toNum = (v?: string | number) => (v == null ? 0 : Number(v));
+const inr = (n: number) => `₹${Math.round(n).toLocaleString()}`;
 
 export function DashboardPage() {
-  const [timeRange, setTimeRange] = useState("7d");
+  // ---- Controls for Sales Overview
+  const [range, setRange] = useState<SalesRange>("30d");     // 7d | 30d | 90d | 1y
+  const [gran, setGran]   = useState<SalesGranularity>("month"); // day | week | month
+
+  // ---- API data
+  const { data: kpis, isLoading: kpiLoading } = useDashboardKpis();
+  const { data: topProducts = [], isLoading: topLoading } = useTopProducts();
+  const { data: orders = [], isLoading: ordersLoading } = useOrders();
+
+  // Sales series driven by controls
+  const { data: salesSeries = [], isLoading: salesLoading } = useSalesSeries({ range, granularity: gran });
+
+  // Aggregate series for dashboard KPIs (fallback to server KPIs if series empty)
+  const agg = useMemo(() => {
+    const revenue = salesSeries.reduce((a: number, p: any) => a + Number(p.sales || 0), 0);
+    const ordersC = salesSeries.reduce((a: number, p: any) => a + Number(p.orders || 0), 0);
+    const customers = salesSeries.reduce((a: number, p: any) => a + Number(p.customers || 0), 0);
+    const aov = ordersC ? revenue / ordersC : 0;
+    return { revenue, orders: ordersC, customers, aov };
+  }, [salesSeries]);
+
+  // ---- Derived/safe values for KPI cards
+  const kCards = useMemo(
+    () => [
+      {
+        title: "Revenue (selected range)",
+        value: salesSeries.length ? inr(agg.revenue) : (kpis?.revenueThisMonth ?? "₹0"),
+        change: kpis ? "+0%" : "+0%",
+        trend: "up" as const,
+        icon: DollarSign,
+        color: "text-green-600",
+        bgColor: "bg-green-50",
+        description: salesSeries.length ? `Range: ${range.toUpperCase()} · ${gran}` : "Revenue this month",
+      },
+      {
+        title: "Orders (selected range)",
+        value: salesSeries.length ? agg.orders.toLocaleString() : String(kpis?.ordersThisMonth ?? 0),
+        change: kpis ? "+0%" : "+0%",
+        trend: "up" as const,
+        icon: ShoppingCart,
+        color: "text-blue-600",
+        bgColor: "bg-blue-50",
+        description: salesSeries.length ? "Total orders in range" : "Orders this month",
+      },
+      {
+        title: "Active Products",
+        value: String(kpis?.inStock ?? 0),
+        change: kpis ? "+0%" : "+0%",
+        trend: "up" as const,
+        icon: Package,
+        color: "text-purple-600",
+        bgColor: "bg-purple-50",
+        description: "In-stock products",
+      },
+      {
+        title: salesSeries.length ? "Avg. Order Value" : "Average Rating",
+        value: salesSeries.length ? inr(agg.aov) : String(kpis?.averageRating ?? "0"),
+        change: kpis ? "+0%" : "+0%",
+        trend: "up" as const,
+        icon: Users,
+        color: "text-orange-600",
+        bgColor: "bg-orange-50",
+        description: salesSeries.length ? "Revenue / orders in range" : "Across approved reviews",
+      },
+    ],
+    [kpis, salesSeries, agg, range, gran]
+  );
+
+  // Category share from top products
+  const categoryShare = useMemo(() => {
+    const counts: Record<string, number> = {};
+    topProducts.forEach((p: any) => {
+      const c = (p.category?.name as string) || "Others";
+      counts[c] = (counts[c] || 0) + 1;
+    });
+    const entries = Object.entries(counts);
+    if (entries.length === 0) {
+      return [
+        { name: "Fruits", value: 35 },
+        { name: "Vegetables", value: 28 },
+        { name: "Grains", value: 20 },
+        { name: "Others", value: 17 },
+      ];
+    }
+    return entries.map(([name, value]) => ({ name, value }));
+  }, [topProducts]);
+
+  const recentOrders = useMemo(() => {
+    if (!orders || orders.length === 0) return [];
+    const sorted = [...orders].sort((a: any, b: any) => {
+      const ad = a.created_at || a.id || 0;
+      const bd = b.created_at || b.id || 0;
+      return String(bd).localeCompare(String(ad));
+    });
+    return sorted.slice(0, 5).map((o: any) => ({
+      id: `#ORD-${o.id}`,
+      customer: o.customer_name || o.email || "Customer",
+      amount: o?.totals?.grand_total != null ? `₹${toNum(o.totals.grand_total).toLocaleString()}` : "—",
+      status: o.status || "created",
+      time: o.created_at ? new Date(o.created_at).toLocaleString() : "",
+    }));
+  }, [orders]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "completed": return "bg-green-100 text-green-800";
-      case "pending": return "bg-yellow-100 text-yellow-800";
-      case "processing": return "bg-blue-100 text-blue-800";
-      case "shipped": return "bg-purple-100 text-purple-800";
-      default: return "bg-gray-100 text-gray-800";
+      case "completed":
+      case "paid":
+      case "confirmed":
+        return "bg-green-100 text-green-800";
+      case "pending":
+        return "bg-yellow-100 text-yellow-800";
+      case "processing":
+        return "bg-blue-100 text-blue-800";
+      case "shipped":
+        return "bg-purple-100 text-purple-800";
+      case "cancelled":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -134,58 +180,83 @@ export function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
-          <Button variant="outline" className="gap-2 flex-1 sm:flex-none">
-            <Calendar className="h-4 w-4" />
-            <span className="hidden sm:inline">Last 7 days</span>
-            <span className="sm:hidden">7d</span>
-          </Button>
-          <Button className="gap-2 flex-1 sm:flex-none">
-            <BarChart3 className="h-4 w-4" />
-            <span className="hidden sm:inline">View Reports</span>
-            <span className="sm:hidden">Reports</span>
-          </Button>
+          {/* Range selector */}
+          <div className="flex rounded-md border overflow-hidden">
+            {(["7d", "30d", "90d", "1y"] as SalesRange[]).map((r) => (
+              <button
+                key={r}
+                onClick={() => setRange(r)}
+                className={`px-3 py-1 text-xs sm:text-sm ${
+                  range === r ? "bg-primary text-primary-foreground" : "bg-background hover:bg-muted"
+                }`}
+              >
+                {r.toUpperCase()}
+              </button>
+            ))}
+          </div>
+          {/* Granularity selector */}
+          <div className="flex rounded-md border overflow-hidden">
+            {(["day", "week", "month"] as SalesGranularity[]).map((g) => (
+              <button
+                key={g}
+                onClick={() => setGran(g)}
+                className={`px-3 py-1 text-xs sm:text-sm ${
+                  gran === g ? "bg-primary text-primary-foreground" : "bg-background hover:bg-muted"
+                } capitalize`}
+              >
+                {g}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {kpiData.map((kpi, index) => (
-          <Card key={kpi.title} className="hover-scale animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {kpi.title}
-              </CardTitle>
-              <div className={`p-2 rounded-lg ${kpi.bgColor}`}>
-                <kpi.icon className={`h-4 w-4 ${kpi.color}`} />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{kpi.value}</div>
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                {kpi.trend === "up" ? (
-                  <ArrowUpRight className="h-3 w-3 text-green-500" />
-                ) : (
-                  <ArrowDownRight className="h-3 w-3 text-red-500" />
-                )}
-                <span className={kpi.trend === "up" ? "text-green-600" : "text-red-600"}>
-                  {kpi.change}
-                </span>
-                <span>from last month</span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">{kpi.description}</p>
-            </CardContent>
-          </Card>
-        ))}
+        {kpiLoading && !salesSeries.length
+          ? Array.from({ length: 4 }).map((_, i) => (
+              <Card key={i} className="p-4">
+                <Skeleton className="h-4 w-24 mb-3" />
+                <Skeleton className="h-7 w-32 mb-2" />
+                <Skeleton className="h-4 w-40" />
+              </Card>
+            ))
+          : kCards.map((kpi, index) => (
+              <Card key={kpi.title} className="hover-scale animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">{kpi.title}</CardTitle>
+                  <div className={`p-2 rounded-lg ${kpi.bgColor}`}>
+                    <kpi.icon className={`h-4 w-4 ${kpi.color}`} />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{kpi.value}</div>
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    {up(kpi.change) ? (
+                      <ArrowUpRight className="h-3 w-3 text-green-500" />
+                    ) : (
+                      <ArrowDownRight className="h-3 w-3 text-red-500" />
+                    )}
+                    <span className={up(kpi.change) ? "text-green-600" : "text-red-600"}>{kpi.change}</span>
+                    <span>{salesSeries.length ? `(${range.toUpperCase()}, ${gran})` : "from last month"}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">{kpi.description}</p>
+                </CardContent>
+              </Card>
+            ))}
       </div>
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-        {/* Sales Chart */}
+        {/* Sales Chart (real data w/ switching) */}
         <Card className="lg:col-span-2 animate-fade-in" style={{ animationDelay: "400ms" }}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
               <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
               Sales Overview
+              <span className="text-xs text-muted-foreground ml-2">
+                ({range.toUpperCase()}, {gran})
+              </span>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -195,120 +266,100 @@ export function DashboardPage() {
                 <TabsTrigger value="orders" className="text-xs sm:text-sm">Orders</TabsTrigger>
                 <TabsTrigger value="customers" className="text-xs sm:text-sm">Customers</TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="revenue" className="space-y-4">
-                <ResponsiveContainer width="100%" height={window.innerWidth < 640 ? 250 : 300}>
-                  <AreaChart data={salesData}>
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                    <XAxis dataKey="name" tick={{ fontSize: window.innerWidth < 640 ? 10 : 12 }} />
-                    <YAxis tick={{ fontSize: window.innerWidth < 640 ? 10 : 12 }} />
-                    <Tooltip 
-                      formatter={(value) => [`₹${value}`, "Revenue"]}
-                      labelStyle={{ color: "#000" }}
-                      contentStyle={{ 
-                        backgroundColor: "white", 
-                        border: "1px solid #e2e8f0",
-                        borderRadius: "8px"
-                      }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="sales"
-                      stroke="#10b981"
-                      fill="#10b981"
-                      fillOpacity={0.2}
-                      strokeWidth={2}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
+                {salesLoading ? (
+                  <Skeleton className="h-72 w-full rounded-md" />
+                ) : (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <AreaChart data={salesSeries}>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip formatter={(value) => [inr(Number(value)), "Revenue"]} />
+                      <Area type="monotone" dataKey="sales" stroke="#10b981" fill="#10b981" fillOpacity={0.2} strokeWidth={2} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                )}
               </TabsContent>
 
               <TabsContent value="orders" className="space-y-4">
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={salesData}>
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip 
-                      formatter={(value) => [value, "Orders"]}
-                      contentStyle={{ 
-                        backgroundColor: "white", 
-                        border: "1px solid #e2e8f0",
-                        borderRadius: "8px"
-                      }}
-                    />
-                    <Bar dataKey="orders" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                {salesLoading ? (
+                  <Skeleton className="h-72 w-full rounded-md" />
+                ) : (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={salesSeries}>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip formatter={(value) => [value, "Orders"]} />
+                      <Bar dataKey="orders" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
               </TabsContent>
 
               <TabsContent value="customers" className="space-y-4">
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={salesData}>
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip 
-                      formatter={(value) => [value, "Customers"]}
-                      contentStyle={{ 
-                        backgroundColor: "white", 
-                        border: "1px solid #e2e8f0",
-                        borderRadius: "8px"
-                      }}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="customers" 
-                      stroke="#8b5cf6" 
-                      strokeWidth={3}
-                      dot={{ fill: "#8b5cf6", strokeWidth: 2, r: 6 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                {salesLoading ? (
+                  <Skeleton className="h-72 w-full rounded-md" />
+                ) : (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={salesSeries}>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip formatter={(value) => [value, "Customers"]} />
+                      <Line type="monotone" dataKey="customers" stroke="#8b5cf6" strokeWidth={3} dot={{ fill: "#8b5cf6", strokeWidth: 2, r: 6 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
               </TabsContent>
             </Tabs>
           </CardContent>
         </Card>
 
-        {/* Category Distribution */}
+        {/* Category Distribution (from backend top products) */}
         <Card className="animate-fade-in" style={{ animationDelay: "500ms" }}>
           <CardHeader>
             <CardTitle className="text-base sm:text-lg">Category Sales</CardTitle>
-            <p className="text-xs sm:text-sm text-muted-foreground">Sales by product category</p>
+            <p className="text-xs sm:text-sm text-muted-foreground">Share by product category</p>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={window.innerWidth < 640 ? 180 : 200}>
-              <PieChart>
-                <Pie
-                  data={categoryData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={window.innerWidth < 640 ? 30 : 40}
-                  outerRadius={window.innerWidth < 640 ? 60 : 80}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {categoryData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+            {topLoading ? (
+              <Skeleton className="h-48 w-full rounded-md" />
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie
+                      data={categoryShare}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={40}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {categoryShare.map((_, index) => (
+                        <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => [`${value}`, "Items"]} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="space-y-2 mt-4">
+                  {categoryShare.map((category, index) => (
+                    <div key={category.name} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                        <span className="text-sm">{category.name}</span>
+                      </div>
+                      <span className="text-sm font-medium">{category.value}</span>
+                    </div>
                   ))}
-                </Pie>
-                <Tooltip formatter={(value) => [`${value}%`, "Share"]} />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="space-y-2 mt-4">
-              {categoryData.map((category, index) => (
-                <div key={category.name} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: COLORS[index] }}
-                    />
-                    <span className="text-sm">{category.name}</span>
-                  </div>
-                  <span className="text-sm font-medium">{category.value}%</span>
                 </div>
-              ))}
-            </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -320,35 +371,48 @@ export function DashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               Recent Orders
-              <Badge variant="outline">{recentOrders.length} new</Badge>
+              <Badge variant="outline">{orders?.length ?? 0} total</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {recentOrders.map((order, index) => (
-                <div
-                  key={order.id}
-                  className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{order.id}</span>
-                      <Badge className={getStatusColor(order.status)} variant="secondary">
-                        {order.status}
-                      </Badge>
+            {ordersLoading ? (
+              <div className="space-y-4">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-14 w-full rounded-md" />
+                ))}
+              </div>
+            ) : (
+              <>
+                <div className="space-y-4">
+                  {recentOrders.map((order) => (
+                    <div
+                      key={order.id}
+                      className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{order.id}</span>
+                          <Badge className={getStatusColor(order.status)} variant="secondary">
+                            {order.status}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{order.customer}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium">{order.amount}</p>
+                        <p className="text-xs text-muted-foreground">{order.time}</p>
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground">{order.customer}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-medium">{order.amount}</p>
-                    <p className="text-xs text-muted-foreground">{order.time}</p>
-                  </div>
+                  ))}
+                  {recentOrders.length === 0 && (
+                    <p className="text-sm text-muted-foreground">No recent orders.</p>
+                  )}
                 </div>
-              ))}
-            </div>
-            <Button variant="outline" className="w-full mt-4">
-              View All Orders
-            </Button>
+                <Button variant="outline" className="w-full mt-4">
+                  View All Orders
+                </Button>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -359,60 +423,47 @@ export function DashboardPage() {
             <p className="text-sm text-muted-foreground">Best performing products</p>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {topProducts.map((product, index) => (
-                <div
-                  key={product.name}
-                  className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
-                >
-                  <div className="space-y-1">
-                    <p className="font-medium text-sm">{product.name}</p>
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <span>{product.sales} sold</span>
-                      <span className="text-green-600">{product.trend}</span>
+            {topLoading ? (
+              <div className="space-y-4">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-14 w-full rounded-md" />
+                ))}
+              </div>
+            ) : (
+              <>
+                <div className="space-y-4">
+                  {topProducts.map((p: any) => (
+                    <div
+                      key={p.id}
+                      className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="space-y-1">
+                        <p className="font-medium text-sm">{p.name}</p>
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          <span>{p.sold_count ?? 0} sold</span>
+                          {p.category?.name && <span>{p.category.name}</span>}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium">
+                          {p.price_inr != null ? `₹${Number(p.price_inr).toLocaleString()}` : "—"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">Unit price</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-medium">{product.revenue}</p>
-                    <p className="text-xs text-muted-foreground">Revenue</p>
-                  </div>
+                  ))}
+                  {topProducts.length === 0 && (
+                    <p className="text-sm text-muted-foreground">No products found.</p>
+                  )}
                 </div>
-              ))}
-            </div>
-            <Button variant="outline" className="w-full mt-4">
-              View All Products
-            </Button>
+                <Button variant="outline" className="w-full mt-4">
+                  View All Products
+                </Button>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
-
-      {/* Quick Actions */}
-      <Card className="animate-fade-in" style={{ animationDelay: "800ms" }}>
-        <CardHeader>
-          <CardTitle className="text-base sm:text-lg">Quick Actions</CardTitle>
-          <p className="text-xs sm:text-sm text-muted-foreground">Common tasks and shortcuts</p>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <Button variant="outline" className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 hover-scale">
-              <Package className="h-4 w-4 sm:h-5 sm:w-5" />
-              <span className="text-xs sm:text-sm">Add Product</span>
-            </Button>
-            <Button variant="outline" className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 hover-scale">
-              <Users className="h-4 w-4 sm:h-5 sm:w-5" />
-              <span className="text-xs sm:text-sm">View Customers</span>
-            </Button>
-            <Button variant="outline" className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 hover-scale">
-              <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
-              <span className="text-xs sm:text-sm">Manage Orders</span>
-            </Button>
-            <Button variant="outline" className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 hover-scale">
-              <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5" />
-              <span className="text-xs sm:text-sm">Analytics</span>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

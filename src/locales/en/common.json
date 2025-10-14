@@ -1,0 +1,21 @@
+{
+  "brand": { "short": "PJK", "full": "Prakrithi Jaiva Kalavara" },
+  "nav": {
+    "home": "Home",
+    "about": "About",
+    "awards": "Awards",
+    "testimonials": "Testimonials",
+    "gallery": "Gallery",
+    "blog": "Blog",
+    "contact": "Contact",
+    "sign_in": "Sign In",
+    "login": "Login",
+    "shop_all": "Shop All Products"
+  },
+  "generic": {
+    "categories": "Categories",
+    "loading_categories": "Loading categories…",
+    "search_placeholder": "Search...",
+    "search_products": "Search products..."
+  }
+}

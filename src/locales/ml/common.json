@@ -1,0 +1,21 @@
+{
+  "brand": { "short": "പിജെകെ", "full": "പ്രകൃതി ജൈവ കലവറ" },
+  "nav": {
+    "home": "ഹോം",
+    "about": "ഞങ്ങളെക്കുറിച്ച്",
+    "awards": "പുരസ്കാരങ്ങൾ",
+    "testimonials": "വിമർശങ്ങൾ",
+    "gallery": "ഗാലറി",
+    "blog": "ബ്ലോഗ്",
+    "contact": "ബന്ധപ്പെടുക",
+    "sign_in": "സൈൻ ഇൻ",
+    "login": "ലോഗിൻ",
+    "shop_all": "എല്ലാ ഉൽപ്പന്നങ്ങളും"
+  },
+  "generic": {
+    "categories": "വിഭാഗങ്ങൾ",
+    "loading_categories": "വിഭാഗങ്ങൾ ലോഡുചെയ്യുന്നു…",
+    "search_placeholder": "തിരയുക...",
+    "search_products": "ഉൽപ്പന്നങ്ങൾ തിരയുക..."
+  }
+}

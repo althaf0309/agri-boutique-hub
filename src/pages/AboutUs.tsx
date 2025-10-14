@@ -1,7 +1,7 @@
 import { Users, Leaf, Heart, Award, Target, Eye } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import Header from "@/components/Header";
+import Header from "@/components/layout/Header";
 import Footer from "@/components/Footer";
 
 const teamMembers = [

@@ -15,7 +15,7 @@ export default function FeaturesCircle() {
   const LINE_RADIUS = 260;
 
   return (
-    <section className="pt-32 pb-16 sm:pt-40 sm:pb-20 lg:pt-60 lg:pb-40 xl:pt-72 bg-gradient-to-br from-muted/20 via-background to-muted/30 relative overflow-hidden">
+    <section className="pt-0 pb-10 sm:pt-14 sm:pb-20 lg:pt-20 lg:pb-16 xl:pt-20 bg-gradient-to-br from-muted/20 via-background to-muted/30 relative overflow-hidden">
       {/* background blobs */}
       <div className="absolute inset-0 opacity-15">
         <div className="absolute top-10 sm:top-20 left-10 sm:left-20 w-32 sm:w-64 h-32 sm:h-64 bg-accent rounded-full blur-3xl animate-pulse" />
@@ -75,9 +75,9 @@ export default function FeaturesCircle() {
           </div>
 
           {/* Desktop circle (card positions unchanged) */}
-          <div className="hidden lg:block relative w-full flex items-center justify-center" style={{ minHeight: "980px" }}>
+          <div className="hidden lg:block relative w-full flex items-center justify-center" style={{ minHeight: "780px",marginBottom: "-12px" }}>
             {/* Center brand circle */}
-            <div className="relative w-[500px] h-[500px] mx-auto">
+            <div className="relative w-[460px] h-[460px] mx-auto">
               <div className="absolute inset-0 rounded-full border-8 border-transparent bg-gradient-to-r from-accent via-primary to-highlight animate-spin" style={{ animationDuration: "30s" }} />
               <div className="absolute inset-4 rounded-full border-6 border-transparent bg-gradient-to-r from-highlight via-secondary to-accent animate-spin" style={{ animationDuration: "40s", animationDirection: "reverse" }} />
               <div className="absolute inset-8 rounded-full bg-gradient-to-br from-primary via-accent to-highlight shadow-2xl">
@@ -159,7 +159,7 @@ export default function FeaturesCircle() {
         </div>
 
         {/* stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-12 mt-12 sm:mt-16 lg:mt-32 max-w-6xl mx-auto">
+         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-12 mt-4 sm:mt-6 lg:mt-8 max-w-6xl mx-auto">
           {[
             { number: "10K+", label: "Happy Customers", icon: "👥" },
             { number: "500+", label: "Organic Products", icon: "🌱" },

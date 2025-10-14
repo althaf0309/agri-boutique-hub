@@ -1,3 +1,4 @@
+// src/pages/Contact.tsx
 import { useState } from "react";
 import { Mail, Phone, MapPin, Clock, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -5,35 +6,78 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import Header from "@/components/Header";
+import Header from "@/components/layout/Header";
 import Footer from "@/components/Footer";
+import { useToast } from "@/hooks/use-toast";
+import { useCreateContact } from "@/api/hooks/contacts";
 
 export default function Contact() {
+  const { toast } = useToast();
+  const createContact = useCreateContact();
+  const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
     subject: "",
-    message: ""
+    message: "",
+    // simple honeypot for bots (kept hidden in the form)
+    website: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission here
-    console.log("Form submitted:", formData);
+    if (submitting) return;
+
+    // basic frontend guard
+    if (!formData.name || !formData.email || !formData.subject || !formData.message) {
+      toast({ title: "Please fill all required fields", variant: "destructive" });
+      return;
+    }
+    // honeypot — if filled, silently skip
+    if (formData.website) return;
+
+    setSubmitting(true);
+    try {
+      await createContact.mutateAsync({
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim() || null,
+        subject: formData.subject.trim(),
+        message: formData.message.trim(),
+        handled: false,
+      });
+
+      toast({ title: "Thanks! We got your message." });
+      setFormData({
+        name: "",
+        email: "",
+        phone: "",
+        subject: "",
+        message: "",
+        website: "",
+      });
+    } catch (e: any) {
+      toast({
+        title: "Could not send message",
+        description: e?.message || "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    setFormData((s) => ({ ...s, [e.target.name]: e.target.value }));
   };
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
+
       <main className="container mx-auto px-4 py-12">
         {/* Hero Section */}
         <section className="text-center mb-16">
@@ -49,7 +93,7 @@ export default function Contact() {
           {/* Contact Information */}
           <div className="lg:col-span-1">
             <h2 className="text-2xl font-bold text-foreground mb-6">Get in Touch</h2>
-            
+
             <div className="space-y-6">
               <Card>
                 <CardContent className="p-6">
@@ -131,6 +175,17 @@ export default function Contact() {
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-6">
+                  {/* honeypot (hidden) */}
+                  <input
+                    type="text"
+                    name="website"
+                    value={formData.website}
+                    onChange={handleInputChange}
+                    className="hidden"
+                    tabIndex={-1}
+                    autoComplete="off"
+                  />
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="name">Name *</Label>
@@ -141,6 +196,7 @@ export default function Contact() {
                         onChange={handleInputChange}
                         required
                         placeholder="Your full name"
+                        disabled={submitting}
                       />
                     </div>
                     <div className="space-y-2">
@@ -153,6 +209,7 @@ export default function Contact() {
                         onChange={handleInputChange}
                         required
                         placeholder="your.email@example.com"
+                        disabled={submitting}
                       />
                     </div>
                   </div>
@@ -167,6 +224,7 @@ export default function Contact() {
                         value={formData.phone}
                         onChange={handleInputChange}
                         placeholder="+91 9876543210"
+                        disabled={submitting}
                       />
                     </div>
                     <div className="space-y-2">
@@ -178,6 +236,7 @@ export default function Contact() {
                         onChange={handleInputChange}
                         required
                         placeholder="What is this about?"
+                        disabled={submitting}
                       />
                     </div>
                   </div>
@@ -192,12 +251,13 @@ export default function Contact() {
                       required
                       placeholder="Tell us how we can help you..."
                       className="min-h-[120px]"
+                      disabled={submitting}
                     />
                   </div>
 
-                  <Button type="submit" size="lg" className="w-full md:w-auto">
+                  <Button type="submit" size="lg" className="w-full md:w-auto" disabled={submitting}>
                     <Send className="w-4 h-4 mr-2" />
-                    Send Message
+                    {submitting ? "Sending..." : "Send Message"}
                   </Button>
                 </form>
               </CardContent>
@@ -229,7 +289,7 @@ export default function Contact() {
               <CardContent className="p-6">
                 <h3 className="font-semibold text-foreground mb-3">What are your delivery areas?</h3>
                 <p className="text-muted-foreground">
-                  We currently deliver across Kerala and select cities in Tamil Nadu and Karnataka. 
+                  We currently deliver across Kerala and select cities in Tamil Nadu and Karnataka.
                   Check our delivery page for the complete list of serviceable areas.
                 </p>
               </CardContent>
@@ -238,7 +298,7 @@ export default function Contact() {
               <CardContent className="p-6">
                 <h3 className="font-semibold text-foreground mb-3">How do you ensure product quality?</h3>
                 <p className="text-muted-foreground">
-                  All our products are sourced directly from certified organic farms and undergo 
+                  All our products are sourced directly from certified organic farms and undergo
                   rigorous quality checks before being packaged and shipped to you.
                 </p>
               </CardContent>
@@ -247,7 +307,7 @@ export default function Contact() {
               <CardContent className="p-6">
                 <h3 className="font-semibold text-foreground mb-3">What is your return policy?</h3>
                 <p className="text-muted-foreground">
-                  We offer a 7-day return policy for non-perishable items. For fresh produce, 
+                  We offer a 7-day return policy for non-perishable items. For fresh produce,
                   please contact us within 24 hours of delivery if there are any quality issues.
                 </p>
               </CardContent>
@@ -256,7 +316,7 @@ export default function Contact() {
               <CardContent className="p-6">
                 <h3 className="font-semibold text-foreground mb-3">Do you offer bulk orders?</h3>
                 <p className="text-muted-foreground">
-                  Yes, we provide special pricing for bulk orders. Please contact our sales team 
+                  Yes, we provide special pricing for bulk orders. Please contact our sales team
                   for customized quotes and wholesale pricing.
                 </p>
               </CardContent>

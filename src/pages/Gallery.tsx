@@ -1,148 +1,28 @@
-import { Camera, MapPin, Calendar, Users, Leaf, Award } from "lucide-react";
+import { Camera, MapPin, Calendar, Users, Leaf, Award as AwardIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import Header from "@/components/Header";
+import Header from "@/components/layout/Header";
 import Footer from "@/components/Footer";
+import { useGalleryItems } from "@/api/hooks/cms";
+import { Skeleton } from "@/components/ui/skeleton";
 
-const farmingGallery = [
-  {
-    image: "/placeholder.svg",
-    title: "Organic Rice Farming",
-    location: "Wayanad, Kerala",
-    date: "March 2024",
-    description: "Traditional organic rice cultivation using sustainable farming methods"
-  },
-  {
-    image: "/placeholder.svg",
-    title: "Spice Plantation",
-    location: "Idukki, Kerala",
-    date: "February 2024",
-    description: "Organic cardamom and pepper cultivation in the Western Ghats"
-  },
-  {
-    image: "/placeholder.svg",
-    title: "Vegetable Gardens",
-    location: "Kottayam, Kerala",
-    date: "January 2024",
-    description: "Fresh organic vegetables grown without chemical pesticides"
-  },
-  {
-    image: "/placeholder.svg",
-    title: "Coconut Groves",
-    location: "Thrissur, Kerala",
-    date: "December 2023",
-    description: "Traditional coconut farming supporting our organic coconut oil production"
-  },
-  {
-    image: "/placeholder.svg",
-    title: "Turmeric Fields",
-    location: "Salem, Tamil Nadu",
-    date: "November 2023",
-    description: "High-quality organic turmeric cultivation with natural farming techniques"
-  },
-  {
-    image: "/placeholder.svg",
-    title: "Fruit Orchards",
-    location: "Ooty, Tamil Nadu",
-    date: "October 2023",
-    description: "Organic fruit orchards producing chemical-free seasonal fruits"
-  }
-];
-
-const eventsGallery = [
-  {
-    image: "/placeholder.svg",
-    title: "Organic Farmers Meet 2024",
-    location: "Kochi, Kerala",
-    date: "March 2024",
-    description: "Annual gathering of 200+ organic farmers discussing sustainable practices",
-    attendees: "200+ Farmers"
-  },
-  {
-    image: "/placeholder.svg",
-    title: "Health & Wellness Workshop",
-    location: "Bangalore, Karnataka",
-    date: "February 2024",
-    description: "Educational workshop on organic nutrition and healthy living",
-    attendees: "150+ Participants"
-  },
-  {
-    image: "/placeholder.svg",
-    title: "School Awareness Program",
-    location: "Various Schools, Kerala",
-    date: "January 2024",
-    description: "Teaching children about organic farming and environmental conservation",
-    attendees: "500+ Students"
-  },
-  {
-    image: "/placeholder.svg",
-    title: "Sustainable Agriculture Expo",
-    location: "Chennai, Tamil Nadu",
-    date: "December 2023",
-    description: "Showcasing innovative organic farming techniques and products",
-    attendees: "300+ Visitors"
-  },
-  {
-    image: "/placeholder.svg",
-    title: "Community Harvest Festival",
-    location: "Wayanad, Kerala",
-    date: "November 2023",
-    description: "Celebrating successful harvest season with farming communities",
-    attendees: "400+ Community Members"
-  },
-  {
-    image: "/placeholder.svg",
-    title: "Organic Product Launch",
-    location: "Trivandrum, Kerala",
-    date: "October 2023",
-    description: "Launching new range of organic wellness products",
-    attendees: "100+ Stakeholders"
-  }
-];
-
-const certificationGallery = [
-  {
-    image: "/placeholder.svg",
-    title: "NPOP Certification Ceremony",
-    location: "New Delhi",
-    date: "August 2023",
-    description: "Receiving National Programme for Organic Production certification"
-  },
-  {
-    image: "/placeholder.svg",
-    title: "Quality Assurance Audit",
-    location: "Processing Facility, Kerala",
-    date: "July 2023",
-    description: "Annual quality assurance audit by certification authorities"
-  },
-  {
-    image: "/placeholder.svg",
-    title: "Fair Trade Certification",
-    location: "Kochi, Kerala",
-    date: "June 2023",
-    description: "Receiving Fair Trade certification for ethical farming practices"
-  },
-  {
-    image: "/placeholder.svg",
-    title: "ISO 22000 Certification",
-    location: "Bangalore, Karnataka",
-    date: "May 2023",
-    description: "Food safety management system certification process"
-  }
-];
-
-const categories = [
-  { name: "Farming & Agriculture", count: 24, icon: Leaf },
-  { name: "Events & Workshops", count: 18, icon: Users },
-  { name: "Certifications", count: 12, icon: Award },
-  { name: "Community Impact", count: 30, icon: Camera }
+type Cat = "Farming & Agriculture" | "Events & Workshops" | "Certifications" | "Community Impact";
+const cats: { name: Cat; icon: any }[] = [
+  { name: "Farming & Agriculture", icon: Leaf },
+  { name: "Events & Workshops", icon: Users },
+  { name: "Certifications", icon: AwardIcon },
+  { name: "Community Impact", icon: Camera },
 ];
 
 export default function Gallery() {
+  const { data: all = [], isLoading, isError } = useGalleryItems();
+
+  const byCat = (c: Cat) => all.filter((g) => g.category === c && g.is_active !== false).sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
+
       <main className="container mx-auto px-4 py-8 sm:py-12">
         {/* Hero Section */}
         <section className="text-center mb-12 sm:mb-16">
@@ -153,7 +33,7 @@ export default function Gallery() {
             Our Journey in Pictures
           </h1>
           <p className="text-lg sm:text-xl text-muted-foreground max-w-3xl mx-auto px-2">
-            Explore our visual story of organic farming excellence, community impact, 
+            Explore our visual story of organic farming excellence, community impact,
             and the journey towards sustainable agriculture across India.
           </p>
         </section>
@@ -161,15 +41,15 @@ export default function Gallery() {
         {/* Gallery Categories */}
         <section className="mb-12 sm:mb-16">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
-            {categories.map((category, index) => (
-              <Card key={index} className="card-farm text-center cursor-pointer">
+            {cats.map(({ name, icon: Icon }) => (
+              <Card key={name} className="card-farm text-center">
                 <CardContent className="p-4 sm:p-6">
                   <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-primary to-accent rounded-lg flex items-center justify-center mx-auto mb-3 sm:mb-4">
-                    <category.icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                    <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                   </div>
-                  <h3 className="text-sm sm:text-lg font-semibold text-foreground mb-2">{category.name}</h3>
+                  <h3 className="text-sm sm:text-lg font-semibold text-foreground mb-2">{name}</h3>
                   <Badge variant="secondary" className="feature-badge text-xs">
-                    {category.count} Photos
+                    {isLoading ? "…" : byCat(name).length} Photos
                   </Badge>
                 </CardContent>
               </Card>
@@ -177,159 +57,187 @@ export default function Gallery() {
           </div>
         </section>
 
-        {/* Farming & Agriculture Gallery */}
-        <section className="mb-12 sm:mb-16">
-          <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-6 sm:mb-8 flex items-center">
-            <Leaf className="w-6 h-6 sm:w-8 sm:h-8 mr-2 sm:mr-3 text-primary" />
-            Farming & Agriculture
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
-            {farmingGallery.map((item, index) => (
-              <Card key={index} className="card-farm overflow-hidden">
-                <div className="relative">
-                  <img 
-                    src={item.image} 
-                    alt={item.title}
-                    className="w-full h-40 sm:h-48 object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                    <Camera className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
-                  </div>
+        {isError && (
+          <p className="text-center text-muted-foreground mb-12">Couldn’t load gallery. Please try again.</p>
+        )}
+
+        {isLoading ? (
+          <>
+            {cats.map((c) => (
+              <section key={c.name} className="mb-12 sm:mb-16">
+                <div className="h-8 w-60 mb-6 bg-muted rounded" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <Card key={i} className="card-farm overflow-hidden">
+                      <Skeleton className="w-full h-48" />
+                      <CardContent className="p-4 space-y-2">
+                        <Skeleton className="h-5 w-3/4" />
+                        <Skeleton className="h-4 w-1/2" />
+                        <Skeleton className="h-4 w-1/3" />
+                        <Skeleton className="h-10 w-full" />
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
-                <CardContent className="p-4 sm:p-6">
-                  <h3 className="text-base sm:text-lg font-semibold text-foreground mb-2">{item.title}</h3>
-                  <div className="flex items-center text-xs sm:text-sm text-muted-foreground mb-2">
-                    <MapPin className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                    <span>{item.location}</span>
-                  </div>
-                  <div className="flex items-center text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3">
-                    <Calendar className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                    <span>{item.date}</span>
-                  </div>
-                  <p className="text-xs sm:text-sm text-muted-foreground">{item.description}</p>
-                </CardContent>
-              </Card>
+              </section>
             ))}
-          </div>
-        </section>
-
-        {/* Events & Workshops Gallery */}
-        <section className="mb-12 sm:mb-16">
-          <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-6 sm:mb-8 flex items-center">
-            <Users className="w-6 h-6 sm:w-8 sm:h-8 mr-2 sm:mr-3 text-primary" />
-            Events & Community Outreach
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
-            {eventsGallery.map((item, index) => (
-              <Card key={index} className="card-farm overflow-hidden">
-                <div className="relative">
-                  <img 
-                    src={item.image} 
-                    alt={item.title}
-                    className="w-full h-48 object-cover"
-                  />
-                  <Badge className="absolute top-4 left-4 bg-accent text-white">
-                    {item.attendees}
-                  </Badge>
-                </div>
-                <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold text-foreground mb-2">{item.title}</h3>
-                  <div className="flex items-center text-sm text-muted-foreground mb-2">
-                    <MapPin className="w-4 h-4 mr-1" />
-                    <span>{item.location}</span>
-                  </div>
-                  <div className="flex items-center text-sm text-muted-foreground mb-3">
-                    <Calendar className="w-4 h-4 mr-1" />
-                    <span>{item.date}</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{item.description}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </section>
-
-        {/* Certifications Gallery */}
-        <section className="mb-12 sm:mb-16">
-          <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-6 sm:mb-8 flex items-center">
-            <Award className="w-6 h-6 sm:w-8 sm:h-8 mr-2 sm:mr-3 text-primary" />
-            Certifications & Achievements
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-            {certificationGallery.map((item, index) => (
-              <Card key={index} className="card-farm overflow-hidden">
-                <div className="relative">
-                  <img 
-                    src={item.image} 
-                    alt={item.title}
-                    className="w-full h-28 sm:h-32 object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                </div>
-                <CardContent className="p-3 sm:p-4">
-                  <h3 className="text-xs sm:text-sm font-semibold text-foreground mb-1">{item.title}</h3>
-                  <div className="flex items-center text-xs text-muted-foreground mb-1">
-                    <MapPin className="w-3 h-3 mr-1" />
-                    <span className="truncate">{item.location}</span>
-                  </div>
-                  <div className="flex items-center text-xs text-muted-foreground mb-1 sm:mb-2">
-                    <Calendar className="w-3 h-3 mr-1" />
-                    <span>{item.date}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground line-clamp-2">{item.description}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </section>
-
-        {/* Gallery Stats */}
-        <section className="mb-12 sm:mb-16">
-          <div className="bg-gradient-to-r from-primary/5 via-accent/5 to-highlight/5 rounded-2xl p-6 sm:p-8">
-            <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-6 sm:mb-8 text-center">Our Visual Journey</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 text-center">
-              <div>
-                <div className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gradient mb-1 sm:mb-2">500+</div>
-                <p className="text-muted-foreground text-xs sm:text-sm">Photos Captured</p>
+          </>
+        ) : (
+          <>
+            {/* Farming & Agriculture */}
+            <section className="mb-12 sm:mb-16">
+              <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-6 sm:mb-8 flex items-center">
+                <Leaf className="w-6 h-6 sm:w-8 sm:h-8 mr-2 sm:mr-3 text-primary" />
+                Farming & Agriculture
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+                {byCat("Farming & Agriculture").map((item) => (
+                  <Card key={item.id} className="card-farm overflow-hidden">
+                    <div className="relative">
+                      <img
+                        src={item.image_url || "/placeholder.svg"}
+                        alt={item.title}
+                        className="w-full h-40 sm:h-48 object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                        <Camera className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+                      </div>
+                    </div>
+                    <CardContent className="p-4 sm:p-6">
+                      <h3 className="text-base sm:text-lg font-semibold text-foreground mb-2">{item.title}</h3>
+                      {item.location && (
+                        <div className="flex items-center text-xs sm:text-sm text-muted-foreground mb-2">
+                          <MapPin className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                          <span>{item.location}</span>
+                        </div>
+                      )}
+                      {item.date_label && (
+                        <div className="flex items-center text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3">
+                          <Calendar className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                          <span>{item.date_label}</span>
+                        </div>
+                      )}
+                      {item.description && (
+                        <p className="text-xs sm:text-sm text-muted-foreground">{item.description}</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
-              <div>
-                <div className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gradient mb-1 sm:mb-2">50+</div>
-                <p className="text-muted-foreground text-xs sm:text-sm">Farm Visits</p>
-              </div>
-              <div>
-                <div className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gradient mb-1 sm:mb-2">25+</div>
-                <p className="text-muted-foreground text-xs sm:text-sm">Events Documented</p>
-              </div>
-              <div>
-                <div className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gradient mb-1 sm:mb-2">5</div>
-                <p className="text-muted-foreground text-xs sm:text-sm">Years of Growth</p>
-              </div>
-            </div>
-          </div>
-        </section>
+            </section>
 
-        {/* Call to Action */}
-        <section className="text-center">
-          <div className="max-w-4xl mx-auto px-4">
-            <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-4 sm:mb-6 text-center">Visit Our Farms</h2>
-            <p className="text-lg sm:text-xl text-muted-foreground mb-6 sm:mb-8 text-center">
-              Experience organic farming firsthand by visiting our partner farms. 
-              See where your food comes from and meet the farmers who grow it with love and care.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
-              <a href="/contact" className="inline-block">
-                <button className="btn-farm">
-                  Plan a Farm Visit
-                </button>
-              </a>
-              <a href="/about" className="inline-block">
-                <button className="btn-secondary-farm">
-                  Learn About Our Story
-                </button>
-              </a>
-            </div>
-          </div>
-        </section>
+            {/* Events & Workshops */}
+            <section className="mb-12 sm:mb-16">
+              <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-6 sm:mb-8 flex items-center">
+                <Users className="w-6 h-6 sm:w-8 sm:h-8 mr-2 sm:mr-3 text-primary" />
+                Events & Community Outreach
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+                {byCat("Events & Workshops").map((item) => (
+                  <Card key={item.id} className="card-farm overflow-hidden">
+                    <div className="relative">
+                      <img
+                        src={item.image_url || "/placeholder.svg"}
+                        alt={item.title}
+                        className="w-full h-48 object-cover"
+                      />
+                      {item.attendees && (
+                        <Badge className="absolute top-4 left-4 bg-accent text-white">
+                          {item.attendees}
+                        </Badge>
+                      )}
+                    </div>
+                    <CardContent className="p-6">
+                      <h3 className="text-lg font-semibold text-foreground mb-2">{item.title}</h3>
+                      {item.location && (
+                        <div className="flex items-center text-sm text-muted-foreground mb-2">
+                          <MapPin className="w-4 h-4 mr-1" />
+                          <span>{item.location}</span>
+                        </div>
+                      )}
+                      {item.date_label && (
+                        <div className="flex items-center text-sm text-muted-foreground mb-3">
+                          <Calendar className="w-4 h-4 mr-1" />
+                          <span>{item.date_label}</span>
+                        </div>
+                      )}
+                      {item.description && (
+                        <p className="text-sm text-muted-foreground">{item.description}</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </section>
+
+            {/* Certifications */}
+            <section className="mb-12 sm:mb-16">
+              <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-6 sm:mb-8 flex items-center">
+                <AwardIcon className="w-6 h-6 sm:w-8 sm:h-8 mr-2 sm:mr-3 text-primary" />
+                Certifications & Achievements
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                {byCat("Certifications").map((item) => (
+                  <Card key={item.id} className="card-farm overflow-hidden">
+                    <div className="relative">
+                      <img
+                        src={item.image_url || "/placeholder.svg"}
+                        alt={item.title}
+                        className="w-full h-28 sm:h-32 object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                    </div>
+                    <CardContent className="p-3 sm:p-4">
+                      <h3 className="text-xs sm:text-sm font-semibold text-foreground mb-1">{item.title}</h3>
+                      {item.location && (
+                        <div className="flex items-center text-xs text-muted-foreground mb-1">
+                          <MapPin className="w-3 h-3 mr-1" />
+                          <span className="truncate">{item.location}</span>
+                        </div>
+                      )}
+                      {item.date_label && (
+                        <div className="flex items-center text-xs text-muted-foreground mb-1 sm:mb-2">
+                          <Calendar className="w-3 h-3 mr-1" />
+                          <span>{item.date_label}</span>
+                        </div>
+                      )}
+                      {item.description && (
+                        <p className="text-xs text-muted-foreground line-clamp-2">{item.description}</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </section>
+
+            {/* Community Impact */}
+            <section className="mb-12 sm:mb-16">
+              <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-6 sm:mb-8 flex items-center">
+                <Camera className="w-6 h-6 sm:w-8 sm:h-8 mr-2 sm:mr-3 text-primary" />
+                Community Impact
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+                {byCat("Community Impact").map((item) => (
+                  <Card key={item.id} className="card-farm overflow-hidden">
+                    <div className="relative">
+                      <img
+                        src={item.image_url || "/placeholder.svg"}
+                        alt={item.title}
+                        className="w-full h-40 sm:h-48 object-cover"
+                      />
+                    </div>
+                    <CardContent className="p-4 sm:p-6">
+                      <h3 className="text-base sm:text-lg font-semibold text-foreground mb-2">{item.title}</h3>
+                      {item.description && (
+                        <p className="text-xs sm:text-sm text-muted-foreground">{item.description}</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </section>
+          </>
+        )}
       </main>
 
       <Footer />

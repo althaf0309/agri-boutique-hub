@@ -8,14 +8,13 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard,
   Package,
   FolderTree,
-  Image,
+  Image as ImageIcon,
   Grid3X3,
   Percent,
   Star,
@@ -27,6 +26,7 @@ import {
   Users,
   BarChart3,
   Settings,
+  Store as StoreIcon,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -36,18 +36,27 @@ const menuItems = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
   { title: "Products", url: "/admin/products", icon: Package },
   { title: "Categories", url: "/admin/categories", icon: FolderTree },
-  { title: "Promo Banners", url: "/admin/promo-banners", icon: Image },
-  { title: "Product Grids", url: "/admin/product-grids", icon: Grid3X3 },
-  { title: "Special Offers", url: "/admin/special-offers", icon: Percent },
-  { title: "Collections", url: "/admin/collections", icon: Star },
+
+  // ✅ NEW
+  { title: "Stores", url: "/admin/stores", icon: StoreIcon },
+  { title: "Vendors", url: "/admin/vendors", icon: Users },
+  { title: "Testimonials", url: "/admin/testimonials", icon: MessageSquare },
+  { title: "Video Testimonials", url: "/admin/video-testimonials", icon: MessageSquare },
+  { title: "Awards", url: "/admin/awards", icon: Star },
+  { title: "Certifications", url: "/admin/certifications", icon: FileText },
+  { title: "Gallery", url: "/admin/gallery", icon: ImageIcon },
+  { title: "Promo Banners", url: "/admin/promo-banners", icon: ImageIcon },
+  // { title: "Product Grids", url: "/admin/product-grids", icon: Grid3X3 },
+  // { title: "Special Offers", url: "/admin/special-offers", icon: Percent },
+  // { title: "Collections", url: "/admin/collections", icon: Star },
   { title: "Reviews", url: "/admin/reviews", icon: MessageSquare },
   { title: "Orders", url: "/admin/orders", icon: ShoppingCart },
   { title: "Contact", url: "/admin/contact", icon: Mail },
   { title: "Blog", url: "/admin/blog", icon: FileText },
-  { title: "Jobs", url: "/admin/jobs", icon: Briefcase },
-  { title: "Job Applications", url: "/admin/job-applications", icon: Users },
+  // { title: "Jobs", url: "/admin/jobs", icon: Briefcase },
+  // { title: "Job Applications", url: "/admin/job-applications", icon: Users },
   { title: "Analytics", url: "/admin/analytics", icon: BarChart3 },
-  { title: "Settings", url: "/admin/settings", icon: Settings },
+  // { title: "Settings", url: "/admin/settings", icon: Settings },
 ];
 
 export function AdminSidebar() {
@@ -55,27 +64,20 @@ export function AdminSidebar() {
   const { open, setOpen, openMobile, setOpenMobile, isMobile, state } = useSidebar();
 
   const isActive = (url: string) => {
-    if (url === "/admin") {
-      return location.pathname === "/admin";
-    }
+    if (url === "/admin") return location.pathname === "/admin";
     return location.pathname.startsWith(url);
   };
 
   const toggleSidebar = () => {
-    if (isMobile) {
-      setOpenMobile(!openMobile);
-    } else {
-      setOpen(!open);
-    }
+    if (isMobile) setOpenMobile(!openMobile);
+    else setOpen(!open);
   };
 
   const isCollapsed = state === "collapsed";
-  const isExpanded = state === "expanded";
-
   const showLabels = !isCollapsed || isMobile;
 
   return (
-    <Sidebar 
+    <Sidebar
       side="left"
       variant="sidebar"
       collapsible="icon"
@@ -95,8 +97,8 @@ export function AdminSidebar() {
               </div>
             )}
           </div>
-          
-          {/* Toggle Button - Only show on desktop */}
+
+          {/* Toggle Button - desktop only */}
           {!isMobile && (
             <Button
               variant="ghost"
@@ -104,11 +106,7 @@ export function AdminSidebar() {
               onClick={toggleSidebar}
               className="h-9 w-9 flex-shrink-0 hover:bg-primary/10 hover:text-primary transition-colors"
             >
-              {isCollapsed ? (
-                <ChevronRight className="h-4 w-4" />
-              ) : (
-                <ChevronLeft className="h-4 w-4" />
-              )}
+              {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
             </Button>
           )}
         </div>
@@ -128,17 +126,19 @@ export function AdminSidebar() {
                   return (
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton asChild isActive={itemIsActive}>
-                        <NavLink 
-                          to={item.url} 
+                        <NavLink
+                          to={item.url}
                           end={item.url === "/admin"}
                           className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-300 font-medium ${
-                            itemIsActive 
-                              ? "bg-gradient-to-r from-primary via-primary-glow to-secondary text-primary-foreground shadow-lg shadow-primary/25 scale-[1.02]" 
+                            itemIsActive
+                              ? "bg-gradient-to-r from-primary via-primary-glow to-secondary text-primary-foreground shadow-lg shadow-primary/25 scale-[1.02]"
                               : "hover:bg-gradient-to-r hover:from-primary/5 hover:to-secondary/5 text-foreground/80 hover:text-foreground hover:scale-[1.01] hover:shadow-md"
                           }`}
                           title={!showLabels ? item.title : undefined}
                         >
-                          <item.icon className={`flex-shrink-0 transition-all ${itemIsActive ? 'h-5 w-5' : 'h-4 w-4'}`} />
+                          <item.icon
+                            className={`flex-shrink-0 transition-all ${itemIsActive ? "h-5 w-5" : "h-4 w-4"}`}
+                          />
                           {showLabels && (
                             <span className="truncate text-sm font-semibold tracking-tight">{item.title}</span>
                           )}
@@ -153,7 +153,7 @@ export function AdminSidebar() {
         </div>
 
         {/* Footer */}
-        {showLabels && (
+        {showLabels ? (
           <div className="border-t border-border/30 p-4 bg-gradient-to-r from-muted/20 to-muted/10">
             <div className="flex items-center gap-3 text-sm text-muted-foreground/80">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-accent/20 to-secondary/20 border border-border/30">
@@ -165,15 +165,14 @@ export function AdminSidebar() {
               </div>
             </div>
           </div>
-        )}
-
-        {/* Collapsed Footer */}
-        {!showLabels && !isMobile && (
-          <div className="border-t border-border/30 p-3 flex justify-center">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-accent/20 to-secondary/20 border border-border/30">
-              <Settings className="h-4 w-4 text-accent-foreground" />
+        ) : (
+          !isMobile && (
+            <div className="border-t border-border/30 p-3 flex justify-center">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-accent/20 to-secondary/20 border border-border/30">
+                <Settings className="h-4 w-4 text-accent-foreground" />
+              </div>
             </div>
-          </div>
+          )
         )}
       </SidebarContent>
     </Sidebar>

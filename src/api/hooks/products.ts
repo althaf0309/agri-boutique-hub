@@ -1,118 +1,167 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import api from '../axios';
-import { Product, Category } from '@/types';
+// src/api/hooks/products.ts
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import api from "@/api/client";
+import type { Product } from "@/types";
 
-interface ProductsResponse {
-  results: Product[];
-  count: number;
-  next: string | null;
-  previous: string | null;
+type Paginated<T> = { count: number; next: string | null; previous: string | null; results: T[] };
+
+const toArray = <T,>(d: any): T[] => (Array.isArray(d) ? d : d?.results ?? []);
+const totalOf = (d: any, arrLen: number) => (typeof d?.count === "number" ? d.count : arrLen);
+
+// helpers to normalize values the backend expects
+const isBlank = (v: any) => v === "" || v === undefined;
+const emptyToNull = <T = any>(v: T) => (v === "" ? null : v);
+
+// allow nulls & zeros, but drop explicit undefined so PATCH stays partial
+const prune = (o: Record<string, any>) =>
+  Object.fromEntries(Object.entries(o || {}).filter(([, v]) => v !== undefined));
+
+/** Map form payload to the exact shape ProductCreateUpdateSerializer (V2) accepts. */
+function toWritable(payload: Partial<Product> & Record<string, any>) {
+  const p = payload as any;
+
+  const manufacture_date = emptyToNull(p.manufacture_date);
+  const hot_deal_ends_at = emptyToNull(p.hot_deal_ends_at);
+
+  const shelf_life_days  = isBlank(p.shelf_life_days) ? null : p.shelf_life_days;
+  const warranty_months  = isBlank(p.warranty_months) ? null : p.warranty_months;
+  const price_inr        = isBlank(p.price_inr) ? null : String(p.price_inr);
+  const gst_rate         = isBlank(p.gst_rate) ? null : String(p.gst_rate);
+  const mrp_price        = isBlank(p.mrp_price) ? null : String(p.mrp_price);
+  const cost_price       = isBlank(p.cost_price) ? null : String(p.cost_price);
+  const default_pack_qty = isBlank(p.default_pack_qty) ? null : p.default_pack_qty;
+
+  const out = prune({
+    // required FK
+    category_id: p.category_id,
+    // optional FKs
+    vendor_id: p.vendor_id,
+    store_id: p.store_id,
+
+    // basics
+    name: p.name,
+    description: p.description,
+    origin_country: p.origin_country,
+    grade: p.grade,
+
+    // inventory/freshness
+    quantity: p.quantity,
+    manufacture_date,
+    is_perishable: p.is_perishable,
+    is_organic: p.is_organic,
+    shelf_life_days,
+    default_uom: p.default_uom,
+    default_pack_qty,
+
+    // pricing (INR + taxes)
+    price_inr,
+    discount_percent: p.discount_percent,
+    hsn_sac: p.hsn_sac,
+    gst_rate,
+    mrp_price,
+    cost_price,
+
+    // flags
+    featured: p.featured,
+    new_arrival: p.new_arrival,
+    hot_deal: p.hot_deal,
+    hot_deal_ends_at,
+
+    // other
+    warranty_months,
+    is_published: p.is_published,
+
+    // nutrition
+    ingredients: p.ingredients,
+    allergens: p.allergens,
+    nutrition_facts: p.nutrition_facts,
+    nutrition_notes: p.nutrition_notes,
+
+    // inline helpers (JSON)
+    variants: p.variants,
+    images_meta: p.images_meta,
+  });
+
+  return out;
 }
 
-interface ProductsParams {
-  page?: number;
-  search?: string;
-  category?: string;
-  in_stock?: boolean;
-  featured?: boolean;
-  new_arrival?: boolean;
-  ordering?: string;
-}
-
-export const useProducts = (params: ProductsParams = {}) => {
+export function useProducts(params?: Record<string, any>) {
   return useQuery({
-    queryKey: ['products', params],
-    queryFn: async (): Promise<ProductsResponse> => {
-      try {
-        const { data } = await api.get('/products/', { params });
-        return data;
-      } catch (error) {
-        // Return mock data for development
-        return {
-          results: [],
-          count: 0,
-          next: null,
-          previous: null,
-        };
-      }
+    queryKey: ["products", params],
+    queryFn: async () => {
+      const { data } = await api.get<Paginated<Product> | Product[]>("/products/", { params });
+      const items = toArray<Product>(data);
+      return {
+        items,
+        count: totalOf(data, items.length),
+        next: (data as any)?.next ?? null,
+        previous: (data as any)?.previous ?? null,
+      };
     },
   });
-};
+}
 
-export const useProduct = (id: number) => {
+export function useProduct(id?: number) {
   return useQuery({
-    queryKey: ['products', id],
-    queryFn: async (): Promise<Product> => {
-      try {
-        const { data } = await api.get(`/products/${id}/`);
-        return data;
-      } catch (error) {
-        throw error;
-      }
-    },
+    queryKey: ["product-id", id],
     enabled: !!id,
+    queryFn: async () => {
+      const { data } = await api.get<Product>(`/products/${id}/`);
+      return data;
+    },
   });
-};
+}
 
-export const useCategories = () => {
+export function useProductBySlug(slug?: string) {
   return useQuery({
-    queryKey: ['categories'],
-    queryFn: async (): Promise<Category[]> => {
-      try {
-        const { data } = await api.get('/categories/');
-        // Handle both array response and paginated response
-        return Array.isArray(data) ? data : (data.results || []);
-      } catch (error) {
-        // Return mock data for development
-        return [
-          { id: 1, name: 'Electronics', slug: 'electronics', parent: null },
-          { id: 2, name: 'Clothing', slug: 'clothing', parent: null },
-          { id: 3, name: 'Home & Garden', slug: 'home-garden', parent: null },
-        ];
-      }
+    queryKey: ["product-slug", slug],
+    enabled: !!slug,
+    queryFn: async () => {
+      const { data } = await api.get<Product>(`/products/by-slug/${encodeURIComponent(slug!)}/`);
+      return data;
     },
   });
-};
+}
 
-export const useCreateProduct = () => {
-  const queryClient = useQueryClient();
-  
+export function useCreateProduct() {
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (productData: Partial<Product>) => {
-      const { data } = await api.post('/products/', productData);
+    mutationFn: async (payload: Partial<Product> & Record<string, any>) => {
+      const { data } = await api.post<Product>("/products/", toWritable(payload));
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
+      qc.invalidateQueries({ queryKey: ["products"] });
     },
   });
-};
+}
 
-export const useUpdateProduct = () => {
-  const queryClient = useQueryClient();
-  
+export function useUpdateProduct() {
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...productData }: Partial<Product> & { id: number }) => {
-      const { data } = await api.patch(`/products/${id}/`, productData);
+    mutationFn: async ({ id, ...payload }: { id: number } & (Partial<Product> & Record<string, any>)) => {
+      const { data } = await api.patch<Product>(`/products/${id}/`, toWritable(payload));
       return data;
     },
-    onSuccess: (data) => {
-      queryClient.setQueryData(['products', data.id], data);
-      queryClient.invalidateQueries({ queryKey: ['products'] });
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: ["products"] });
+      qc.invalidateQueries({ queryKey: ["product-id", variables.id] });
+    },
+    onError: (err: any) => {
+      // Better console to see DRF validation details
+      // eslint-disable-next-line no-console
+      console.error("PATCH /products error", err?.response?.status, err?.response?.data || err?.message);
     },
   });
-};
+}
 
-export const useDeleteProduct = () => {
-  const queryClient = useQueryClient();
-  
+export function useDeleteProduct() {
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async ({ id }: { id: number }) => {
       await api.delete(`/products/${id}/`);
-      return id;
+      return true;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["products"] }),
   });
-};
+}
