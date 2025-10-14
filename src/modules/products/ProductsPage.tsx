@@ -7,17 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
-import { useProducts, useCategories, useDeleteProduct, useCreateProduct } from "@/api/hooks/products";
-import { useToast } from "@/hooks/use-toast";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-/* ---------- helpers / small components ---------- */
+import { useProducts, useDeleteProduct, useCreateProduct } from "@/api/hooks/products";
+import { useCategories } from "@/api/hooks/categories";
+import { useToast } from "@/hooks/use-toast";
+import { API_BASE } from "@/api/client";
 
 function formatCurrency(value: string | number | null | undefined, currency: string = "INR") {
   const num = typeof value === "string" ? Number(value) : (value ?? 0);
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency, maximumFractionDigits: 2 }).format(Number.isFinite(num) ? num : 0);
+  return new Intl.NumberFormat("en-IN", { style: "currency", currency, maximumFractionDigits: 2 })
+    .format(Number.isFinite(num) ? num : 0);
 }
 
 function isGroceryCat(name: string = ""): boolean {
@@ -40,134 +40,49 @@ function StatusBadge({ status }: { status: string }) {
   return <span className={`${base} ${map[status] ?? "border-slate-200 bg-slate-50 text-slate-700"}`}>{status}</span>;
 }
 
-/* ---------- dummy data (fallback) ---------- */
+/** Convert possible relative media paths to absolute URLs and pick the best available image field. */
+function resolveImageUrl(p: any): string | null {
+  const candidates: Array<string | undefined | null> = [
+    p.primary_image_url,
+    p.primary_image?.image,
+    Array.isArray(p.images) ? p.images.find((im: any) => im?.is_primary)?.image : undefined,
+    Array.isArray(p.images) ? p.images[0]?.image : undefined,
+    p.image,
+  ];
 
-const dummyProducts = [
-  {
-    id: 1,
-    name: "Premium Basmati Rice",
-    slug: "premium-basmati-rice",
-    price: "899.00",
-    discounted_price: "799.00",
-    discount_percent: 11,
-    currency: "INR",
-    quantity: 50,
-    in_stock: true,
-    featured: true,
-    new_arrival: false,
-    limited_stock: false,
-    created_at: "2024-01-15T10:30:00Z",
-    category: { id: 1, name: "Grains & Cereals" },
-    images: [{ image: "/src/assets/product-rice.jpg" }]
-  },
-  {
-    id: 2,
-    name: "Organic Coconut Oil",
-    slug: "organic-coconut-oil",
-    price: "1299.00",
-    discounted_price: "1099.00",
-    discount_percent: 15,
-    currency: "INR",
-    quantity: 25,
-    in_stock: true,
-    featured: true,
-    new_arrival: true,
-    limited_stock: false,
-    created_at: "2024-01-10T14:20:00Z",
-    category: { id: 2, name: "Oils & Spices" },
-    images: [{ image: "/src/assets/product-coconut-oil.jpg" }]
-  },
-  {
-    id: 3,
-    name: "Pure Natural Honey",
-    slug: "pure-natural-honey",
-    price: "899.00",
-    discounted_price: "799.00",
-    discount_percent: 11,
-    currency: "INR",
-    quantity: 0,
-    in_stock: false,
-    featured: false,
-    new_arrival: false,
-    limited_stock: true,
-    created_at: "2024-01-08T09:15:00Z",
-    category: { id: 3, name: "Natural Products" },
-    images: [{ image: "/src/assets/product-honey.jpg" }]
-  },
-  {
-    id: 4,
-    name: "Organic Turmeric Powder",
-    slug: "organic-turmeric-powder",
-    price: "299.00",
-    discounted_price: "249.00",
-    discount_percent: 17,
-    currency: "INR",
-    quantity: 75,
-    in_stock: true,
-    featured: false,
-    new_arrival: true,
-    limited_stock: false,
-    created_at: "2024-01-05T16:45:00Z",
-    category: { id: 2, name: "Oils & Spices" },
-    images: [{ image: "/src/assets/product-turmeric.jpg" }]
-  },
-  {
-    id: 5,
-    name: "Fresh Aloe Vera Gel",
-    slug: "fresh-aloe-vera-gel",
-    price: "599.00",
-    discounted_price: "549.00",
-    discount_percent: 8,
-    currency: "INR",
-    quantity: 30,
-    in_stock: true,
-    featured: true,
-    new_arrival: false,
-    limited_stock: true,
-    created_at: "2024-01-03T11:30:00Z",
-    category: { id: 4, name: "Health & Wellness" },
-    images: [{ image: "/src/assets/product-aloe-gel.jpg" }]
-  },
-  {
-    id: 6,
-    name: "Organic Neem Oil",
-    slug: "organic-neem-oil",
-    price: "449.00",
-    discounted_price: "399.00",
-    discount_percent: 11,
-    currency: "INR",
-    quantity: 15,
-    in_stock: true,
-    featured: false,
-    new_arrival: false,
-    limited_stock: false,
-    created_at: "2024-01-01T08:00:00Z",
-    category: { id: 2, name: "Oils & Spices" },
-    images: [{ image: "/src/assets/product-neem-oil.jpg" }]
-  }
-];
+  const first = candidates.find(Boolean);
+  if (!first) return null;
 
-/* ---------- page ---------- */
+  const url = String(first);
+  if (/^https?:\/\//i.test(url) || url.startsWith("data:") || url.startsWith("blob:")) return url;
+
+  const ORIGIN = API_BASE.replace(/\/api\/?$/i, "");
+  return url.startsWith("/") ? `${ORIGIN}${url}` : `${ORIGIN}/${url}`;
+}
 
 export function ProductsPage() {
   // filters / state
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
-  const [inStock, setInStock] = useState<string>("all");        // "all" | "true" | "false"
-  const [featured, setFeatured] = useState<string>("all");       // "all" | "true" | "false"
-  const [organic, setOrganic] = useState<string>("all");         // "all" | "true" | "false"
-  const [perishable, setPerishable] = useState<string>("all");   // "all" | "true" | "false"
-  const [uom, setUom] = useState<string>("all");                 // "all" | PCS | G | KG | ML | L | BUNDLE
+  const [inStock, setInStock] = useState<string>("all");
+  const [featured, setFeatured] = useState<string>("all");
+  const [organic, setOrganic] = useState<string>("all");
+  const [perishable, setPerishable] = useState<string>("all");
+  const [uom, setUom] = useState<string>("all");
   const [ordering, setOrdering] = useState("-created_at");
   const [page, setPage] = useState(1);
 
-  const { data: categories = [] } = useCategories();
+  // Normalize categories to always be an array
+  const { data: rawCategories } = useCategories();
+  const categoriesArr: any[] = Array.isArray(rawCategories)
+    ? (rawCategories as any[])
+    : (rawCategories?.items ?? []);
+
   const groceryCategories = useMemo(
-    () => (Array.isArray(categories) ? categories.filter((c: any) => isGroceryCat(c?.name)) : []),
-    [categories]
+    () => (Array.isArray(categoriesArr) ? categoriesArr.filter((c: any) => isGroceryCat(c?.name)) : []),
+    [categoriesArr]
   );
 
-  // assemble params for DRF; it’s fine if backend ignores some
   const params: Record<string, any> = {
     page,
     search: search || undefined,
@@ -180,13 +95,16 @@ export function ProductsPage() {
     ordering,
   };
 
-  const { data: productsData, isLoading } = useProducts(params);
+  const { data, isLoading } = useProducts(params);
   const deleteProduct = useDeleteProduct();
   const createProduct = useCreateProduct();
   const { toast } = useToast();
 
-  const displayProducts = (productsData?.results?.length ? productsData.results : (Array.isArray(productsData) ? productsData : dummyProducts)) as any[];
-  const hasRealData = Boolean(productsData?.results?.length || (Array.isArray(productsData) && productsData.length));
+  // unified shape from products list
+  const items = data?.items ?? [];
+  const count = data?.count ?? 0;
+  const hasPrev = Boolean(data?.previous);
+  const hasNext = Boolean(data?.next);
 
   const onDelete = async (id: number, name: string) => {
     if (!confirm(`Delete "${name}" permanently?`)) return;
@@ -203,11 +121,11 @@ export function ProductsPage() {
       const payload: Record<string, any> = {
         name: `${p.name} (Copy)`,
         description: p.description ?? "",
-        category_id: p.category_id ?? p.category?.id,
-        vendor_id: p.vendor_id ?? null,
-        store_id: p.store_id ?? null,
+        category_id: p.category?.id ?? p.category_id ?? null,
+        vendor_id: p.vendor?.id ?? p.vendor_id ?? null,
+        store_id: p.store?.id ?? p.store_id ?? null,
 
-        // grocery bits
+        // grocery / packaging
         origin_country: p.origin_country ?? "IN",
         grade: p.grade ?? "",
         default_uom: p.default_uom ?? "PCS",
@@ -217,10 +135,7 @@ export function ProductsPage() {
         shelf_life_days: p.shelf_life_days ?? null,
 
         // prices
-        price_inr: p.price_inr ?? p.price ?? "0.00",
-        price_usd: p.price_usd ?? "0.00",
-        aed_pricing_mode: p.aed_pricing_mode ?? "STATIC",
-        price_aed_static: p.price_aed_static ?? "0.00",
+        price_inr: p.price_inr ?? "0.00",
         discount_percent: p.discount_percent ?? 0,
 
         // flags
@@ -290,7 +205,7 @@ export function ProductsPage() {
                     <div className="px-2 py-1 text-xs text-muted-foreground">Other</div>
                   </>
                 )}
-                {(categories as any[]).map((cat) => (
+                {categoriesArr.map((cat: any) => (
                   <SelectItem key={cat.id} value={String(cat.id)}>
                     {cat.name}
                   </SelectItem>
@@ -381,110 +296,123 @@ export function ProductsPage() {
                       Loading products...
                     </TableCell>
                   </TableRow>
-                ) : displayProducts.length > 0 ? (
-                  displayProducts.map((product: any) => (
-                    <TableRow key={product.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2 sm:gap-3">
-                          {product.images && product.images[0] && (
-                            <img
-                              src={product.images[0].image}
-                              alt={product.name}
-                              className="h-10 w-10 sm:h-12 sm:w-12 rounded object-cover flex-shrink-0"
-                            />
-                          )}
-                          <div className="min-w-0">
-                            <p className="font-medium text-sm sm:text-base truncate">{product.name}</p>
-                            <p className="text-xs sm:text-sm text-muted-foreground truncate">
-                              SKU: {product.slug}
-                            </p>
+                ) : items.length > 0 ? (
+                  items.map((p: any) => {
+                    const price = p.price_inr ?? p.price ?? "0.00";
+                    const discount = Number(p.discount_percent ?? 0);
+                    const discounted = discount > 0 ? (Number(price) * (1 - discount / 100)).toFixed(2) : price;
+
+                    const image = resolveImageUrl(p);
+
+                    const qty = p.quantity ?? (p.in_stock ? 1 : 0);
+                    const inStockVal = (p.in_stock ?? qty > 0) as boolean;
+
+                    return (
+                      <TableRow key={p.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2 sm:gap-3">
+                            {image ? (
+                              <img
+                                src={image}
+                                alt={p.name}
+                                className="h-10 w-10 sm:h-12 sm:w-12 rounded object-cover flex-shrink-0"
+                              />
+                            ) : (
+                              <div className="h-10 w-10 sm:h-12 sm:w-12 rounded border bg-muted/30" />
+                            )}
+                            <div className="min-w-0">
+                              <p className="font-medium text-sm sm:text-base truncate">{p.name}</p>
+                              <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                                #{p.id}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      </TableCell>
+                        </TableCell>
 
-                      <TableCell className="hidden sm:table-cell">
-                        {product.category?.name ?? "-"}
-                      </TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          {p.category?.name ?? "-"}
+                        </TableCell>
 
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          {Number(product.discount_percent ?? 0) > 0 && (
-                            <span className="text-xs text-muted-foreground line-through">
-                              {formatCurrency(product.price, product.currency)}
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            {discount > 0 && (
+                              <span className="text-xs text-muted-foreground line-through">
+                                {formatCurrency(price, "INR")}
+                              </span>
+                            )}
+                            <span className="font-medium text-sm">
+                              {formatCurrency(discounted, "INR")}
                             </span>
-                          )}
-                          <span className="font-medium text-sm">
-                            {formatCurrency(product.discounted_price ?? product.price, product.currency)}
-                          </span>
-                        </div>
-                      </TableCell>
+                          </div>
+                        </TableCell>
 
-                      <TableCell className="hidden md:table-cell">
-                        <div className="flex items-center gap-2">
-                          <span className={`font-medium text-sm ${product.in_stock ? 'text-green-600' : 'text-red-600'}`}>
-                            {product.quantity ?? 0}
-                          </span>
-                          <StatusBadge status={product.in_stock ? "In Stock" : "Out of Stock"} />
-                        </div>
-                      </TableCell>
-
-                      <TableCell className="hidden lg:table-cell">
-                        <div className="flex gap-1 flex-wrap">
-                          {product.featured && <StatusBadge status="Featured" />}
-                          {product.new_arrival && <StatusBadge status="New" />}
-                          {product.limited_stock && <StatusBadge status="Limited" />}
-                          {product.is_organic && (
-                            <span title="Organic" className="inline-flex items-center text-green-700 text-xs border rounded px-1">
-                              <Leaf className="h-3 w-3 mr-1" /> Organic
+                        <TableCell className="hidden md:table-cell">
+                          <div className="flex items-center gap-2">
+                            <span className={`font-medium text-sm ${inStockVal ? "text-green-600" : "text-red-600"}`}>
+                              {qty}
                             </span>
-                          )}
-                          {product.is_perishable && (
-                            <span title="Perishable" className="inline-flex items-center text-amber-700 text-xs border rounded px-1">
-                              <Snowflake className="h-3 w-3 mr-1" /> Perishable
-                            </span>
-                          )}
-                        </div>
-                      </TableCell>
+                            <StatusBadge status={inStockVal ? "In Stock" : "Out of Stock"} />
+                          </div>
+                        </TableCell>
 
-                      <TableCell className="hidden xl:table-cell text-sm">
-                        {product.created_at ? dayjs(product.created_at).format("MMM D, YYYY") : "-"}
-                      </TableCell>
+                        <TableCell className="hidden lg:table-cell">
+                          <div className="flex gap-1 flex-wrap">
+                            {p.featured && <StatusBadge status="Featured" />}
+                            {p.new_arrival && <StatusBadge status="New" />}
+                            {p.limited_stock && <StatusBadge status="Limited" />}
+                            {p.is_organic && (
+                              <span title="Organic" className="inline-flex items-center text-green-700 text-xs border rounded px-1">
+                                <Leaf className="h-3 w-3 mr-1" /> Organic
+                              </span>
+                            )}
+                            {p.is_perishable && (
+                              <span title="Perishable" className="inline-flex items-center text-amber-700 text-xs border rounded px-1">
+                                <Snowflake className="h-3 w-3 mr-1" /> Perishable
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
 
-                      <TableCell>
-                        <div className="flex items-center gap-1 justify-end">
-                          <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-                            <Link to={`/admin/products/${product.id}`}>
-                              <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
-                            </Link>
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-                            <Link to={`/admin/products/${product.id}/edit`}>
-                              <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
-                            </Link>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 hidden sm:inline-flex"
-                            onClick={() => onDuplicate(product)}
-                          >
-                            <Copy className="h-3 w-3 sm:h-4 sm:w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => onDelete(product.id, product.name)}
-                          >
-                            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                        <TableCell className="hidden xl:table-cell text-sm">
+                          {p.created_at ? dayjs(p.created_at).format("MMM D, YYYY") : "-"}
+                        </TableCell>
+
+                        <TableCell>
+                          <div className="flex items-center gap-1 justify-end">
+                            {/* <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                              <Link to={`/admin/products/${p.id}`}>
+                                <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
+                              </Link>
+                            </Button> */}
+                            <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                              <Link to={`/admin/products/${p.id}/edit`}>
+                                <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
+                              </Link>
+                            </Button>
+                            {/* <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 hidden sm:inline-flex"
+                              onClick={() => onDuplicate(p)}
+                            >
+                              <Copy className="h-3 w-3 sm:h-4 sm:w-4" />
+                            </Button> */}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => onDelete(p.id, p.name)}
+                            >
+                              <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8">No products found</TableCell>
+                    <TableCell colSpan={7} className="text-center py-8">No products found</TableCell>
                   </TableRow>
                 )}
               </TableBody>
@@ -494,17 +422,16 @@ export function ProductsPage() {
       </Card>
 
       {/* Pagination */}
-      {displayProducts.length > 0 && (
+      {items.length > 0 && (
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
-            Showing {displayProducts.length} of {hasRealData ? (productsData as any)?.count || 0 : dummyProducts.length} products
-            {!hasRealData && <span className="ml-2 text-primary">(Demo Data)</span>}
+            Showing {items.length} of {count} products
           </p>
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <Button
               variant="outline"
               size="sm"
-              disabled={!hasRealData || !(productsData as any)?.previous}
+              disabled={!hasPrev}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               className="flex-1 sm:flex-none"
             >
@@ -513,7 +440,7 @@ export function ProductsPage() {
             <Button
               variant="outline"
               size="sm"
-              disabled={!hasRealData || !(productsData as any)?.next}
+              disabled={!hasNext}
               onClick={() => setPage((p) => p + 1)}
               className="flex-1 sm:flex-none"
             >
@@ -525,3 +452,5 @@ export function ProductsPage() {
     </div>
   );
 }
+
+export default ProductsPage;

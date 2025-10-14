@@ -1,40 +1,41 @@
-import { useMemo, useState } from "react";
-import { useReviews, useUpdateReview, useDeleteReview } from "@/api/hooks/reviews";
+// src/pages/admin/ReviewsPage.tsx
+import { useMemo } from "react";
+import { useReviews, useUpdateReview, useDeleteReview, Review } from "@/api/hooks/reviews";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Trash2 } from "lucide-react";
+import { useState } from "react";
 
 export function ReviewsPage() {
   const { data: reviews = [], isLoading } = useReviews();
   const updateReview = useUpdateReview();
   const deleteReview = useDeleteReview();
   const { toast } = useToast();
-
   const [onlyPending, setOnlyPending] = useState(false);
 
-  const rows = useMemo(() => {
-    return onlyPending ? reviews.filter((r: any) => !r.is_approved) : reviews;
-  }, [reviews, onlyPending]);
+  const rows = useMemo(
+    () => (onlyPending ? reviews.filter((r) => !r.is_approved) : reviews),
+    [reviews, onlyPending]
+  );
 
-  const toggleApprove = async (r: any, checked: boolean) => {
+  const toggleApprove = async (r: Review, checked: boolean) => {
     try {
-      await updateReview.mutateAsync({ id: r.id, is_approved: checked } as any);
+      await updateReview.mutateAsync({ id: r.id, is_approved: checked });
       toast({ title: checked ? "Approved" : "Unapproved" });
     } catch (e: any) {
-      toast({ title: "Update failed", description: e?.message, variant: "destructive" });
+      toast({ title: "Update failed", description: e?.message ?? "Try again", variant: "destructive" });
     }
   };
 
   const onDelete = async (id: number) => {
-    const ok = window.confirm("Delete this review?");
-    if (!ok) return;
+    if (!window.confirm("Delete this review?")) return;
     try {
       await deleteReview.mutateAsync({ id });
       toast({ title: "Review deleted" });
     } catch (e: any) {
-      toast({ title: "Delete failed", description: e?.message, variant: "destructive" });
+      toast({ title: "Delete failed", description: e?.message ?? "Try again", variant: "destructive" });
     }
   };
 
@@ -49,7 +50,9 @@ export function ReviewsPage() {
       </div>
 
       <Card>
-        <CardHeader><CardTitle>All Reviews</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>All Reviews</CardTitle>
+        </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="py-10 text-center text-muted-foreground">Loading…</div>
@@ -69,17 +72,17 @@ export function ReviewsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((r: any) => (
+                  {rows.map((r) => (
                     <tr key={r.id} className="border-b">
                       <td className="py-2 px-2">{r.product?.name ?? "—"}</td>
-                      <td className="py-2 px-2">{r.user_email || r.user?.email || "—"}</td>
+                      <td className="py-2 px-2">
+                        {r.user_name ? `${r.user_name} · ` : ""}
+                        {r.user_email || r.user?.email || "—"}
+                      </td>
                       <td className="py-2 px-2">★ {r.rating}</td>
                       <td className="py-2 px-2">{r.title || "—"}</td>
                       <td className="py-2 px-2">
-                        <Switch
-                          checked={!!r.is_approved}
-                          onCheckedChange={(v) => toggleApprove(r, v)}
-                        />
+                        <Switch checked={!!r.is_approved} onCheckedChange={(v) => toggleApprove(r, v)} />
                       </td>
                       <td className="py-2 px-2 text-right">
                         <Button size="sm" variant="destructive" onClick={() => onDelete(r.id)}>
@@ -98,3 +101,5 @@ export function ReviewsPage() {
     </div>
   );
 }
+
+export default ReviewsPage;

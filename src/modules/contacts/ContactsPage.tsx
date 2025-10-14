@@ -28,6 +28,7 @@ export function ContactsPage() {
     try {
       await deleteContact.mutateAsync({ id });
       toast({ title: "Deleted" });
+      if (selected?.id === id) setSelected(null);
     } catch (e: any) {
       toast({ title: "Delete failed", description: e?.message, variant: "destructive" });
     }
@@ -63,12 +64,20 @@ export function ContactsPage() {
                   {contacts.map((c: any) => (
                     <tr key={c.id} className="border-b">
                       <td className="py-2 px-2">{c.name}</td>
-                      <td className="py-2 px-2">{c.email}</td>
+                      <td className="py-2 px-2">
+                        {c.email ? (
+                          <a href={`mailto:${c.email}`} className="text-primary underline-offset-2 hover:underline">
+                            {c.email}
+                          </a>
+                        ) : "—"}
+                      </td>
                       <td className="py-2 px-2">{c.subject || "—"}</td>
                       <td className="py-2 px-2">
                         <Switch checked={!!c.handled} onCheckedChange={(v) => toggleHandled(c, v)} />
                       </td>
-                      <td className="py-2 px-2">{new Date(c.created_at).toLocaleString()}</td>
+                      <td className="py-2 px-2">
+                        {c.created_at ? new Date(c.created_at).toLocaleString() : "—"}
+                      </td>
                       <td className="py-2 px-2 text-right">
                         <Button size="sm" variant="outline" className="mr-2" onClick={() => setSelected(c)}>
                           <Eye className="h-4 w-4 mr-1" />
@@ -92,7 +101,10 @@ export function ContactsPage() {
                     <Button variant="ghost" onClick={() => setSelected(null)}>Close</Button>
                   </div>
                   <div className="text-sm text-muted-foreground mb-2">
-                    From {selected.name} &lt;{selected.email}&gt; — {new Date(selected.created_at).toLocaleString()}
+                    From {selected.name}
+                    {selected.email ? <> &lt;{selected.email}&gt;</> : null}
+                    {" — "}
+                    {selected.created_at ? new Date(selected.created_at).toLocaleString() : "—"}
                   </div>
                   <div className="whitespace-pre-wrap">{selected.message}</div>
                 </div>

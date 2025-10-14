@@ -7,7 +7,7 @@ export default function Footer() {
   return (
     <footer className="bg-primary text-primary-foreground">
       {/* Newsletter Section */}
-      <div className="bg-primary/90 py-12">
+      {/* <div className="bg-primary/90 py-12">
         <div className="container mx-auto px-4">
           <div className="max-w-2xl mx-auto text-center">
             <h3 className="text-2xl font-bold mb-4">Stay Connected</h3>
@@ -26,7 +26,7 @@ export default function Footer() {
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* Main Footer */}
       <div className="py-12">

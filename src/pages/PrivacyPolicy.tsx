@@ -1,4 +1,4 @@
-import Header from "@/components/Header";
+import Header from "@/components/layout/Header";
 import Footer from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -186,7 +186,7 @@ export default function PrivacyPolicy() {
                   please contact us:
                 </p>
                 <div className="space-y-2 text-muted-foreground">
-                  <p><strong>Email:</strong> privacy@agrifresh.com</p>
+                  <p><strong>Email:</strong> privacy@prakrothijaivakalavara.com</p>
                   <p><strong>Phone:</strong> +91 9876543210</p>
                   <p><strong>Address:</strong> 123 Organic Street, Green Valley, Kerala 682001, India</p>
                 </div>

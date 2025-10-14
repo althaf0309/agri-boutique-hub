@@ -5,6 +5,18 @@ import { z } from "zod";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Save, Eye, Trash2, RotateCcw, Info, Calendar, ChevronDown, ChevronRight } from "lucide-react";
 
+import { useCategories } from "@/api/hooks/categories";
+import { useCreateProduct, useUpdateProduct, useDeleteProduct } from "@/api/hooks/products";
+import { useVendors } from "@/api/hooks/vendors";
+import { useStores } from "@/api/hooks/stores";
+
+import { AddVendorDialog } from "@/components/pickers/AddVendorDialog";
+import { AddStoreDialog } from "@/components/pickers/AddStoreDialog";
+
+import { ProductOptions } from "@/components/product/ProductOptions";
+import { VariantTable } from "@/components/product/VariantTable";
+import { WeightVariantManager } from "@/components/product/WeightVariantManager";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,11 +29,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-
-import { useCategories, useCreateProduct, useUpdateProduct, useDeleteProduct } from "@/api/hooks/products";
-import { ProductOptions } from "@/components/product/ProductOptions";
-import { VariantTable } from "@/components/product/VariantTable";
-import { WeightVariantManager } from "@/components/product/WeightVariantManager";
 
 /* ---------- schema (grocery-focused) ---------- */
 const groceryProductSchema = z.object({
@@ -93,6 +100,9 @@ export function GroceryProductForm() {
   const [weightVariants, setWeightVariants] = useState<any[]>([]);
 
   const { data: categories } = useCategories();
+  const { data: vendors = [] } = useVendors();
+  const { data: stores = [] } = useStores();
+
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
@@ -134,9 +144,12 @@ export function GroceryProductForm() {
 
   const onSubmit = async (data: GroceryProductFormData) => {
     try {
+      // If your backend expects vendor/store instead of vendor_id/store_id, map here:
+      // const payload = { ...data, vendor: data.vendor_id ?? null, store: data.store_id ?? null };
+      // delete (payload as any).vendor_id; delete (payload as any).store_id;
+
       const payload = {
         ...data,
-        // lock non-grocery currencies as 0
         price_usd: "0.00",
         aed_pricing_mode: "STATIC" as const,
         price_aed_static: "0.00",
@@ -146,8 +159,7 @@ export function GroceryProductForm() {
         await updateProduct.mutateAsync({ id: Number(id), ...payload });
         toast({ title: "Grocery product updated successfully" });
       } else {
-        const created = await createProduct.mutateAsync(payload);
-        // TODO: save options / variants via API when backend is ready
+        await createProduct.mutateAsync(payload);
         toast({ title: "Grocery product created successfully" });
         navigate("/admin/products");
       }
@@ -914,49 +926,73 @@ export function GroceryProductForm() {
                   <CardTitle>Organization</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Vendor */}
                   <FormField
                     control={form.control}
                     name="vendor_id"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Vendor/Supplier</FormLabel>
-                        <Select
-                          value={field.value ? field.value.toString() : "none"}
-                          onValueChange={(value) => field.onChange(value === "none" ? null : Number(value))}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select vendor" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="none">No vendor</SelectItem>
-                            {/* TODO: Load vendors */}
-                          </SelectContent>
-                        </Select>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <Select
+                            value={field.value ? field.value.toString() : "none"}
+                            onValueChange={(value) => field.onChange(value === "none" ? null : Number(value))}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select vendor" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="none">No vendor</SelectItem>
+                              {vendors.map((v: any) => (
+                                <SelectItem key={v.id} value={v.id.toString()}>
+                                  {v.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <AddVendorDialog
+                            onCreated={(newId: number) => {
+                              form.setValue("vendor_id", newId, { shouldDirty: true });
+                            }}
+                          />
+                        </div>
                       </FormItem>
                     )}
                   />
+                  {/* Store */}
                   <FormField
                     control={form.control}
                     name="store_id"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Store/Location</FormLabel>
-                        <Select
-                          value={field.value ? field.value.toString() : "none"}
-                          onValueChange={(value) => field.onChange(value === "none" ? null : Number(value))}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select store" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="none">No store</SelectItem>
-                            {/* TODO: Load stores */}
-                          </SelectContent>
-                        </Select>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <Select
+                            value={field.value ? field.value.toString() : "none"}
+                            onValueChange={(value) => field.onChange(value === "none" ? null : Number(value))}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select store" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="none">No store</SelectItem>
+                              {stores.map((s: any) => (
+                                <SelectItem key={s.id} value={s.id.toString()}>
+                                  {s.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <AddStoreDialog
+                            onCreated={(newId: number) => {
+                              form.setValue("store_id", newId, { shouldDirty: true });
+                            }}
+                          />
+                        </div>
                       </FormItem>
                     )}
                   />

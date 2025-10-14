@@ -1,30 +1,30 @@
 import { Users, Leaf, Heart, Award, Target, Eye } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import Header from "@/components/Header";
+import Header from "@/components/layout/Header";
 import Footer from "@/components/Footer";
 
 const teamMembers = [
   {
-    name: "Priya Sharma",
+    name: "Ms Vani Vijith and Mr. Vijith V C",
     role: "Founder & CEO",
-    bio: "Agricultural scientist with 15+ years in sustainable farming",
+    bio: "From Soil to Soul - Organic Leadership at Work",
     image: "/placeholder.svg"
   },
   {
-    name: "Rahul Nair",
+    name: "Vijith V C",
     role: "Head of Operations",
     bio: "Expert in supply chain and organic certification processes",
     image: "/placeholder.svg"
   },
   {
-    name: "Maya Patel",
+    name: "Vani Vijith",
     role: "Quality Assurance",
-    bio: "Food scientist ensuring the highest quality standards",
+    bio: "Agricultural scientist with 15+years in sustainable framing ensuring the highest quality standards",
     image: "/placeholder.svg"
   },
   {
-    name: "Arjun Menon",
+    name: "Vani Vijith",
     role: "Farmer Relations",
     bio: "Building partnerships with organic farmers across India",
     image: "/placeholder.svg"
@@ -55,7 +55,7 @@ const values = [
 ];
 
 const milestones = [
-  { year: "2020", event: "AgriFresh founded with 5 partner farms" },
+  { year: "2020", event: "Prakrithi Jaiva Kalavara founded with 5 partner farms" },
   { year: "2021", event: "Expanded to 50+ certified organic farms" },
   { year: "2022", event: "Launched online platform and delivery service" },
   { year: "2023", event: "Reached 10,000+ satisfied customers" },
@@ -71,7 +71,7 @@ export default function AboutUs() {
         {/* Hero Section */}
         <section className="text-center mb-16">
           <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
-            About AgriFresh
+            About Prakrithi Jaiva Kalavara
           </h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
             We're passionate about connecting you with the finest organic products 
@@ -86,8 +86,8 @@ export default function AboutUs() {
               <h2 className="text-3xl font-bold text-foreground mb-6">Our Story</h2>
               <div className="space-y-4 text-muted-foreground">
                 <p>
-                  Founded in 2020, AgriFresh began as a small initiative to bridge the gap 
-                  between organic farmers and conscious consumers. Our founder, Dr. Priya Sharma, 
+                  Founded in 2010, Prakrithi Jaiva Kalavara began as a small initiative to bridge the gap 
+                  between organic farmers and conscious consumers. The founders of Prakrithi Jaiva Kalavara are Ms Vani Vijith and Mr. Vijith Vc,
                   witnessed firsthand the challenges faced by small-scale organic farmers in 
                   reaching urban markets.
                 </p>
@@ -218,7 +218,7 @@ export default function AboutUs() {
         {/* Statistics */}
         <section className="mb-16">
           <div className="bg-primary/5 rounded-lg p-8">
-            <h2 className="text-3xl font-bold text-foreground mb-8 text-center">AgriFresh by Numbers</h2>
+            <h2 className="text-3xl font-bold text-foreground mb-8 text-center">Prakrithi Jaiva Kalavara by Numbers</h2>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-center">
               <div>
                 <div className="text-4xl font-bold text-primary mb-2">200+</div>
@@ -244,7 +244,7 @@ export default function AboutUs() {
         <section className="text-center">
           <h2 className="text-3xl font-bold text-foreground mb-6">Join Our Mission</h2>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Be part of the organic revolution. Choose AgriFresh for healthier living and a sustainable future.
+            Be part of the organic revolution. Choose Prakrithi Jaiva Kalavara for healthier living and a sustainable future.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a href="/shop" className="inline-block">
