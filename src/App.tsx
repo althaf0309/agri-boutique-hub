@@ -19,6 +19,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsConditions from "./pages/TermsConditions";
+import ShippingPolicy from "./pages/ShippingPolicy";
 import Awards from "./pages/Awards";
 import Testimonials from "./pages/Testimonials";
 import Gallery from "./pages/Gallery";
@@ -88,6 +89,7 @@ const App = () => (
           <Route path="/register" element={<Register />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<TermsConditions />} />
+          <Route path="/shipping" element={<ShippingPolicy />} />
           <Route path="/payment-success" element={<PaymentSuccess />} />
           <Route path="/order-success" element={<OrderSuccess />} />
           <Route
