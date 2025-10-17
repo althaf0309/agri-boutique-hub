@@ -12,8 +12,9 @@ import { useAuth } from "@/lib/auth";
 import { useNavigate } from "react-router-dom";
 
 export function AdminTopbar() {
-  const { userEmail, logout } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const userEmail = user?.email;
 
   const onLogout = () => {
     logout();

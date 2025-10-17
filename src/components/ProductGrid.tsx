@@ -228,7 +228,6 @@ export default function ProductGrid({
         inStock: variant ? variant.stockCount > 0 : product.inStock,
         // optional variant metadata for your cart line:
         variantId: variant?.id,
-        sku: variant?.sku,
       });
       toast({
         title: "Added to Cart",

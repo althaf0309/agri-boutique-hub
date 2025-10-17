@@ -78,7 +78,8 @@ export function useCreateBlogPost() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: Partial<BlogPost> & { cover?: File | null }) => {
-      if (payload.cover instanceof File) {
+      const hasFile = payload.cover != null && typeof payload.cover === 'object' && payload.cover && 'name' in payload.cover;
+      if (hasFile) {
         const fd = new FormData();
         Object.entries(payload).forEach(([k, v]) => {
           if (k === "cover" && v instanceof File) fd.append("cover", v);
@@ -98,7 +99,8 @@ export function useUpdateBlogPost() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...payload }: { id: number } & (Partial<BlogPost> & { cover?: File | null })) => {
-      if (payload.cover instanceof File) {
+      const hasFile = payload.cover != null && typeof payload.cover === 'object' && payload.cover && 'name' in payload.cover;
+      if (hasFile) {
         const fd = new FormData();
         Object.entries(payload).forEach(([k, v]) => {
           if (k === "cover" && v instanceof File) fd.append("cover", v);

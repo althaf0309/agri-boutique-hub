@@ -13,7 +13,7 @@ export function AddVendorDialog({ onCreated }: { onCreated: (id: number) => void
 
   const save = async () => {
     try {
-      const v = await mutateAsync({ name });
+      const v = await mutateAsync({ name } as any);
       toast({ title: "Vendor created" });
       onCreated(v.id);
       setOpen(false);

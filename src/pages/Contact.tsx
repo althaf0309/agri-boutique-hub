@@ -45,7 +45,6 @@ export default function Contact() {
         phone: formData.phone.trim() || null,
         subject: formData.subject.trim(),
         message: formData.message.trim(),
-        handled: false,
       });
 
       toast({ title: "Thanks! We got your message." });

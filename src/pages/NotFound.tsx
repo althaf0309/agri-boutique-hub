@@ -4,12 +4,10 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 
-const float = {
-  animate: {
-    y: [0, -12, 0],
-    rotate: [0, 2, -2, 0],
-    transition: { duration: 5, repeat: Infinity, ease: "easeInOut" },
-  },
+const float: any = {
+  y: [0, -12, 0],
+  rotate: [0, 2, -2, 0],
+  transition: { duration: 5, repeat: Infinity, ease: "easeInOut" },
 };
 
 const NotFound = () => {
@@ -29,17 +27,15 @@ const NotFound = () => {
       {/* Floating shapes */}
       <motion.div
         className="absolute left-10 top-24 h-16 w-16 rounded-2xl bg-primary/15"
-        {...float}
+        animate={float}
       />
       <motion.div
         className="absolute right-16 bottom-28 h-10 w-10 rounded-full bg-emerald-500/20"
-        {...float}
-        animate={{ ...float.animate, transition: { duration: 6, repeat: Infinity } }}
+        animate={{ ...float, transition: { duration: 6, repeat: Infinity, ease: "easeInOut" } }}
       />
       <motion.div
         className="absolute left-1/3 bottom-10 h-14 w-14 rotate-12 rounded-xl bg-amber-500/20"
-        {...float}
-        animate={{ ...float.animate, transition: { duration: 7, repeat: Infinity } }}
+        animate={{ ...float, transition: { duration: 7, repeat: Infinity, ease: "easeInOut" } }}
       />
 
       <div className="relative z-10 mx-auto flex max-w-4xl flex-col items-center px-6 pt-28 text-center sm:pt-36">
