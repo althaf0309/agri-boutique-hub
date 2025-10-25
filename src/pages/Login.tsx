@@ -1,5 +1,4 @@
-// src/pages/Login.tsx
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,43 +13,45 @@ import { toast } from "sonner";
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState({ email: "", password: "", rememberMe: false });
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+    rememberMe: false,
+  });
 
-  const { login, isAuthenticated } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    // If already logged in, redirect by role
-    // (superuser handled by RoleRedirect on the route too, but this is extra safety)
-    if (isAuthenticated) {
-      // no user object here, but RoleRedirect (in App.tsx) covers /login when authed
-      navigate("/", { replace: true });
-    }
-  }, [isAuthenticated, navigate]);
+  // ⛔️ Removed the "if authenticated then navigate('/')" useEffect.
+  // RoleRedirect already handles this safely based on the actual user role.
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const me = await login(formData.email, formData.password);
+      const me = await login(
+        formData.email.trim(),
+        formData.password,
+        formData.rememberMe
+      );
       toast.success("Signed in");
-      if (me.is_superuser) {
-        navigate("/admin", { replace: true });
-      } else {
-        navigate("/", { replace: true });
-      }
+      navigate(me.is_superuser ? "/admin" : "/", { replace: true });
     } catch (err: any) {
       const detail =
         err?.response?.data?.detail ??
         err?.response?.data?.non_field_errors?.[0] ??
+        err?.response?.data?.message ??
         err?.message ??
         "Login failed";
-      toast.error(detail);
+      toast.error(String(detail));
     }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
   };
 
   return (
@@ -60,7 +61,9 @@ export default function Login() {
         <div className="max-w-md mx-auto">
           <Card className="shadow-lg">
             <CardHeader className="text-center">
-              <CardTitle className="text-3xl font-bold text-foreground">Welcome Back</CardTitle>
+              <CardTitle className="text-3xl font-bold text-foreground">
+                Welcome Back
+              </CardTitle>
               <p className="text-muted-foreground">Sign in to your account</p>
             </CardHeader>
 
@@ -102,7 +105,11 @@ export default function Login() {
                       onClick={() => setShowPassword((s) => !s)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                     >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      {showPassword ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -113,13 +120,16 @@ export default function Login() {
                       id="rememberMe"
                       name="rememberMe"
                       checked={formData.rememberMe}
+                      // Radix Checkbox uses boolean | "indeterminate"
                       onCheckedChange={(checked) =>
                         setFormData((p) => ({ ...p, rememberMe: !!checked }))
                       }
                     />
-                    <Label htmlFor="rememberMe" className="text-sm">Remember me</Label>
+                    <Label htmlFor="rememberMe" className="text-sm">
+                      Remember me
+                    </Label>
                   </div>
-                  {/*   */}
+                  {/* forgot password link can go here later */}
                 </div>
 
                 <Button type="submit" className="w-full" size="lg">

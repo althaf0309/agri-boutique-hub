@@ -31,36 +31,131 @@ import {
   type SalesRange,
   type SalesGranularity,
 } from "@/api/hooks/dashboard";
+import { useOrders } from "@/api/hooks/orders";
 
 const COLORS = ["#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#6b7280"];
 const inr = (n: number) => `₹${Math.round(n).toLocaleString()}`;
 
+/* ---------- helpers to build fallback series from orders ---------- */
+const toNum = (v?: string | number) => (v == null ? 0 : Number(v));
+
+function startOfRange(range: SalesRange) {
+  const now = new Date();
+  const d = new Date(now);
+  if (range === "7d") d.setDate(d.getDate() - 6);
+  else if (range === "30d") d.setDate(d.getDate() - 29);
+  else if (range === "90d") d.setDate(d.getDate() - 89);
+  else if (range === "1y") d.setFullYear(d.getFullYear() - 1);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+function addDays(d: Date, n: number) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
+function addMonths(d: Date, n: number) { const x = new Date(d); x.setMonth(x.getMonth() + n); return x; }
+function startOfWeek(d: Date) {
+  const x = new Date(d);
+  const day = x.getDay(); // 0 Sun
+  const diff = day === 0 ? 6 : day - 1; // Monday start
+  x.setDate(x.getDate() - diff);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+function startOfMonth(d: Date) { const x = new Date(d); x.setDate(1); x.setHours(0,0,0,0); return x; }
+function label(date: Date, gran: SalesGranularity) {
+  if (gran === "month") return date.toLocaleDateString(undefined, { month: "short", year: "numeric" });
+  if (gran === "week") {
+    const end = addDays(date, 6);
+    return `${date.toLocaleDateString(undefined, { month: "short", day: "numeric" })} – ${end.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
+  }
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function buildBuckets(range: SalesRange, gran: SalesGranularity) {
+  const start = startOfRange(range);
+  const now = new Date(); now.setHours(0,0,0,0);
+  const buckets: { start: Date; end: Date; name: string; sales: number; orders: number; customers: number; _seen?: Set<string> }[] = [];
+  let cur = new Date(start);
+
+  if (gran === "month") {
+    cur = startOfMonth(cur);
+    while (cur <= now) {
+      const s = new Date(cur); const e = addMonths(s, 1);
+      buckets.push({ start: s, end: e, name: label(s, "month"), sales: 0, orders: 0, customers: 0 });
+      cur = e;
+    }
+  } else if (gran === "week") {
+    cur = startOfWeek(cur);
+    while (cur <= now) {
+      const s = new Date(cur); const e = addDays(s, 7);
+      buckets.push({ start: s, end: e, name: label(s, "week"), sales: 0, orders: 0, customers: 0 });
+      cur = e;
+    }
+  } else {
+    while (cur <= now) {
+      const s = new Date(cur); const e = addDays(s, 1);
+      buckets.push({ start: s, end: e, name: label(s, "day"), sales: 0, orders: 0, customers: 0 });
+      cur = e;
+    }
+  }
+  return buckets;
+}
+
+function buildSeriesFromOrders(orders: any[], range: SalesRange, gran: SalesGranularity) {
+  if (!Array.isArray(orders) || orders.length === 0) return [];
+  const buckets = buildBuckets(range, gran);
+  for (const o of orders) {
+    const ts = o.created_at ? new Date(o.created_at) : null;
+    if (!ts) continue;
+    const amt = toNum(o?.totals?.grand_total);
+    const b = buckets.find(bk => ts >= bk.start && ts < bk.end);
+    if (!b) continue;
+    b.sales += amt;
+    b.orders += 1;
+    const custKey = (o.customer_id ?? o.email ?? o.customer_name ?? "").toString();
+    (b._seen ??= new Set()).add(custKey);
+  }
+  return buckets.map(b => ({
+    name: b.name,
+    sales: Math.round(b.sales),
+    orders: b.orders,
+    customers: b._seen ? b._seen.size : 0,
+  }));
+}
+
+/* ---------- component ---------- */
 export function AnalyticsDashboard() {
-  const [dateRange, setDateRange] = useState<SalesRange>("30d");
+  // default day-wise
+  const [dateRange, setDateRange] = useState<SalesRange>("7d");
   const [selectedPeriod, setSelectedPeriod] = useState<"week" | "month">("week");
 
-  // Week tab -> daily points; Month tab -> months for 1y, else weeks
   const granularity: SalesGranularity = useMemo(() => {
-    if (selectedPeriod === "week") return "day";
-    return dateRange === "1y" ? "month" : "week";
+    if (selectedPeriod === "week") return "day";                // day-wise
+    return dateRange === "1y" ? "month" : "week";               // month for 1y, else week
   }, [selectedPeriod, dateRange]);
 
-  // Sales series (real backend)
-  const { data: salesSeries = [], isLoading: salesLoading } = useSalesSeries({ range: dateRange, granularity });
+  // API data
+  const { data: salesSeriesApi = [], isLoading: salesLoading } = useSalesSeries({ range: dateRange, granularity });
+  const { data: orders = [] } = useOrders(); // for fallback series
+  const { data: topProducts = [], isLoading: topLoading } = useTopProducts();
 
-  // Aggregate KPIs from the series (fallback-safe)
+  // Fallback series when API returns empty
+  const salesSeriesFallback = useMemo(
+    () => (salesSeriesApi.length ? [] : buildSeriesFromOrders(orders, dateRange, granularity)),
+    [salesSeriesApi, orders, dateRange, granularity]
+  );
+
+  // Final series used everywhere
+  const salesSeries = salesSeriesApi.length ? salesSeriesApi : salesSeriesFallback;
+
+  // KPIs from final series
   const kpi = useMemo(() => {
     const totalRevenue = salesSeries.reduce((a: number, p: any) => a + Number(p.sales || 0), 0);
     const totalOrders  = salesSeries.reduce((a: number, p: any) => a + Number(p.orders || 0), 0);
-    // If backend gives "customers" per bucket, sum (approx) else derive from orders
     const customers    = salesSeries.reduce((a: number, p: any) => a + Number(p.customers || 0), 0) || Math.round(totalOrders * 0.6);
     const aov          = totalOrders ? totalRevenue / totalOrders : 0;
     return { totalRevenue, totalOrders, customers, aov };
   }, [salesSeries]);
 
-  // Top products
-  const { data: topProducts = [], isLoading: topLoading } = useTopProducts();
-
+  // Top products shaping
   const topSellingProducts = useMemo(
     () =>
       topProducts.map((p: any) => ({
@@ -105,7 +200,7 @@ export function AnalyticsDashboard() {
         </div>
       </div>
 
-      {/* KPIs (from real series) */}
+      {/* KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
           { label: "Total Revenue", icon: <DollarSign className="h-4 w-4 text-green-600" />, value: inr(kpi.totalRevenue) },
@@ -119,7 +214,7 @@ export function AnalyticsDashboard() {
               <div className="p-2 bg-green-50 rounded-lg">{c.icon}</div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{salesLoading ? <Skeleton className="h-7 w-24" /> : c.value}</div>
+              <div className="text-2xl font-bold">{salesLoading && !salesSeries.length ? <Skeleton className="h-7 w-24" /> : c.value}</div>
               <div className="text-xs text-muted-foreground">({dateRange.toUpperCase()}, {granularity})</div>
             </CardContent>
           </Card>
@@ -165,7 +260,7 @@ export function AnalyticsDashboard() {
                 </div>
               </CardHeader>
               <CardContent>
-                {salesLoading ? (
+                {(salesLoading && !salesSeries.length) ? (
                   <Skeleton className="h-72 w-full rounded-md" />
                 ) : (
                   <ResponsiveContainer width="100%" height={300}>
@@ -176,7 +271,7 @@ export function AnalyticsDashboard() {
                       <Tooltip
                         formatter={(value, name) => [
                           name === "sales" ? inr(Number(value)) : value,
-                          name === "sales" ? "Revenue" : name,
+                          name === "sales" ? "Revenue" : (name as string),
                         ]}
                       />
                       <Area type="monotone" dataKey="sales" stackId="1" stroke="#10b981" fill="#10b981" fillOpacity={0.3} />
@@ -353,7 +448,7 @@ export function AnalyticsDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {salesLoading ? (
+              {(salesLoading && !salesSeries.length) ? (
                 <Skeleton className="h-96 w-full rounded-md" />
               ) : (
                 <ResponsiveContainer width="100%" height={400}>
@@ -365,7 +460,7 @@ export function AnalyticsDashboard() {
                     <Tooltip
                       formatter={(value, name) => [
                         name === "sales" ? inr(Number(value)) : value,
-                        name,
+                        name as string,
                       ]}
                     />
                     <Line yAxisId="sales" type="monotone" dataKey="sales" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} />
@@ -380,3 +475,5 @@ export function AnalyticsDashboard() {
     </div>
   );
 }
+
+export default AnalyticsDashboard;

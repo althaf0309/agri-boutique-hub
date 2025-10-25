@@ -1,4 +1,3 @@
-// src/lib/cart.ts
 import { useSyncExternalStore } from "react";
 
 export interface CartLine {
@@ -16,6 +15,8 @@ export interface CartLine {
 
 const KEY = "cart_items_v1";
 const EVT = "cart:changed";
+const API_BASE =
+  (import.meta as any)?.env?.VITE_API_BASE_URL || "http://127.0.0.1:8000/api";
 
 /* ------------------------- helpers ------------------------- */
 function read(): CartLine[] {
@@ -44,11 +45,13 @@ function sameLine(
 }
 
 /* ------------------------- backend sync (best-effort) ------------------------- */
-const API_BASE =
-  (import.meta as any)?.env?.VITE_API_BASE_URL || "http://127.0.0.1:8000/api";
 
 function authHeaders() {
-  const token = localStorage.getItem("auth_token") || localStorage.getItem("authToken");
+  // read token from both storages so session (remember=false) works too
+  const token =
+    localStorage.getItem("auth_token") ||
+    sessionStorage.getItem("auth_token") ||
+    localStorage.getItem("authToken");
   return token ? { Authorization: `Token ${token}` } : {};
 }
 
@@ -136,6 +139,7 @@ export function removeItem(id: number, weight: string, variantId?: number) {
 
 export function clear() {
   save([]);
+  // best-effort: reflect on server
   syncAllToServer("replace");
 }
 

@@ -1,4 +1,3 @@
-// src/components/layout/Header.tsx
 import { useMemo, useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
@@ -7,7 +6,6 @@ import {
   Menu,
   X,
   UserCircle2,
-  PackageSearch,
   LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,7 +15,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 
@@ -46,7 +43,6 @@ function toFlatCats(data: unknown): any[] {
 export default function Header() {
   const { t, i18n } = useTranslation("common");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const location = useLocation();
   const navigate = useNavigate();
   const cartCount = useCartCount();
@@ -54,7 +50,7 @@ export default function Header() {
 
   const isActive = (path: string) => location.pathname === path;
 
-  // keep <html lang> synced for a11y/SEO
+  // keep <html lang> synced
   useEffect(() => {
     document.documentElement.setAttribute("lang", i18n.language);
   }, [i18n.language]);
@@ -70,25 +66,38 @@ export default function Header() {
     }));
   }, [categoriesData]);
 
-  // unified search submit
+  // ---------- Search state mirrors current URL (so it stays in sync across pages) ----------
+  const currentParams = useMemo(
+    () => new URLSearchParams(location.search),
+    [location.search]
+  );
+  const qFromUrl = currentParams.get("q") || "";
+  const catFromUrl = currentParams.get("category") || "";
+
+  const [searchQuery, setSearchQuery] = useState(qFromUrl);
+  useEffect(() => {
+    // when URL q changes elsewhere (e.g., Shop page), reflect it in header
+    setSearchQuery(qFromUrl);
+  }, [qFromUrl]);
+
   const submitSearch = () => {
     const q = (searchQuery || "").trim();
-    if (!q) return;
-
-    // optional: “smart” category match by name
-    const match = categories.find(
-      (c) => toSlug(c.name) === toSlug(q) || c.name.toLowerCase() === q.toLowerCase()
-    );
-
     const params = new URLSearchParams();
-    params.set("q", q);
-    if (match) params.set("category", match.slug);
-
+    if (q) params.set("q", q);
+    // keep current category if present
+    if (catFromUrl) params.set("category", catFromUrl);
     navigate({ pathname: "/shop", search: params.toString() });
     setIsMenuOpen(false);
   };
 
-  // form handlers
+  const goToCategory = (slug: string) => {
+    const params = new URLSearchParams();
+    if (searchQuery.trim()) params.set("q", searchQuery.trim());
+    if (slug) params.set("category", slug);
+    navigate({ pathname: "/shop", search: params.toString() });
+    setIsMenuOpen(false);
+  };
+
   const onSubmitDesktop: React.FormEventHandler = (e) => {
     e.preventDefault();
     submitSearch();
@@ -183,11 +192,6 @@ export default function Header() {
                       <UserCircle2 className="w-4 h-4 mr-2" />
                       Profile
                     </DropdownMenuItem>
-                    {/* <DropdownMenuItem className="hover:bg-muted cursor-pointer" onClick={() => navigate("/my-orders")}>
-                      <PackageSearch className="w-4 h-4 mr-2" />
-                      Orders
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator /> */}
                     <DropdownMenuItem
                       className="hover:bg-muted text-red-600 cursor-pointer"
                       onClick={async () => {
@@ -225,19 +229,21 @@ export default function Header() {
             {isLoading && <span className="text-xs text-muted-foreground">{t("generic.loading_categories")}</span>}
             {!isLoading &&
               categories.map((c) => (
-                <Link
+                <button
                   key={c.id}
-                  to={`/shop?category=${encodeURIComponent(c.slug)}`}
+                  type="button"
+                  onClick={() => goToCategory(c.slug)}
                   className="pill-nav whitespace-nowrap"
+                  title={c.name}
                 >
                   {c.name}
-                </Link>
+                </button>
               ))}
           </nav>
 
           {/* Search & Actions */}
           <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-4 flex-shrink-0">
-            {/* Desktop Search (form so Enter works) */}
+            {/* Desktop Search */}
             <form onSubmit={onSubmitDesktop} className="relative max-w-28 sm:max-w-sm hidden sm:block">
               <Search className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-3 h-3 sm:w-4 sm:h-4" />
               <Input
@@ -247,7 +253,6 @@ export default function Header() {
                 className="pl-8 sm:pl-10 bg-muted/50 text-xs sm:text-sm h-8 sm:h-10 border-border"
                 aria-label="Search products"
               />
-              {/* hidden submit allows Enter key to work on iOS too */}
               <button type="submit" className="hidden" aria-hidden="true" />
             </form>
 
@@ -286,7 +291,7 @@ export default function Header() {
         {/* Mobile Menu */}
         {isMenuOpen && (
           <div className="md:hidden mt-4 pb-4 border-t border-border bg-card/50 backdrop-blur-sm rounded-lg mx-2">
-            {/* Mobile Search (own form + button) */}
+            {/* Mobile Search */}
             <form onSubmit={onSubmitMobile} className="px-4 pt-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -339,14 +344,15 @@ export default function Header() {
               ) : (
                 <div className="flex flex-col space-y-1">
                   {categories.map((c) => (
-                    <Link
+                    <button
                       key={c.id}
-                      to={`/shop?category=${encodeURIComponent(c.slug)}`}
-                      className="text-sm text-muted-foreground hover:text-primary transition-colors py-2 px-2 rounded hover:bg-muted/50"
-                      onClick={() => setIsMenuOpen(false)}
+                      type="button"
+                      onClick={() => goToCategory(c.slug)}
+                      className="text-left text-sm text-muted-foreground hover:text-primary transition-colors py-2 px-2 rounded hover:bg-muted/50"
+                      title={c.name}
                     >
                       {c.name}
-                    </Link>
+                    </button>
                   ))}
                 </div>
               )}

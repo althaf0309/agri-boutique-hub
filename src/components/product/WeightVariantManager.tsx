@@ -42,18 +42,13 @@ const COMMON_WEIGHTS: Record<Unit, string[]> = {
 };
 
 function formatINR(n: number) {
-  try {
-    return n.toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 });
-  } catch {
-    return `₹${n.toFixed(2)}`;
-  }
+  try { return n.toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }); }
+  catch { return `₹${n.toFixed(2)}`; }
 }
 
-export function WeightVariantManager({
-  variants,
-  onVariantsChange,
-  productName,
-}: WeightVariantManagerProps) {
+const keyOf = (w?: string, u?: string) => `${String(w ?? "").trim()}|${String(u ?? "").trim().toUpperCase()}`;
+
+export function WeightVariantManager({ variants, onVariantsChange, productName }: WeightVariantManagerProps) {
   const [newWeight, setNewWeight] = useState("");
   const [newUnit, setNewUnit] = useState<Unit>("KG");
   const [newPrice, setNewPrice] = useState("");
@@ -75,13 +70,12 @@ export function WeightVariantManager({
     return baseSlug ? `${baseSlug}-${w}${u}` : `${w}${u}`;
   };
 
+  // Refresh SKUs when product name/slug changes
   useEffect(() => {
     if (!variants.length) return;
-    const updated = variants.map((v) => ({
-      ...v,
-      sku: generateSKU(v.weight, v.unit),
-    }));
-    onVariantsChange(updated);
+    const next = variants.map(v => ({ ...v, sku: generateSKU(v.weight, v.unit) }));
+    const changed = next.some((n, i) => n.sku !== variants[i].sku);
+    if (changed) onVariantsChange(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baseSlug]);
 
@@ -97,14 +91,14 @@ export function WeightVariantManager({
       toast({ title: "Invalid values", description: "Weight must be > 0, price ≥ 0, stock ≥ 0.", variant: "destructive" });
       return;
     }
-    const exists = variants.some(
-      (v) => v.unit.toUpperCase() === newUnit.toUpperCase() && String(v.weight).trim() === String(newWeight).trim()
-    );
-    if (exists) {
-      toast({ title: "Variant exists", description: `${newWeight}${newUnit} variant already exists.`, variant: "destructive" });
+
+    const key = keyOf(newWeight, newUnit);
+    if (variants.some(v => keyOf(v.weight, v.unit) === key)) {
+      toast({ title: "Variant exists", description: `${newWeight}${newUnit} already exists.`, variant: "destructive" });
       return;
     }
-    const id = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}`;
+
+    const id = (typeof crypto !== "undefined" && "randomUUID" in crypto) ? crypto.randomUUID() : `${Date.now()}`;
     const newVariant: WeightVariant = {
       id,
       weight: newWeight,
@@ -114,35 +108,52 @@ export function WeightVariantManager({
       sku: generateSKU(newWeight, newUnit),
       isActive: true,
     };
+
     onVariantsChange([...variants, newVariant]);
-    setNewWeight("");
-    setNewPrice("");
-    setNewStock("");
-    toast({ title: "Variant added", description: `${newWeight}${newUnit} variant created successfully.` });
+    setNewWeight(""); setNewPrice(""); setNewStock("");
+    toast({ title: "Variant added", description: `${newWeight}${newUnit} created successfully.` });
   };
 
   const updateVariant = (id: string, field: keyof WeightVariant, value: unknown) => {
-    const updated = variants.map((v) => {
-      if (v.id !== id) return v;
-      const next: WeightVariant = { ...v } as WeightVariant;
-      if (field === "stock") {
-        const num = Number(value);
-        next.stock = Number.isFinite(num) && num >= 0 ? num : 0;
-      } else if (field === "unit") {
-        next.unit = value as Unit;
-        next.sku = generateSKU(next.weight, next.unit);
-      } else if (field === "weight") {
-        next.weight = String(value ?? "");
-        next.sku = generateSKU(next.weight, next.unit);
-      } else if (field === "price") {
-        next.price = String(value ?? "");
-      } else if (field === "sku") {
-        next.sku = String(value ?? "");
-      } else if (field === "isActive") {
-        next.isActive = Boolean(value);
+    const idx = variants.findIndex(v => v.id === id);
+    if (idx < 0) return;
+
+    const current = variants[idx];
+    let nextRow: WeightVariant = { ...current };
+
+    if (field === "stock") {
+      const num = Number(value);
+      nextRow.stock = Number.isFinite(num) && num >= 0 ? num : 0;
+    } else if (field === "unit") {
+      const newUnit = value as Unit;
+      const newKey = keyOf(current.weight, newUnit);
+      const collides = variants.some((v, i) => i !== idx && keyOf(v.weight, v.unit) === newKey);
+      if (collides) {
+        toast({ title: "Duplicate not allowed", description: `${current.weight}${newUnit} already exists.`, variant: "destructive" });
+        return; // block change
       }
-      return next;
-    });
+      nextRow.unit = newUnit;
+      nextRow.sku = generateSKU(nextRow.weight, nextRow.unit);
+    } else if (field === "weight") {
+      const newWeight = String(value ?? "");
+      const newKey = keyOf(newWeight, current.unit);
+      const collides = variants.some((v, i) => i !== idx && keyOf(v.weight, v.unit) === newKey);
+      if (collides) {
+        toast({ title: "Duplicate not allowed", description: `${newWeight}${current.unit} already exists.`, variant: "destructive" });
+        return; // block change
+      }
+      nextRow.weight = newWeight;
+      nextRow.sku = generateSKU(nextRow.weight, nextRow.unit);
+    } else if (field === "price") {
+      nextRow.price = String(value ?? "");
+    } else if (field === "sku") {
+      nextRow.sku = String(value ?? "");
+    } else if (field === "isActive") {
+      nextRow.isActive = Boolean(value);
+    }
+
+    const updated = [...variants];
+    updated[idx] = nextRow;
     onVariantsChange(updated);
   };
 
@@ -264,7 +275,14 @@ export function WeightVariantManager({
                       <div>
                         <Label className="text-xs text-muted-foreground">Weight</Label>
                         <div className="flex gap-1">
-                          <Input type="number" step="0.01" min="0" value={variant.weight ?? ""} onChange={(e) => updateVariant(variant.id, "weight", e.target.value)} className="h-8" />
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={variant.weight ?? ""}
+                            onChange={(e) => updateVariant(variant.id, "weight", e.target.value)}
+                            className="h-8"
+                          />
                           <Select value={variant.unit} onValueChange={(v: Unit) => updateVariant(variant.id, "unit", v)}>
                             <SelectTrigger className="h-8 w-16"><SelectValue /></SelectTrigger>
                             <SelectContent>

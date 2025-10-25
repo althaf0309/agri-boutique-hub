@@ -1,6 +1,8 @@
 // src/types.ts
 
 export type ID = number | string;
+export type OrderStatus = "pending" | "confirmed" | "cancelled";
+export type ShipmentStatus = "placed" | "pending" | "processing" | "delivered";
 
 export type OrderLine = {
   product_id: number;
@@ -35,7 +37,9 @@ export type OrderCheckoutDetails = {
 export type Order = {
   id: number;
   status: "pending" | "confirmed" | "cancelled";
+  shipment_status: "placed" | "pending" | "processing" | "delivered";
   payment_method?: "cash-on-delivery" | "card" | string;
+  
   currency?: string; // "INR", etc.
   country_code?: string; // "IN"
   created_at: string;

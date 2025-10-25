@@ -1,4 +1,3 @@
-// src/api/hooks/products.ts
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/api/client";
 import type { Product } from "@/types/index";
@@ -16,7 +15,35 @@ const emptyToNull = <T = any>(v: T) => (v === "" ? null : v);
 const prune = (o: Record<string, any>) =>
   Object.fromEntries(Object.entries(o || {}).filter(([, v]) => v !== undefined));
 
-/** Map form payload to the exact shape ProductCreateUpdateSerializer (V2) accepts. */
+const money = (x: unknown, fallback = "0.00") => {
+  const n = Number(x);
+  if (!Number.isFinite(n)) return fallback;
+  return n.toFixed(2);
+};
+
+// ---- error presentation (exported) ----
+export function extractAxiosError(err: any): string {
+  const http = err?.response;
+  if (!http) return err?.message || "Network error";
+  const status = http.status;
+  const data = http.data;
+
+  if (typeof data === "string") return `${status}: ${data}`;
+  if (data && typeof data === "object") {
+    // DRF-style detail
+    if (data.detail) return `${status}: ${data.detail}`;
+    // Field errors: { field: ["msg1","msg2"] }
+    const entries = Object.entries(data as Record<string, any>);
+    if (entries.length) {
+      const [k, v] = entries[0];
+      if (Array.isArray(v)) return `${status}: ${k} – ${v.join(", ")}`;
+      if (typeof v === "string") return `${status}: ${k} – ${v}`;
+    }
+  }
+  return `${status}: ${http.statusText || "Request failed"}`;
+}
+
+/** Map form payload to the exact shape ProductCreateUpdateSerializer accepts. */
 function toWritable(payload: Partial<Product> & Record<string, any>) {
   const p = payload as any;
 
@@ -25,7 +52,11 @@ function toWritable(payload: Partial<Product> & Record<string, any>) {
 
   const shelf_life_days  = isBlank(p.shelf_life_days) ? null : p.shelf_life_days;
   const warranty_months  = isBlank(p.warranty_months) ? null : p.warranty_months;
+
+  // Always send decimals as strings (safer with DRF DecimalField)
   const price_inr        = isBlank(p.price_inr) ? null : String(p.price_inr);
+  const price_usd        = isBlank(p.price_usd) ? null : String(p.price_usd);
+  const price_aed_static = isBlank(p.price_aed_static) ? null : String(p.price_aed_static);
   const gst_rate         = isBlank(p.gst_rate) ? null : String(p.gst_rate);
   const mrp_price        = isBlank(p.mrp_price) ? null : String(p.mrp_price);
   const cost_price       = isBlank(p.cost_price) ? null : String(p.cost_price);
@@ -35,8 +66,8 @@ function toWritable(payload: Partial<Product> & Record<string, any>) {
     // required FK
     category_id: p.category_id,
     // optional FKs
-    vendor_id: p.vendor_id,
-    store_id: p.store_id,
+    vendor_id: p.vendor_id ?? null,
+    store_id: p.store_id ?? null,
 
     // basics
     name: p.name,
@@ -53,8 +84,11 @@ function toWritable(payload: Partial<Product> & Record<string, any>) {
     default_uom: p.default_uom,
     default_pack_qty,
 
-    // pricing (INR + taxes)
+    // pricing (INR + taxes / DRF DecimalField as strings)
     price_inr,
+    price_usd,
+    aed_pricing_mode: p.aed_pricing_mode,
+    price_aed_static,
     discount_percent: p.discount_percent,
     hsn_sac: p.hsn_sac,
     gst_rate,
@@ -77,9 +111,14 @@ function toWritable(payload: Partial<Product> & Record<string, any>) {
     nutrition_facts: p.nutrition_facts,
     nutrition_notes: p.nutrition_notes,
 
-    // inline helpers (JSON)
-    variants: p.variants,
-    images_meta: p.images_meta,
+    // IMPORTANT: omit inline variants/images here on create to avoid 500s
+    // variants: p.variants,
+    // images_meta: p.images_meta,
+  });
+
+  // Normalize money-like strings to 2dp if present
+  ["price_inr", "price_usd", "price_aed_static", "gst_rate", "mrp_price", "cost_price"].forEach((k) => {
+    if (out[k] != null) out[k] = money(out[k], "0.00");
   });
 
   return out;
@@ -127,11 +166,16 @@ export function useCreateProduct() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: Partial<Product> & Record<string, any>) => {
+      // minimal payload – server often 500s if nested variants/images are posted here
       const { data } = await api.post<Product>("/products/", toWritable(payload));
       return data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["products"] });
+    },
+    onError: (err: any) => {
+      // Useful for local dev – see exactly what serializer complained about
+      console.error("[Create product] error:", err?.response?.status, err?.response?.data || err?.message);
     },
   });
 }
@@ -140,7 +184,8 @@ export function useUpdateProduct() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...payload }: { id: number } & (Partial<Product> & Record<string, any>)) => {
-      const { data } = await api.patch<Product>(`/products/${id}/`, toWritable(payload));
+      const body = toWritable(payload);
+      const { data } = await api.patch<Product>(`/products/${id}/`, body);
       return data;
     },
     onSuccess: (_data, variables) => {
@@ -148,9 +193,7 @@ export function useUpdateProduct() {
       qc.invalidateQueries({ queryKey: ["product-id", variables.id] });
     },
     onError: (err: any) => {
-      // Better console to see DRF validation details
-      // eslint-disable-next-line no-console
-      console.error("PATCH /products error", err?.response?.status, err?.response?.data || err?.message);
+      console.error("[Update product] error:", err?.response?.status, err?.response?.data || err?.message);
     },
   });
 }

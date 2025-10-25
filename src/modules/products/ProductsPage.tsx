@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
-import { Plus, Search, Eye, Edit, Copy, Trash2, Leaf, Snowflake } from "lucide-react";
+// src/modules/products/ProductsPage.tsx
+import { useState, useMemo, useEffect } from "react";
+import { Plus, Search, Edit, Trash2, Leaf, Snowflake } from "lucide-react";
 import { Link } from "react-router-dom";
 import dayjs from "dayjs";
 
@@ -14,6 +15,7 @@ import { useCategories } from "@/api/hooks/categories";
 import { useToast } from "@/hooks/use-toast";
 import { API_BASE } from "@/api/client";
 
+/* ---------------- utils ---------------- */
 function formatCurrency(value: string | number | null | undefined, currency: string = "INR") {
   const num = typeof value === "string" ? Number(value) : (value ?? 0);
   return new Intl.NumberFormat("en-IN", { style: "currency", currency, maximumFractionDigits: 2 })
@@ -23,8 +25,9 @@ function formatCurrency(value: string | number | null | undefined, currency: str
 function isGroceryCat(name: string = ""): boolean {
   const hay = name.toLowerCase();
   return [
-    "grain", "cereal", "oil", "spice", "natural", "honey", "health", "wellness",
-    "vegetable", "fruit", "dairy", "beverage", "bakery", "snack", "staple", "pulse",
+    "grain","cereal","oil","spice","natural","honey","health","wellness",
+    "vegetable","fruit","dairy","beverage","bakery","snack","staple","pulse",
+    "grocery","fresh"
   ].some(k => hay.includes(k));
 }
 
@@ -49,17 +52,25 @@ function resolveImageUrl(p: any): string | null {
     Array.isArray(p.images) ? p.images[0]?.image : undefined,
     p.image,
   ];
-
   const first = candidates.find(Boolean);
   if (!first) return null;
-
   const url = String(first);
   if (/^https?:\/\//i.test(url) || url.startsWith("data:") || url.startsWith("blob:")) return url;
-
   const ORIGIN = API_BASE.replace(/\/api\/?$/i, "");
   return url.startsWith("/") ? `${ORIGIN}${url}` : `${ORIGIN}/${url}`;
 }
 
+/** Tiny debounce hook */
+function useDebounced<T>(value: T, ms = 300) {
+  const [v, setV] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setV(value), ms);
+    return () => clearTimeout(t);
+  }, [value, ms]);
+  return v;
+}
+
+/* ---------------- page ---------------- */
 export function ProductsPage() {
   // filters / state
   const [search, setSearch] = useState("");
@@ -72,6 +83,8 @@ export function ProductsPage() {
   const [ordering, setOrdering] = useState("-created_at");
   const [page, setPage] = useState(1);
 
+  const debouncedSearch = useDebounced(search, 300);
+
   // Normalize categories to always be an array
   const { data: rawCategories } = useCategories();
   const categoriesArr: any[] = Array.isArray(rawCategories)
@@ -82,15 +95,24 @@ export function ProductsPage() {
     () => (Array.isArray(categoriesArr) ? categoriesArr.filter((c: any) => isGroceryCat(c?.name)) : []),
     [categoriesArr]
   );
+  const otherCategories = useMemo(
+    () => (Array.isArray(categoriesArr) ? categoriesArr.filter((c: any) => !isGroceryCat(c?.name)) : []),
+    [categoriesArr]
+  );
 
+  // Build API params (booleans as real booleans)
+  const bool = (v: string) => v === "true" ? true : v === "false" ? false : undefined;
   const params: Record<string, any> = {
     page,
-    search: search || undefined,
+    search: debouncedSearch || undefined,
+    // send both; backend can accept either depending on your API
     category: category !== "all" ? category : undefined,
-    in_stock: inStock !== "all" ? inStock : undefined,
-    featured: featured !== "all" ? featured : undefined,
-    is_organic: organic !== "all" ? organic : undefined,
-    is_perishable: perishable !== "all" ? perishable : undefined,
+    category_id: category !== "all" ? category : undefined,
+
+    in_stock: bool(inStock),
+    featured: bool(featured),
+    is_organic: bool(organic),
+    is_perishable: bool(perishable),
     default_uom: uom !== "all" ? uom : undefined,
     ordering,
   };
@@ -154,6 +176,21 @@ export function ProductsPage() {
     }
   };
 
+  // Reset page when filters change (but not when page itself changes)
+  useEffect(() => { setPage(1); }, [debouncedSearch, category, inStock, featured, organic, perishable, uom, ordering]);
+
+  const clearAll = () => {
+    setSearch("");
+    setCategory("all");
+    setInStock("all");
+    setFeatured("all");
+    setOrganic("all");
+    setPerishable("all");
+    setUom("all");
+    setOrdering("-created_at");
+    setPage(1);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -162,12 +199,17 @@ export function ProductsPage() {
           <h1 className="text-2xl sm:text-3xl font-bold">Products</h1>
           <p className="text-muted-foreground text-sm sm:text-base">Manage your product catalog</p>
         </div>
-        <Button asChild className="w-full sm:w-auto">
-          <Link to="/admin/products/new">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Product
-          </Link>
-        </Button>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button variant="outline" className="w-full sm:w-auto" onClick={clearAll}>
+            Reset Filters
+          </Button>
+          <Button asChild className="w-full sm:w-auto">
+            <Link to="/admin/products/new">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Product
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -176,8 +218,9 @@ export function ProductsPage() {
           <CardTitle>Filters</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            <div className="relative sm:col-span-2 md:col-span-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+            {/* Search */}
+            <div className="relative sm:col-span-2">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search products..."
@@ -187,13 +230,14 @@ export function ProductsPage() {
               />
             </div>
 
-            {/* Category (grocery-first) */}
+            {/* Category (grocery-first, then others) */}
             <Select value={category} onValueChange={setCategory}>
               <SelectTrigger>
                 <SelectValue placeholder="All Categories" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
+
                 {groceryCategories.length > 0 && (
                   <>
                     <div className="px-2 py-1 text-xs text-muted-foreground">Grocery</div>
@@ -202,14 +246,19 @@ export function ProductsPage() {
                         {cat.name}
                       </SelectItem>
                     ))}
-                    <div className="px-2 py-1 text-xs text-muted-foreground">Other</div>
                   </>
                 )}
-                {categoriesArr.map((cat: any) => (
-                  <SelectItem key={cat.id} value={String(cat.id)}>
-                    {cat.name}
-                  </SelectItem>
-                ))}
+
+                {otherCategories.length > 0 && (
+                  <>
+                    <div className="px-2 py-1 text-xs text-muted-foreground">Other</div>
+                    {otherCategories.map((cat: any) => (
+                      <SelectItem key={`o-${cat.id}`} value={String(cat.id)}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </>
+                )}
               </SelectContent>
             </Select>
 
@@ -237,6 +286,16 @@ export function ProductsPage() {
               </SelectContent>
             </Select>
 
+            {/* Featured */}
+            <Select value={featured} onValueChange={setFeatured}>
+              <SelectTrigger><SelectValue placeholder="Featured" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="true">Featured</SelectItem>
+                <SelectItem value="false">Not Featured</SelectItem>
+              </SelectContent>
+            </Select>
+
             {/* Organic */}
             <Select value={organic} onValueChange={setOrganic}>
               <SelectTrigger><SelectValue placeholder="Organic" /></SelectTrigger>
@@ -258,7 +317,7 @@ export function ProductsPage() {
             </Select>
 
             {/* Ordering */}
-            <Select value={ordering} onValueChange={(v) => { setOrdering(v); setPage(1); }}>
+            <Select value={ordering} onValueChange={setOrdering}>
               <SelectTrigger><SelectValue placeholder="Sort by" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="-created_at">Newest First</SelectItem>
@@ -379,24 +438,11 @@ export function ProductsPage() {
 
                         <TableCell>
                           <div className="flex items-center gap-1 justify-end">
-                            {/* <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-                              <Link to={`/admin/products/${p.id}`}>
-                                <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
-                              </Link>
-                            </Button> */}
                             <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
                               <Link to={`/admin/products/${p.id}/edit`}>
                                 <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                               </Link>
                             </Button>
-                            {/* <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 hidden sm:inline-flex"
-                              onClick={() => onDuplicate(p)}
-                            >
-                              <Copy className="h-3 w-3 sm:h-4 sm:w-4" />
-                            </Button> */}
                             <Button
                               variant="ghost"
                               size="icon"

@@ -1,4 +1,3 @@
-// src/api/hooks/orders.ts
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/api/client";
 import type { Order, ID, OrderLine, OrderTotals } from "@/types";
@@ -20,9 +19,8 @@ function toList<T = any>(data: any): T[] {
 function normalizeOrder(order: Order): Order {
   const lines = (order.lines ?? []).map((l: OrderLine) => ({
     ...l,
-    // map quantity/qty variations → qty
     qty: toNum((l as any).qty ?? (l as any).quantity),
-    price: toNum((l as any).price), // unit price
+    price: toNum((l as any).price),
   }));
 
   const totals: OrderTotals | undefined = order.totals
@@ -38,30 +36,39 @@ function normalizeOrder(order: Order): Order {
 }
 
 /**
- * Fetch only the current user's orders when supported.
- * If the backend doesn't support `?mine=1`, we fall back to `/orders/`.
- * Optionally pass `currentUserId` to defensively filter client-side.
+ * Fetch orders.
+ * - If opts.showAll === true → always fetch all orders (`/orders/`)
+ * - Else → try `/orders/?mine=1`, and if unsupported fall back to `/orders/`
+ * - If opts.currentUserId is provided, filter for that user (after normalization)
  */
-export function useOrders(currentUserId?: number) {
+export function useOrders(opts?: { showAll?: boolean; currentUserId?: number }) {
+  const showAll = !!opts?.showAll;
+  const currentUserId = opts?.currentUserId;
+
   return useQuery({
-    queryKey: ["orders", currentUserId],
+    queryKey: ["orders", { showAll, currentUserId }],
     queryFn: async () => {
       let list: Order[] = [];
-      try {
-        // Preferred: server filters to the logged-in user's orders
-        const mine = await api.get<Order[] | { results: Order[]; items?: Order[] }>("/orders/", {
-          params: { mine: 1 },
-        });
-        list = toList<Order>(mine.data);
-      } catch {
-        // Fallback: get everything and let server auth/permissions decide
+
+      if (showAll) {
+        // Admin/superuser: get the full list explicitly
         const res = await api.get<Order[] | { results: Order[]; items?: Order[] }>("/orders/");
         list = toList<Order>(res.data);
+      } else {
+        // Normal user: try mine=1 first for efficiency; fall back if backend doesn’t support it
+        try {
+          const mine = await api.get<Order[] | { results: Order[]; items?: Order[] }>("/orders/", {
+            params: { mine: 1 },
+          });
+          list = toList<Order>(mine.data);
+        } catch {
+          const res = await api.get<Order[] | { results: Order[]; items?: Order[] }>("/orders/");
+          list = toList<Order>(res.data);
+        }
       }
 
       const normalized = list.map(normalizeOrder);
 
-      // Extra safety: if we know the user id, only keep their orders client-side
       if (currentUserId != null) {
         return normalized.filter((o: any) => {
           const uid = o?.user?.id ?? o?.user_id;

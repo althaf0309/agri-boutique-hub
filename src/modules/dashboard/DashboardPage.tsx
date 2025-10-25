@@ -7,8 +7,6 @@ import {
   ShoppingCart,
   ArrowUpRight,
   ArrowDownRight,
-  Calendar,
-  BarChart3,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +29,7 @@ import {
   Cell,
 } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Link } from "react-router-dom";
 
 import {
   useDashboardKpis,
@@ -46,76 +45,176 @@ const up = (v?: string) => v?.startsWith("+");
 const toNum = (v?: string | number) => (v == null ? 0 : Number(v));
 const inr = (n: number) => `₹${Math.round(n).toLocaleString()}`;
 
-export function DashboardPage() {
-  // ---- Controls for Sales Overview
-  const [range, setRange] = useState<SalesRange>("30d");     // 7d | 30d | 90d | 1y
-  const [gran, setGran]   = useState<SalesGranularity>("month"); // day | week | month
+/* ---------- helpers for client-side fallback series ---------- */
+function startOfRange(range: SalesRange) {
+  const now = new Date();
+  const d = new Date(now);
+  if (range === "7d") d.setDate(d.getDate() - 6);
+  else if (range === "30d") d.setDate(d.getDate() - 29);
+  else if (range === "90d") d.setDate(d.getDate() - 89);
+  else if (range === "1y") d.setFullYear(d.getFullYear() - 1);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+function formatBucketLabel(date: Date, gran: SalesGranularity) {
+  if (gran === "month") return date.toLocaleDateString(undefined, { month: "short", year: "numeric" });
+  if (gran === "week") {
+    const end = new Date(date); end.setDate(end.getDate() + 6);
+    return `${date.toLocaleDateString(undefined, { month: "short", day: "numeric" })} – ${end.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
+  }
+  // day
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+function addDays(d: Date, n: number) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
+function addMonths(d: Date, n: number) { const x = new Date(d); x.setMonth(x.getMonth() + n); return x; }
+function startOfWeek(d: Date) {
+  const x = new Date(d);
+  const day = x.getDay(); // 0 Sun
+  const diff = day === 0 ? 6 : day - 1; // Monday as start
+  x.setDate(x.getDate() - diff);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+function startOfMonth(d: Date) { const x = new Date(d); x.setDate(1); x.setHours(0,0,0,0); return x; }
 
-  // ---- API data
+function buildBuckets(range: SalesRange, gran: SalesGranularity) {
+  const start = startOfRange(range);
+  const now = new Date();
+  now.setHours(0,0,0,0);
+
+  const buckets: { key: string; start: Date; end: Date; name: string; sales: number; orders: number; customers: number }[] = [];
+  let cursor = new Date(start);
+
+  if (gran === "month") {
+    while (cursor <= now) {
+      const s = startOfMonth(cursor);
+      const e = addMonths(s, 1);
+      buckets.push({ key: `${s.getFullYear()}-${s.getMonth()+1}`, start: s, end: e, name: formatBucketLabel(s, "month"), sales: 0, orders: 0, customers: 0 });
+      cursor = e;
+    }
+  } else if (gran === "week") {
+    cursor = startOfWeek(cursor);
+    while (cursor <= now) {
+      const s = new Date(cursor);
+      const e = addDays(s, 7);
+      buckets.push({ key: `w-${s.toISOString().slice(0,10)}`, start: s, end: e, name: formatBucketLabel(s, "week"), sales: 0, orders: 0, customers: 0 });
+      cursor = e;
+    }
+  } else {
+    // day
+    while (cursor <= now) {
+      const s = new Date(cursor);
+      const e = addDays(s, 1);
+      buckets.push({ key: s.toISOString().slice(0,10), start: s, end: e, name: formatBucketLabel(s, "day"), sales: 0, orders: 0, customers: 0 });
+      cursor = e;
+    }
+  }
+  return buckets;
+}
+
+function buildSeriesFromOrders(orders: any[], range: SalesRange, gran: SalesGranularity) {
+  if (!Array.isArray(orders) || orders.length === 0) return [];
+  const buckets = buildBuckets(range, gran);
+
+  for (const o of orders) {
+    const ts = o.created_at ? new Date(o.created_at) : null;
+    if (!ts) continue;
+    const amt = toNum(o?.totals?.grand_total);
+    // find bucket
+    const b = buckets.find(bk => ts >= bk.start && ts < bk.end);
+    if (!b) continue;
+    b.sales += amt;
+    b.orders += 1;
+    // customers: try email or customer id/name
+    const custKey = (o.customer_id ?? o.email ?? o.customer_name ?? "").toString();
+    // quick set per-bucket unique customers
+    (b as any)._seen = (b as any)._seen || new Set<string>();
+    (b as any)._seen.add(custKey);
+  }
+
+  return buckets.map(b => ({
+    name: b.name,
+    sales: Math.round(b.sales),
+    orders: b.orders,
+    customers: (b as any)._seen ? (b as any)._seen.size : 0,
+  }));
+}
+
+/* ---------- component ---------- */
+export function DashboardPage() {
+  // Default: day-wise
+  const [range, setRange] = useState<SalesRange>("7d");
+  const [gran, setGran] = useState<SalesGranularity>("day");
+
   const { data: kpis, isLoading: kpiLoading } = useDashboardKpis();
   const { data: topProducts = [], isLoading: topLoading } = useTopProducts();
   const { data: orders = [], isLoading: ordersLoading } = useOrders();
 
-  // Sales series driven by controls
-  const { data: salesSeries = [], isLoading: salesLoading } = useSalesSeries({ range, granularity: gran });
+  // Server series
+  const { data: salesSeriesApi = [], isLoading: salesLoading } = useSalesSeries({ range, granularity: gran });
 
-  // Aggregate series for dashboard KPIs (fallback to server KPIs if series empty)
+  // Fallback series from orders if API returns empty
+  const salesSeriesFallback = useMemo(
+    () => (salesSeriesApi && salesSeriesApi.length ? [] : buildSeriesFromOrders(orders, range, gran)),
+    [salesSeriesApi, orders, range, gran]
+  );
+
+  // Final series to plot/use in KPIs
+  const series = salesSeriesApi.length ? salesSeriesApi : salesSeriesFallback;
+
+  // Aggregate from final series
   const agg = useMemo(() => {
-    const revenue = salesSeries.reduce((a: number, p: any) => a + Number(p.sales || 0), 0);
-    const ordersC = salesSeries.reduce((a: number, p: any) => a + Number(p.orders || 0), 0);
-    const customers = salesSeries.reduce((a: number, p: any) => a + Number(p.customers || 0), 0);
+    const revenue = series.reduce((a: number, p: any) => a + Number(p.sales || 0), 0);
+    const ordersC = series.reduce((a: number, p: any) => a + Number(p.orders || 0), 0);
+    const customers = series.reduce((a: number, p: any) => a + Number(p.customers || 0), 0);
     const aov = ordersC ? revenue / ordersC : 0;
     return { revenue, orders: ordersC, customers, aov };
-  }, [salesSeries]);
+  }, [series]);
 
-  // ---- Derived/safe values for KPI cards
+  // KPI Cards (use series first, else fallbacks)
   const kCards = useMemo(
     () => [
       {
         title: "Revenue (selected range)",
-        value: salesSeries.length ? inr(agg.revenue) : (kpis?.revenueThisMonth ?? "₹0"),
-        change: kpis ? "+0%" : "+0%",
-        trend: "up" as const,
+        value: series.length ? inr(agg.revenue) : (kpis?.revenueThisMonth ?? "₹0"),
+        change: "+0%",
         icon: DollarSign,
         color: "text-green-600",
         bgColor: "bg-green-50",
-        description: salesSeries.length ? `Range: ${range.toUpperCase()} · ${gran}` : "Revenue this month",
+        description: series.length ? `Range: ${range.toUpperCase()} · ${gran}` : "Revenue this month",
       },
       {
         title: "Orders (selected range)",
-        value: salesSeries.length ? agg.orders.toLocaleString() : String(kpis?.ordersThisMonth ?? 0),
-        change: kpis ? "+0%" : "+0%",
-        trend: "up" as const,
+        value: series.length ? agg.orders.toLocaleString() : String(kpis?.ordersThisMonth ?? 0),
+        change: "+0%",
         icon: ShoppingCart,
         color: "text-blue-600",
         bgColor: "bg-blue-50",
-        description: salesSeries.length ? "Total orders in range" : "Orders this month",
+        description: series.length ? "Total orders in range" : "Orders this month",
       },
       {
         title: "Active Products",
         value: String(kpis?.inStock ?? 0),
-        change: kpis ? "+0%" : "+0%",
-        trend: "up" as const,
+        change: "+0%",
         icon: Package,
         color: "text-purple-600",
         bgColor: "bg-purple-50",
         description: "In-stock products",
       },
       {
-        title: salesSeries.length ? "Avg. Order Value" : "Average Rating",
-        value: salesSeries.length ? inr(agg.aov) : String(kpis?.averageRating ?? "0"),
-        change: kpis ? "+0%" : "+0%",
-        trend: "up" as const,
+        title: series.length ? "Avg. Order Value" : "Average Rating",
+        value: series.length ? inr(agg.aov) : String(kpis?.averageRating ?? "0"),
+        change: "+0%",
         icon: Users,
         color: "text-orange-600",
         bgColor: "bg-orange-50",
-        description: salesSeries.length ? "Revenue / orders in range" : "Across approved reviews",
+        description: series.length ? "Revenue / orders in range" : "Across approved reviews",
       },
     ],
-    [kpis, salesSeries, agg, range, gran]
+    [kpis, series, agg, range, gran]
   );
 
-  // Category share from top products
+  // Category share
   const categoryShare = useMemo(() => {
     const counts: Record<string, number> = {};
     topProducts.forEach((p: any) => {
@@ -134,6 +233,7 @@ export function DashboardPage() {
     return entries.map(([name, value]) => ({ name, value }));
   }, [topProducts]);
 
+  // Recent orders
   const recentOrders = useMemo(() => {
     if (!orders || orders.length === 0) return [];
     const sorted = [...orders].sort((a: any, b: any) => {
@@ -213,7 +313,7 @@ export function DashboardPage() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {kpiLoading && !salesSeries.length
+        {kpiLoading && !series.length
           ? Array.from({ length: 4 }).map((_, i) => (
               <Card key={i} className="p-4">
                 <Skeleton className="h-4 w-24 mb-3" />
@@ -238,7 +338,7 @@ export function DashboardPage() {
                       <ArrowDownRight className="h-3 w-3 text-red-500" />
                     )}
                     <span className={up(kpi.change) ? "text-green-600" : "text-red-600"}>{kpi.change}</span>
-                    <span>{salesSeries.length ? `(${range.toUpperCase()}, ${gran})` : "from last month"}</span>
+                    <span>{series.length ? `(${range.toUpperCase()}, ${gran})` : "from last month"}</span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">{kpi.description}</p>
                 </CardContent>
@@ -248,7 +348,7 @@ export function DashboardPage() {
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-        {/* Sales Chart (real data w/ switching) */}
+        {/* Sales Chart */}
         <Card className="lg:col-span-2 animate-fade-in" style={{ animationDelay: "400ms" }}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
@@ -268,11 +368,11 @@ export function DashboardPage() {
               </TabsList>
 
               <TabsContent value="revenue" className="space-y-4">
-                {salesLoading ? (
+                {(salesLoading && !series.length) ? (
                   <Skeleton className="h-72 w-full rounded-md" />
                 ) : (
                   <ResponsiveContainer width="100%" height={300}>
-                    <AreaChart data={salesSeries}>
+                    <AreaChart data={series}>
                       <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                       <XAxis dataKey="name" />
                       <YAxis />
@@ -284,11 +384,11 @@ export function DashboardPage() {
               </TabsContent>
 
               <TabsContent value="orders" className="space-y-4">
-                {salesLoading ? (
+                {(salesLoading && !series.length) ? (
                   <Skeleton className="h-72 w-full rounded-md" />
                 ) : (
                   <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={salesSeries}>
+                    <BarChart data={series}>
                       <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                       <XAxis dataKey="name" />
                       <YAxis />
@@ -300,11 +400,11 @@ export function DashboardPage() {
               </TabsContent>
 
               <TabsContent value="customers" className="space-y-4">
-                {salesLoading ? (
+                {(salesLoading && !series.length) ? (
                   <Skeleton className="h-72 w-full rounded-md" />
                 ) : (
                   <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={salesSeries}>
+                    <LineChart data={series}>
                       <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                       <XAxis dataKey="name" />
                       <YAxis />
@@ -318,7 +418,7 @@ export function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Category Distribution (from backend top products) */}
+        {/* Category Distribution */}
         <Card className="animate-fade-in" style={{ animationDelay: "500ms" }}>
           <CardHeader>
             <CardTitle className="text-base sm:text-lg">Category Sales</CardTitle>
@@ -408,8 +508,9 @@ export function DashboardPage() {
                     <p className="text-sm text-muted-foreground">No recent orders.</p>
                   )}
                 </div>
-                <Button variant="outline" className="w-full mt-4">
-                  View All Orders
+                {/* FIX: Link to all orders */}
+                <Button asChild variant="outline" className="w-full mt-4">
+                  <Link to="/admin/orders">View All Orders</Link>
                 </Button>
               </>
             )}
@@ -467,3 +568,5 @@ export function DashboardPage() {
     </div>
   );
 }
+
+export default DashboardPage;

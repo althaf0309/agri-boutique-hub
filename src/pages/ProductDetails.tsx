@@ -149,14 +149,8 @@ function useProductBySlug(slug?: string) {
     queryKey: ["product-slug", slug],
     enabled: !!slug && !/^\d+$/.test(slug),
     queryFn: async () => {
-      // Ask backend for 1 item; BUT ensure we return an EXACT match.
-      const { data } = await api.get("/products/", { params: { slug, page_size: 5 } });
-      const list: any[] = Array.isArray(data) ? data : (data?.results ?? []);
-      const exact =
-        list.find((p) => String(p?.slug ?? "").toLowerCase() === String(slug).toLowerCase()) ||
-        list.find((p) => slugify(p?.name) === String(slug).toLowerCase()) ||
-        null;
-      return exact; // return null if no exact match
+      const { data } = await api.get(`/products/by-slug/${encodeURIComponent(slug!)}/`);
+      return data ?? null; // backend returns the exact product or 404
     },
   });
 }
