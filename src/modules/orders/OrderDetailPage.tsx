@@ -15,8 +15,13 @@ import {
   CreditCard,
   Truck,
   Wallet,
+  PackageOpen,
+  PackageSearch,
+  PackageCheck,
+  CheckCheck,
 } from "lucide-react";
 
+/* ---------------- small UI helpers ---------------- */
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
     confirmed: "bg-emerald-100 text-emerald-800 border-emerald-200",
@@ -33,6 +38,24 @@ function StatusBadge({ status }: { status: string }) {
     </span>
   );
 }
+
+function ShipBadge({ status }: { status: string }) {
+  const map: Record<string, { cls: string; icon: JSX.Element }> = {
+    placed:      { cls: "bg-slate-100 text-slate-800 border-slate-200",    icon: <PackageOpen className="h-3.5 w-3.5" /> },
+    pending:     { cls: "bg-amber-100 text-amber-800 border-amber-200",    icon: <PackageSearch className="h-3.5 w-3.5" /> },
+    processing:  { cls: "bg-blue-100 text-blue-800 border-blue-200",       icon: <Truck className="h-3.5 w-3.5" /> },
+    delivered:   { cls: "bg-emerald-100 text-emerald-800 border-emerald-200", icon: <PackageCheck className="h-3.5 w-3.5" /> },
+  };
+  const s = (status || "placed").toLowerCase();
+  const x = map[s] ?? map.placed;
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${x.cls}`}>
+      {x.icon}
+      {s}
+    </span>
+  );
+}
+/* --------------------------------------------------- */
 
 export function OrderDetailPage() {
   const { id } = useParams();
@@ -66,7 +89,7 @@ export function OrderDetailPage() {
     shipping: "0.00",
     tax: "0.00",
     grand_total: "0.00",
-  };
+  } as any;
 
   const cd = order.checkout_details || ({} as any);
   const customerName = cd.full_name || "—";
@@ -90,6 +113,7 @@ export function OrderDetailPage() {
 
   const fmt = (v: string | number) => `${currency === "INR" ? "₹" : ""}${Number(v ?? 0).toFixed(2)}`;
 
+  /* -------- actions -------- */
   const onConfirm = async () => {
     try {
       await confirmOrder.mutateAsync({ id: orderId });
@@ -122,6 +146,16 @@ export function OrderDetailPage() {
     }
   };
 
+  const setShipment = async (shipment_status: "placed" | "pending" | "processing" | "delivered") => {
+    try {
+      await updateOrder.mutateAsync({ id: orderId, shipment_status } as any);
+      toast({ title: `Shipment: ${shipment_status}` });
+    } catch (e: any) {
+      toast({ title: "Failed to update shipment", description: e?.message, variant: "destructive" });
+    }
+  };
+
+  /* -------- print / download -------- */
   const handlePrintInvoice = () => {
     const rowsHtml = (order.lines ?? [])
       .map((i: any) => {
@@ -241,6 +275,9 @@ export function OrderDetailPage() {
     URL.revokeObjectURL(url);
   };
 
+  const shipStatus: "placed" | "pending" | "processing" | "delivered" =
+    (order.shipment_status || "placed").toLowerCase() as any;
+
   return (
     <div className="p-6 space-y-4">
       {/* header / actions */}
@@ -335,12 +372,56 @@ export function OrderDetailPage() {
         </Card>
       </div>
 
+      {/* Shipment */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2">
+            <Truck className="h-4 w-4" /> Shipment
+            <ShipBadge status={shipStatus} />
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+          <Button
+            variant={shipStatus === "placed" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShipment("placed")}
+            title="Mark as Placed"
+          >
+            <PackageOpen className="h-4 w-4 mr-1" /> Placed
+          </Button>
+          <Button
+            variant={shipStatus === "pending" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShipment("pending")}
+            title="Mark as Pending"
+          >
+            <PackageSearch className="h-4 w-4 mr-1" /> Pending
+          </Button>
+          <Button
+            variant={shipStatus === "processing" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShipment("processing")}
+            title="Mark as Processing"
+          >
+            <Truck className="h-4 w-4 mr-1" /> Processing
+          </Button>
+          <Button
+            variant={shipStatus === "delivered" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShipment("delivered")}
+            title="Mark as Delivered"
+          >
+            <CheckCheck className="h-4 w-4 mr-1" /> Delivered
+          </Button>
+        </CardContent>
+      </Card>
+
       {/* customer + shipping */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="md:col-span-2">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2">
-              <Truck className="h-4 w-4" /> Customer & Shipping
+              Customer & Shipping
             </CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
@@ -446,3 +527,5 @@ export function OrderDetailPage() {
     </div>
   );
 }
+
+export default OrderDetailPage;

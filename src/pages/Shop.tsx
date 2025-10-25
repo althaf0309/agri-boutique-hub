@@ -1,4 +1,3 @@
-// src/pages/Shop.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import Header from "@/components/layout/Header";
@@ -15,8 +14,6 @@ import { toast } from "@/hooks/use-toast";
 import { useProducts } from "@/api/hooks/products";
 import { useCategories, type CategoryNode } from "@/api/hooks/categories";
 import { addItem as cartAdd } from "@/lib/cart";
-
-// types ProductCard expects
 import type { CardProduct, CardVariant } from "@/components/ProductGrid";
 
 /* ---------------- helpers ---------------- */
@@ -174,8 +171,41 @@ function toCardProduct(p: any): CardProduct {
   } as CardProduct;
 }
 
+/* ---------------- Category tree flattening + descendant map ---------------- */
+type FlatCategory = { label: string; slug: string; depth: number };
+
+const getNodeSlug = (n: CategoryNode) => (n as any).slug || slugify(n.name);
+
+function flattenTree(nodes: CategoryNode[], depth = 0): FlatCategory[] {
+  const out: FlatCategory[] = [];
+  for (const n of nodes) {
+    const slug = getNodeSlug(n);
+    out.push({ label: n.name, slug, depth });
+    if (n.children?.length) out.push(...flattenTree(n.children, depth + 1));
+  }
+  return out;
+}
+
+/** Map slug -> all descendant slugs (including itself). */
+function buildDescendantSlugMap(nodes: CategoryNode[]): Map<string, string[]> {
+  const map = new Map<string, string[]>();
+
+  const dfs = (n: CategoryNode): string[] => {
+    const self = getNodeSlug(n);
+    let collected = [self];
+    if (n.children?.length) {
+      for (const c of n.children) collected = collected.concat(dfs(c));
+    }
+    map.set(self, collected);
+    return collected;
+  };
+
+  for (const root of nodes) dfs(root);
+  return map;
+}
+
 /* ---------------- fallback static categories (if API not ready) ---------------- */
-const fallbackSidebar = [
+const fallbackSidebar: FlatCategory[] = [
   { label: "All Categories", slug: "all", depth: 0 },
   { label: "Organic Grocery", slug: "organic-grocery", depth: 0 },
   { label: "Ruchira", slug: "ruchira", depth: 0 },
@@ -230,60 +260,50 @@ function sortCards(cards: CardProduct[], sortBy: string) {
   return copy;
 }
 
-/* ---------------- Category tree flattening ---------------- */
-type FlatCategory = { label: string; slug: string; depth: number };
-
-function flattenTree(nodes: CategoryNode[], depth = 0): FlatCategory[] {
-  const out: FlatCategory[] = [];
-  for (const n of nodes) {
-    const slug = (n as any).slug || slugify(n.name);
-    out.push({ label: n.name, slug, depth });
-    if (n.children?.length) out.push(...flattenTree(n.children, depth + 1));
-  }
-  return out;
-}
-
 /* ---------------- Component ---------------- */
 export default function Shop() {
   const [searchParams, setSearchParams] = useSearchParams();
 
+  // URL is the single source of truth for q and category
+  const urlQ = (searchParams.get("q") || "").trim();
+  const urlCat = (searchParams.get("category") || "all").trim().toLowerCase();
+
   // categories API
   const { data: catData, isLoading: catsLoading } = useCategories();
+
+  // Flat list for sidebar
   const flatCats: FlatCategory[] = useMemo(() => {
     if (!catData?.tree?.length) return fallbackSidebar;
     return [{ label: "All Categories", slug: "all", depth: 0 }, ...flattenTree(catData.tree)];
   }, [catData]);
 
-  // state that mirrors URL
-  const [selectedCategorySlug, setSelectedCategorySlug] = useState<string>("all");
-  const [searchQuery, setSearchQuery] = useState("");
+  // Descendant slug map for server/client filtering
+  const descendantMap = useMemo(() => {
+    if (!catData?.tree?.length) return new Map<string, string[]>();
+    return buildDescendantSlugMap(catData.tree);
+  }, [catData]);
+
+  // UI-only states
+  const [searchQuery, setSearchQuery] = useState(urlQ);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState([0, 2000]);
   const [sortBy, setSortBy] = useState("newest");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showFilters, setShowFilters] = useState(false);
 
-  // sync initial from URL (?q, ?category)
+  // keep input in sync with URL q (when header changes it)
   useEffect(() => {
-    const q = (searchParams.get("q") || "").trim();
-    const cat = (searchParams.get("category") || "").trim().toLowerCase();
-    if (q) setSearchQuery(q);
-    setSelectedCategorySlug(cat || "all");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // only on mount
+    setSearchQuery(urlQ);
+  }, [urlQ]);
 
-  // keep URL updated when search/category changes
-  useEffect(() => {
-    const next = new URLSearchParams(searchParams);
-    if (searchQuery) next.set("q", searchQuery);
-    else next.delete("q");
-    if (selectedCategorySlug && selectedCategorySlug !== "all") next.set("category", selectedCategorySlug);
-    else next.delete("category");
-    setSearchParams(next, { replace: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, selectedCategorySlug]);
+  // Derived: all slugs to include for the selected category (parent + children)
+  const selectedSlugSet: Set<string> = useMemo(() => {
+    if (!urlCat || urlCat === "all") return new Set();
+    const list = descendantMap.get(urlCat) ?? [urlCat];
+    return new Set(list);
+  }, [urlCat, descendantMap]);
 
-  // API params (server category filter via category__slug)
+  // API params (server category filter via category__slug / category__slug__in)
   const params = useMemo(() => {
     const serverOrdering =
       sortBy === "price-low"
@@ -302,13 +322,18 @@ export default function Shop() {
 
     if (serverOrdering) q.ordering = serverOrdering;
 
-    if (searchQuery.trim()) {
-      q.search = searchQuery.trim();
-      q.q = searchQuery.trim();
+    if (urlQ) {
+      q.search = urlQ;
+      q.q = urlQ;
     }
 
-    if (selectedCategorySlug && selectedCategorySlug !== "all") {
-      q["category__slug"] = selectedCategorySlug; // ✅ server-side category filter
+    if (urlCat && urlCat !== "all") {
+      const desc = descendantMap.get(urlCat);
+      if (desc && desc.length > 1) {
+        q["category__slug__in"] = desc.join(",");
+      } else {
+        q["category__slug"] = urlCat;
+      }
     }
 
     // client-side filters
@@ -317,7 +342,7 @@ export default function Shop() {
     if (selectedTags.length) q.tags = selectedTags.join(",");
 
     return q;
-  }, [sortBy, searchQuery, selectedCategorySlug, priceRange, selectedTags]);
+  }, [sortBy, urlQ, urlCat, priceRange, selectedTags, descendantMap]);
 
   // Fetch
   const { data, isLoading, isError } = useProducts(params);
@@ -326,14 +351,19 @@ export default function Shop() {
   // Map to cards
   const allCards: CardProduct[] = useMemo(() => rawItems.map(toCardProduct), [rawItems]);
 
-  // Client-side filtering + sorting
+  // Client-side filtering + sorting (also enforce parent+child when server doesn’t)
   const filteredSortedCards = useMemo(() => {
     const minP = priceRange[0] ?? 0;
     const maxP = priceRange[1] ?? Number.MAX_SAFE_INTEGER;
 
     const filtered = allCards.filter((cp: any) => {
-      if (!localSearchMatch(cp, searchQuery)) return false;
+      if (!localSearchMatch(cp, urlQ)) return false;
       if (!matchesTags(cp, selectedTags)) return false;
+
+      if (selectedSlugSet.size > 0) {
+        const pSlug = (cp as any).categorySlug as string | undefined;
+        if (!pSlug || !selectedSlugSet.has(pSlug)) return false;
+      }
 
       const p = effectivePrice(cp);
       if (p < minP || p > maxP) return false;
@@ -342,7 +372,7 @@ export default function Shop() {
     });
 
     return sortCards(filtered, sortBy);
-  }, [allCards, searchQuery, selectedTags, priceRange, sortBy]);
+  }, [allCards, urlQ, selectedTags, priceRange, sortBy, selectedSlugSet]);
 
   // For QuickView
   const rawById = useMemo(() => {
@@ -376,7 +406,9 @@ export default function Shop() {
       weight: variant?.weight || product.weight || "",
       quantity: 1,
       inStock: variant ? variant.stockCount > 0 : product.inStock,
+      // @ts-expect-error sku/variantId extra
       variantId: variant?.id,
+      // @ts-expect-error ProductCard passes sku
       sku: variant?.sku,
     });
     toast({
@@ -398,21 +430,45 @@ export default function Shop() {
     else setSelectedTags((t) => t.filter((x) => x !== tag));
   };
 
-  /* ----------- FIXED CATEGORY ITEM (single-select) ----------- */
+  // ----- Actions that update URL (source of truth) -----
+  const setCategoryInUrl = (slug: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (slug && slug !== "all") next.set("category", slug);
+    else next.delete("category");
+    setSearchParams(next, { replace: true });
+  };
+
+  const submitLocalSearch = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const next = new URLSearchParams(searchParams);
+    const q = (searchQuery || "").trim();
+    if (q) next.set("q", q);
+    else next.delete("q");
+    setSearchParams(next, { replace: true });
+  };
+
+  /* ----------- Category item (single-select w/ parent & child support) ----------- */
   const CategoryItem = ({ c }: { c: FlatCategory }) => {
-    const isChecked = selectedCategorySlug === c.slug;
+    const isChecked = urlCat === c.slug || (urlCat === "all" && c.slug === "all");
+    const toggle = () => setCategoryInUrl(isChecked ? "all" : c.slug);
     return (
-      <button
-        type="button"
-        onClick={() => setSelectedCategorySlug(isChecked ? "all" : c.slug)}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={toggle}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            toggle();
+          }
+        }}
         className="w-full flex items-center space-x-2 cursor-pointer rounded-md px-2 py-1 hover:bg-accent/50"
         title={c.label}
         aria-pressed={isChecked}
       >
-        {/* Controlled checkbox purely for visuals */}
-        <Checkbox checked={isChecked} onCheckedChange={() => {}} readOnly />
+        <Checkbox checked={isChecked} onCheckedChange={toggle} />
         <span className="text-sm" style={{ paddingLeft: c.depth * 12 }}>{c.label}</span>
-      </button>
+      </div>
     );
   };
 
@@ -424,10 +480,10 @@ export default function Shop() {
         {/* Breadcrumbs */}
         <nav className="text-sm text-muted-foreground mb-6">
           <span>Home</span> <span className="mx-2">/</span> <span className="text-primary">Shop</span>
-          {selectedCategorySlug !== "all" && (
+          {urlCat !== "all" && (
             <>
               <span className="mx-2">/</span>
-              <span className="text-primary capitalize">{selectedCategorySlug.replace(/-/g, " ")}</span>
+              <span className="text-primary capitalize">{urlCat.replace(/-/g, " ")}</span>
             </>
           )}
         </nav>
@@ -438,14 +494,14 @@ export default function Shop() {
             <div className="bg-card p-6 rounded-lg border border-border">
               <h3 className="font-semibold text-lg mb-4">Filters</h3>
 
-              {/* Category (API-driven tree with fallback) */}
+              {/* Category */}
               <div className="space-y-3 mb-6">
                 <div className="flex items-center justify-between">
                   <h4 className="font-medium">Category</h4>
                   {catsLoading && <span className="text-xs text-muted-foreground">Loading…</span>}
                 </div>
                 {flatCats.map((c) => (
-                  <CategoryItem key={c.slug} c={c} />
+                  <CategoryItem key={`${c.slug}-${c.depth}`} c={c} />
                 ))}
               </div>
 
@@ -479,15 +535,18 @@ export default function Shop() {
           <div className="lg:col-span-3">
             {/* Search & Sort */}
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <div className="relative flex-1">
+              <form onSubmit={submitLocalSearch} className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <Input
                   placeholder="Search products..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
+                  aria-label="Search products"
                 />
-              </div>
+                {/* hidden button ensures Enter on mobile submits */}
+                <button type="submit" className="hidden" aria-hidden="true" />
+              </form>
 
               <div className="flex gap-2 items-center">
                 <Button variant="outline" size="sm" className="lg:hidden" onClick={() => setShowFilters(!showFilters)}>
@@ -536,7 +595,7 @@ export default function Shop() {
               <p className="text-muted-foreground mb-6">
                 Showing {filteredSortedCards.length} product(s)
                 {typeof (data as any)?.count === "number" ? ` (of ${(data as any).count})` : ""}
-                {selectedCategorySlug !== "all" ? ` in “${selectedCategorySlug.replace(/-/g, " ")}”` : ""}
+                {urlCat !== "all" ? ` in “${urlCat.replace(/-/g, " ")}”` : ""}
               </p>
             )}
 

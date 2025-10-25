@@ -36,6 +36,36 @@ function normalizeUrl(raw?: string): string {
   return full;
 }
 
+/* ---------- Expected Delivery helpers ---------- */
+// Business window: tweak as per your SLA
+const MIN_BIZ_DAYS = 3;
+const MAX_BIZ_DAYS = 7;
+
+function isSunday(d: Date) {
+  return d.getDay() === 0;
+}
+function addBusinessDays(from: Date, days: number) {
+  const d = new Date(from);
+  let added = 0;
+  while (added < days) {
+    d.setDate(d.getDate() + 1);
+    if (!isSunday(d)) added += 1;
+  }
+  return d;
+}
+function formatDate(d: Date) {
+  try {
+    return d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+  } catch {
+    return d.toDateString();
+  }
+}
+function getDeliveryWindow(from: Date = new Date()) {
+  const start = addBusinessDays(from, MIN_BIZ_DAYS);
+  const end = addBusinessDays(from, MAX_BIZ_DAYS);
+  return { start, end, label: `${formatDate(start)} – ${formatDate(end)}` };
+}
+
 type OrderItem = {
   id: number;
   name: string;
@@ -91,6 +121,9 @@ export default function OrderSuccess() {
 
   const { customer, items, totals, gateway } = state;
 
+  // Compute ETA once (based on "now"; if you store an order date, use that)
+  const eta = getDeliveryWindow();
+
   const openPrintInvoice = () => {
     // Prepare rows with normalized images
     const rowsHtml = items
@@ -127,6 +160,7 @@ export default function OrderSuccess() {
     .totals td{border:none;padding:6px 8px}
     .right{text-align:right}
     .muted{color:#666}
+    .pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#eef6ff;border:1px solid #d7e9ff;color:#1e3a8a;font-size:12px}
     .no-border{border:none !important}
   </style>
 </head>
@@ -134,6 +168,9 @@ export default function OrderSuccess() {
   <h1>Invoice</h1>
   <div class="muted">Payment: ${(gateway?.provider || "-").toUpperCase()} ${gateway?.paymentId ? `• ${gateway.paymentId}` : ""}</div>
   <div class="muted">Order ID: ${gateway?.orderId || "-"}</div>
+  <div class="muted" style="margin-top:6px">Expected delivery:
+    <span class="pill">${formatDate(eta.start)} – ${formatDate(eta.end)}</span>
+  </div>
   <div style="margin-top:12px">
     <div><strong>${customer.firstName} ${customer.lastName}</strong></div>
     <div>${customer.address}, ${customer.city}, ${customer.state} ${customer.zipCode}</div>
@@ -175,9 +212,16 @@ export default function OrderSuccess() {
   };
 
   const downloadInvoiceJSON = () => {
-    const blob = new Blob([JSON.stringify({ customer, items, totals, gateway }, null, 2)], {
-      type: "application/json",
-    });
+    const blob = new Blob(
+      [
+        JSON.stringify(
+          { customer, items, totals, gateway, eta: { start: eta.start.toISOString(), end: eta.end.toISOString() } },
+          null,
+          2
+        ),
+      ],
+      { type: "application/json" }
+    );
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -202,6 +246,14 @@ export default function OrderSuccess() {
               Payment: <strong>{(gateway?.provider || "").toUpperCase() || "—"}</strong>
               {gateway?.paymentId ? ` • ${gateway.paymentId}` : ""}
               {gateway?.orderId ? ` • Order: ${gateway.orderId}` : ""}
+            </div>
+
+            {/* ETA pill */}
+            <div className="text-sm">
+              <span className="text-muted-foreground mr-2">Expected delivery:</span>
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full border bg-accent/40 text-foreground">
+                {eta.label}
+              </span>
             </div>
 
             <div className="grid sm:grid-cols-2 gap-6">

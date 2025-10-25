@@ -1,5 +1,5 @@
 // src/pages/Cart.tsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/Footer";
@@ -21,23 +21,43 @@ function normalizeImage(src?: string) {
   return src.startsWith("/") ? src : `/${src}`;
 }
 
+const rowKey = (i: CartLine) => `${i.id}-${i.weight}-${i.variantId ?? "na"}`;
+
 export default function Cart() {
   const navigate = useNavigate();
   const [cartItems, setCartItems] = useState<CartLine[]>([]);
   const [couponCode, setCouponCode] = useState("");
 
+  // Live input values per-row (string so the user can type freely)
+  const [quantities, setQuantities] = useState<Record<string, string>>({});
+
+  // Guards to avoid double-commit on Enter (Enter triggers blur)
+  const skipNextBlurRef = useRef<Record<string, boolean>>({});
+  // Cache last quantity we actually wrote to storage to prevent duplicate writes
+  const lastCommittedRef = useRef<Record<string, number>>({});
+
+  const sync = () => {
+    const items = getItems();
+    setCartItems(items);
+    setQuantities(Object.fromEntries(items.map(i => [rowKey(i), String(i.quantity)])));
+    lastCommittedRef.current = Object.fromEntries(items.map(i => [rowKey(i), i.quantity]));
+  };
+
   useEffect(() => {
-    setCartItems(getItems());
+    sync();
   }, []);
 
-  const sync = () => setCartItems(getItems());
-
-  const updateQuantity = (id: number, weight: string, newQuantity: number, variantId?: number) => {
-    setQty(id, weight, newQuantity, variantId);
-    sync();
-    if (newQuantity <= 0) {
-      toast({ title: "Item Removed", description: "Item removed from your cart." });
+  const updateQuantityButtons = (item: CartLine, delta: number) => {
+    const key = rowKey(item);
+    const next = Math.max(0, (lastCommittedRef.current[key] ?? item.quantity) + delta);
+    if (next === 0) {
+      removeItem(item.id, item.weight, item.variantId);
+      return;
     }
+    setQty(item.id, item.weight, next, item.variantId);
+    lastCommittedRef.current[key] = next;
+    setQuantities(prev => ({ ...prev, [key]: String(next) }));
+    sync();
   };
 
   const removeItem = (id: number, weight: string, variantId?: number) => {
@@ -50,6 +70,45 @@ export default function Cart() {
     if (couponCode.trim()) {
       toast({ title: "Coupon Applied", description: `Coupon "${couponCode}" applied.` });
     }
+  };
+
+  const handleQtyChange = (key: string, val: string) => {
+    // Allow empty string and digits only while typing
+    if (/^\d*$/.test(val)) {
+      setQuantities(prev => ({ ...prev, [key]: val }));
+    }
+  };
+
+  const commitQty = (item: CartLine) => {
+    const key = rowKey(item);
+    const raw = quantities[key];
+
+    // If empty, reset to current cart quantity
+    if (!raw?.length) {
+      setQuantities(prev => ({ ...prev, [key]: String(item.quantity) }));
+      return;
+    }
+
+    const n = Math.floor(Number(raw));
+    if (!Number.isFinite(n)) {
+      toast({ title: "Invalid quantity", description: "Please enter a number.", variant: "destructive" });
+      setQuantities(prev => ({ ...prev, [key]: String(item.quantity) }));
+      return;
+    }
+
+    const clamped = Math.max(0, Math.min(9999, n));
+
+    // Idempotency: if this equals the last committed value, do nothing
+    if (lastCommittedRef.current[key] === clamped) return;
+
+    if (clamped === 0) {
+      removeItem(item.id, item.weight, item.variantId);
+      return;
+    }
+
+    setQty(item.id, item.weight, clamped, item.variantId);
+    lastCommittedRef.current[key] = clamped;
+    sync();
   };
 
   const subtotal = useMemo(
@@ -104,8 +163,11 @@ export default function Cart() {
           <div className="lg:col-span-2 space-y-4">
             {cartItems.map((item) => {
               const imgSrc = normalizeImage(item.image);
+              const key = rowKey(item);
+              const value = quantities[key] ?? String(item.quantity);
+
               return (
-                <div key={`${item.id}-${item.weight}-${item.variantId ?? "na"}`} className="bg-card p-3 sm:p-6 rounded-lg border border-border">
+                <div key={key} className="bg-card p-3 sm:p-6 rounded-lg border border-border">
                   <div className="flex flex-col sm:flex-row gap-4">
                     <div className="w-full sm:w-24 h-40 sm:h-24 bg-muted/50 rounded-lg overflow-hidden flex-shrink-0">
                       <img
@@ -144,22 +206,51 @@ export default function Cart() {
                         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                           <div className="flex items-center justify-between sm:justify-start">
                             <span className="text-sm text-muted-foreground sm:hidden">Quantity:</span>
-                            <div className="flex items-center border border-border rounded-lg">
+
+                            <div className="flex items-center border border-border rounded-lg overflow-hidden">
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => updateQuantity(item.id, item.weight, item.quantity - 1, item.variantId)}
-                                disabled={item.quantity <= 1}
+                                onClick={() => updateQuantityButtons(item, -1)}
+                                disabled={(lastCommittedRef.current[key] ?? item.quantity) <= 1}
                                 className="h-8 w-8 p-0"
+                                aria-label="Decrease quantity"
                               >
                                 <Minus className="w-3 h-3" />
                               </Button>
-                              <span className="px-3 py-1 font-medium text-sm">{item.quantity}</span>
+
+                              <Input
+                                inputMode="numeric"
+                                type="number"
+                                min={0}
+                                max={9999}
+                                className="w-16 h-8 text-center border-0 focus-visible:ring-0"
+                                value={value}
+                                onChange={(e) => handleQtyChange(key, e.target.value)}
+                                onBlur={() => {
+                                  if (skipNextBlurRef.current[key]) {
+                                    skipNextBlurRef.current[key] = false;
+                                    return;
+                                  }
+                                  commitQty(item);
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    skipNextBlurRef.current[key] = true;
+                                    commitQty(item);
+                                    (e.currentTarget as HTMLInputElement).blur();
+                                  }
+                                }}
+                                aria-label="Quantity"
+                              />
+
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => updateQuantity(item.id, item.weight, item.quantity + 1, item.variantId)}
+                                onClick={() => updateQuantityButtons(item, +1)}
                                 className="h-8 w-8 p-0"
+                                aria-label="Increase quantity"
                               >
                                 <Plus className="w-3 h-3" />
                               </Button>
@@ -168,7 +259,9 @@ export default function Cart() {
 
                           <div className="flex justify-between sm:justify-end">
                             <span className="text-sm text-muted-foreground sm:hidden">Total:</span>
-                            <span className="text-lg font-bold text-primary">₹{item.price * item.quantity}</span>
+                            <span className="text-lg font-bold text-primary">
+                              ₹{item.price * item.quantity}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -188,7 +281,7 @@ export default function Cart() {
           </div>
 
           <div className="space-y-4 sm:space-y-6 order-first lg:order-last">
-            <div className="bg-card p-4 sm:p-6 rounded-lg border border-border">
+            {/* <div className="bg-card p-4 sm:p-6 rounded-lg border border-border">
               <h3 className="font-semibold mb-4 text-base sm:text-lg">Apply Coupon</h3>
               <div className="flex flex-col sm:flex-row gap-2">
                 <Input
@@ -202,7 +295,7 @@ export default function Cart() {
                 </Button>
               </div>
               <p className="text-sm text-muted-foreground mt-2">Try "WELCOME10" for 10% off</p>
-            </div>
+            </div> */}
 
             <div className="bg-card p-4 sm:p-6 rounded-lg border border-border">
               <h3 className="font-semibold text-base sm:text-lg mb-4">Order Summary</h3>

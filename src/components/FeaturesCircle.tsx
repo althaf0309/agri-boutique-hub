@@ -4,9 +4,9 @@ const features = [
   { id: 1, title: "100% Organic", description: "Certified organic products for healthy living", icon: Leaf,  color: "text-accent" },
   { id: 2, title: "Farm Fresh",  description: "Direct from sustainable farms",                   icon: Truck, color: "text-primary" },
   { id: 3, title: "Pesticide Free", description: "Natural & chemical-free",                       icon: Shield, color: "text-accent" },
-  { id: 4, title: "Better Food Brighter Future", description: "Eat well Live well. Leave well ",  icon: Snowflake, color: "text-primary" },
+  { id: 4, title: "Better Food Brighter Future", description: "Eat well Live well",  icon: Snowflake, color: "text-primary" },
   { id: 5, title: "Freash. Local. Organic ", description: "Closer. Fresher. Better",              icon: Clock, color: "text-highlight" },
-  { id: 6, title: "Eat clean, Live Green", description: "Wholesome organic choices for a healthier you", icon: RotateCcw, color: "text-secondary" }
+  { id: 6, title: "Eat clean, Live Green", description: "Wholesome organic choices for a healthier", icon: RotateCcw, color: "text-secondary" }
 ];
 
 export default function FeaturesCircle() {

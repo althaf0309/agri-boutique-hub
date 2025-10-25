@@ -1,4 +1,3 @@
-// src/components/product/ImageUpload.tsx
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Upload, X, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,6 +15,7 @@ interface ProductImage {
 interface ImageUploadProps {
   images: ProductImage[];
   onImagesChange: (images: ProductImage[]) => void;
+  /** Optional: if provided, parent uploads files to server */
   onUpload?: (files: File[]) => Promise<void>;
   productId?: number;
   maxSizeMB?: number;
@@ -47,11 +47,19 @@ export function ImageUpload({
     const imageFiles = files.filter((f) => f.type.startsWith("image/"));
     const tooLarge = imageFiles.filter((f) => f.size > maxBytes);
     if (imageFiles.length === 0) {
-      toast({ title: "Invalid files", description: "Please select image files only.", variant: "destructive" });
+      toast({
+        title: "Invalid files",
+        description: "Please select image files only.",
+        variant: "destructive",
+      });
       return { ok: false, filtered: [] as File[] };
     }
     if (tooLarge.length) {
-      toast({ title: "File too large", description: `Each image must be ≤ ${maxSizeMB} MB.`, variant: "destructive" });
+      toast({
+        title: "File too large",
+        description: `Each image must be ≤ ${maxSizeMB} MB.`,
+        variant: "destructive",
+      });
       return { ok: false, filtered: [] as File[] };
     }
     return { ok: true, filtered: imageFiles };
@@ -92,8 +100,10 @@ export function ImageUpload({
     setUploading(true);
     try {
       if (onUpload) {
+        // Delegate upload to parent (recommended: server upload in parent)
         await onUpload(filtered);
       } else {
+        // Local preview; parent can upload later
         const newImages = filtered.map((file, idx) => {
           const url = URL.createObjectURL(file);
           createdUrlsRef.current.push(url);
@@ -106,18 +116,31 @@ export function ImageUpload({
         });
 
         const combined = [...images, ...newImages];
+
+        // Ensure exactly one 'primary'
         const hasPrimary = combined.some((im) => im.is_primary);
         if (!hasPrimary && combined.length) combined[0].is_primary = true;
         let seen = false;
         for (const im of combined) {
-          if (im.is_primary && !seen) { seen = true; }
-          else { im.is_primary = false; }
+          if (im.is_primary && !seen) {
+            seen = true;
+          } else {
+            im.is_primary = false;
+          }
         }
+
         onImagesChange(combined);
       }
-      toast({ title: "Images added", description: `${filtered.length} image(s) ready to upload.` });
+      toast({
+        title: "Images added",
+        description: `${filtered.length} image(s) ready to upload.`,
+      });
     } catch {
-      toast({ title: "Upload failed", description: "Failed to upload images.", variant: "destructive" });
+      toast({
+        title: "Upload failed",
+        description: "Failed to upload images.",
+        variant: "destructive",
+      });
     } finally {
       setUploading(false);
     }
@@ -136,6 +159,7 @@ export function ImageUpload({
     }
     const updated = images.filter((_, i) => i !== index);
     if (toRemove?.is_primary && updated.length > 0) {
+      // Promote first remaining image to primary
       updated[0] = { ...updated[0], is_primary: true };
       for (let i = 1; i < updated.length; i++) updated[i].is_primary = false;
     }
@@ -146,7 +170,9 @@ export function ImageUpload({
     <div className="space-y-4">
       <div
         className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
-          dragActive ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-muted-foreground/50"
+          dragActive
+            ? "border-primary bg-primary/5"
+            : "border-muted-foreground/25 hover:border-muted-foreground/50"
         }`}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
@@ -157,14 +183,25 @@ export function ImageUpload({
         aria-label="Upload images"
       >
         <Upload className="h-8 w-8 mx-auto mb-4 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground mb-2">Drag and drop images here, or click to browse</p>
-        <input type="file" multiple accept={accept} onChange={handleChange} className="hidden" id="image-upload" />
+        <p className="text-sm text-muted-foreground mb-2">
+          Drag and drop images here, or click to browse
+        </p>
+        <input
+          type="file"
+          multiple
+          accept={accept}
+          onChange={handleChange}
+          className="hidden"
+          id="image-upload"
+        />
         <Button type="button" variant="outline" size="sm" disabled={uploading} asChild>
           <label htmlFor="image-upload" className="cursor-pointer">
             {uploading ? "Uploading..." : "Add Images"}
           </label>
         </Button>
-        <div className="mt-2 text-xs text-muted-foreground">Max size: {maxSizeMB}MB per image</div>
+        <div className="mt-2 text-xs text-muted-foreground">
+          Max size: {maxSizeMB}MB per image
+        </div>
       </div>
 
       {images.length > 0 && (
@@ -172,26 +209,55 @@ export function ImageUpload({
           {images.map((img, index) => (
             <div key={img.id ?? `${img.image}-${index}`} className="relative group">
               <div className="aspect-square overflow-hidden rounded border">
-                <img src={img.image} alt={`Product image ${index + 1}`} className="w-full h-full object-cover" draggable={false} />
+                <img
+                  src={img.image}
+                  alt={`Product image ${index + 1}`}
+                  className="w-full h-full object-cover"
+                  draggable={false}
+                />
               </div>
 
               <div className="absolute top-2 left-2 flex gap-1">
-                {img.is_primary && <Badge variant="default" className="text-xs">Primary</Badge>}
+                {img.is_primary && (
+                  <Badge variant="default" className="text-xs">
+                    Primary
+                  </Badge>
+                )}
               </div>
 
               <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
                 {!img.is_primary && (
-                  <Button type="button" variant="secondary" size="sm" onClick={() => setPrimary(index)} className="h-6 w-6 p-0" title="Set as primary">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setPrimary(index)}
+                    className="h-6 w-6 p-0"
+                    title="Set as primary"
+                  >
                     <Star className="h-3 w-3" />
                   </Button>
                 )}
-                <Button type="button" variant="destructive" size="sm" onClick={() => removeImage(index)} className="h-6 w-6 p-0" title="Remove image">
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => removeImage(index)}
+                  className="h-6 w-6 p-0"
+                  title="Remove image"
+                >
                   <X className="h-3 w-3" />
                 </Button>
               </div>
 
               {!img.is_primary && (
-                <Button type="button" variant="outline" size="sm" className="absolute bottom-2 left-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setPrimary(index)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="absolute bottom-2 left-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={() => setPrimary(index)}
+                >
                   Set as Primary
                 </Button>
               )}

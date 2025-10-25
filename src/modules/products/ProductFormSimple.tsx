@@ -1,10 +1,10 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { ArrowLeft, Save, Eye, Trash2, RotateCcw, Calendar, Images } from "lucide-react";
+import { ArrowLeft, Save, RotateCcw, Calendar, Images } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,144 +17,107 @@ import { Badge } from "@/components/ui/badge";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 
-// Hooks
+// API hooks
 import { useCreateProduct, useUpdateProduct, useDeleteProduct, useProduct } from "@/api/hooks/products";
 import { useCategories } from "@/api/hooks/categories";
 import { useVendors } from "@/api/hooks/vendors";
 import { useStores } from "@/api/hooks/stores";
 
 // Components
-import { AddVendorDialog } from "@/components/pickers/AddVendorDialog";
-import { AddStoreDialog } from "@/components/pickers/AddStoreDialog";
 import { WeightVariantManager, WeightVariant } from "@/components/product/WeightVariantManager";
 import { ImageUpload } from "@/components/product/ImageUpload";
 import { SpecificationsManager, SpecRow } from "@/components/product/SpecificationsManager";
 
-// API helpers
-import { api, uploadForm } from "@/api/http";
+// API client (axios with auth auto-injected)
+import api, { postMultipart } from "@/api/client";
 
 /* ---------------- helpers ---------------- */
 const toNumberOrUndefined = (v: unknown) => (v === "" || v == null ? undefined : Number(v));
 const toStringOrUndefined = (v: unknown) => (v === "" || v == null ? undefined : String(v));
-const prune = (obj: Record<string, any>) =>
-  Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined));
+const prune = (obj: Record<string, any>) => Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined));
 const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-
-function getNumericIdLoose(maybe: unknown): number | null {
-  const tryNum = (x: any) => {
-    const n = Number(x);
-    return Number.isFinite(n) && n > 0 ? n : null;
-  };
-  const direct = tryNum((maybe as any)?.id ?? maybe);
-  if (direct) return direct;
-  const nests = [
-    (maybe as any)?.data?.id,
-    (maybe as any)?.product?.id,
-    (maybe as any)?.result?.id,
-    (maybe as any)?.results?.[0]?.id,
-  ];
-  for (const c of nests) {
-    const n = tryNum(c);
-    if (n) return n;
-  }
-  return null;
-}
-
-/* ---------------- constants ---------------- */
-const COUNTRIES = [
-  { code: "IN", name: "India" },
-  { code: "US", name: "United States" },
-  { code: "CN", name: "China" },
-  { code: "BR", name: "Brazil" },
-  { code: "MX", name: "Mexico" },
-  { code: "TH", name: "Thailand" },
-  { code: "VN", name: "Vietnam" },
-  { code: "PH", name: "Philippines" },
-];
-
-const UOM_OPTIONS = [
-  { value: "PCS", label: "Pieces (PCS)" },
-  { value: "G", label: "Grams (G)" },
-  { value: "KG", label: "Kilograms (KG)" },
-  { value: "ML", label: "Milliliters (ML)" },
-  { value: "L", label: "Liters (L)" },
-  { value: "BUNDLE", label: "Bundle" },
-];
+const toIdNumber = (v: unknown): number | undefined => {
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? n : undefined;
+};
+const vKey = (w?: string, u?: string) => `${String(w ?? "").trim()}|${String(u ?? "").trim().toUpperCase()}`;
 
 /* ---------------- schema ---------------- */
-const strToIntOrNull = z.preprocess((v) => {
-  if (v === "" || v === "none" || v == null) return null;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : v;
-}, z.number().int().nullable());
-
-// backend requires category_id → make it required positive int (validation happens on submit)
-const requiredId = z.preprocess((v) => {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : v;
-}, z.number().int().min(1, "Category is required"));
-
 const emptyToNull = z.preprocess((v) => (v === "" ? null : v), z.string().nullable().optional());
+const requiredNumber = z.preprocess((v) => (v === "" || v == null ? undefined : Number(v)), z.number());
 
-const formSchema = z.object({
-  mode: z.preprocess(
-    (v) => (v === undefined || v === null || v === "" ? "grocery" : v),
-    z.enum(["standard", "grocery"])
-  ),
+const formSchema = z
+  .object({
+    mode: z.preprocess((v) => (v == null || v === "" ? "grocery" : v), z.enum(["standard", "grocery"])),
+    name: z.string().min(1, "Product name is required"),
+    description: z.string().optional(),
+    category_id: requiredNumber,
 
-  name: z.string().min(1, "Product name is required"),
-  description: z.string().optional(),
+    vendor_id: z.preprocess((v) => (v === "" || v == null ? null : Number(v)), z.number().nullable().optional()),
+    store_id: z.preprocess((v) => (v === "" || v == null ? null : Number(v)), z.number().nullable().optional()),
 
-  category_id: requiredId, // <- REQUIRED ON SUBMIT
-  vendor_id:   strToIntOrNull.optional(),
-  store_id:    strToIntOrNull.optional(),
+    price_inr: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid price format (use up to 2 decimals)"),
+    price_usd: z.string().nullable().optional(),
+    aed_pricing_mode: z.enum(["STATIC", "GOLD"]).default("STATIC"),
+    price_aed_static: z.string().nullable().optional(),
+    discount_percent: z.coerce.number().min(0).max(90).default(0),
+    quantity: z.coerce.number().min(0).default(0),
 
-  price_inr: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid INR price"),
-  price_usd: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid USD price").optional().nullable(),
-  aed_pricing_mode: z.enum(["STATIC", "GOLD"]).default("STATIC"),
-  price_aed_static: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid AED price").optional().nullable(),
-  discount_percent: z.coerce.number().min(0).max(90).default(0),
+    featured: z.boolean().default(false),
 
-  quantity: z.coerce.number().min(0).default(0),
+    origin_country: z.string().default("IN").optional(),
+    grade: z.string().optional(),
+    is_perishable: z.boolean().default(false).optional(),
+    is_organic: z.boolean().default(false).optional(),
 
-  featured: z.boolean().default(false),
-  new_arrival: z.boolean().default(false),
-  hot_deal: z.boolean().default(false),
+    manufacture_date: emptyToNull,
+    shelf_life_days: z.preprocess((v) => {
+      if (v === "" || v == null) return null;
+      const n = Number(v);
+      return Number.isFinite(n) ? n : v;
+    }, z.number().min(0).nullable().optional()),
 
-  // grocery optionals
-  origin_country: z.string().default("IN").optional(),
-  grade: z.string().optional(),
-  is_perishable: z.boolean().default(false).optional(),
-  is_organic: z.boolean().default(false).optional(),
+    default_uom: z.enum(["PCS", "G", "KG", "ML", "L", "BUNDLE"]).default("KG").optional(),
+    default_pack_qty: emptyToNull,
+    hsn_sac: z.string().optional(),
+    gst_rate: z.string().default("0.00").optional(),
+    mrp_price: z.string().default("0.00").optional(),
+    cost_price: z.string().default("0.00").optional(),
 
-  manufacture_date: emptyToNull,
-  shelf_life_days: z.preprocess((v) => {
-    if (v === "" || v == null) return null;
-    const n = Number(v);
-    return Number.isFinite(n) ? n : v;
-  }, z.number().min(0).nullable()).optional(),
+    warranty_months: z.preprocess((v) => {
+      const n = Number(v);
+      return !Number.isFinite(n) || n <= 0 ? 12 : Math.floor(n);
+    }, z.number().int().min(1)).optional(),
 
-  default_uom: z.enum(["PCS", "G", "KG", "ML", "L", "BUNDLE"]).default("KG").optional(),
-  default_pack_qty: emptyToNull,
-  hsn_sac: z.string().optional(),
-  gst_rate: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid GST rate").default("0.00").optional(),
-  mrp_price: z.string().regex(/^\d+(\.\d{1,2})?$/).default("0.00").optional(),
-  cost_price: z.string().regex(/^\d+(\.\d{1,2})?$/).default("0.00").optional(),
-  hot_deal_ends_at: emptyToNull,
-  warranty_months: z.preprocess((v) => (v === "" || v == null ? 0 : v), z.number().min(0)).optional(),
+    is_published: z.boolean().default(true).optional(),
 
-  is_published: z.boolean().default(true).optional(),
+    ingredients: z.string().optional(),
+    allergens: z.string().optional(),
+    nutrition_notes: z.string().optional(),
+    nutrition_facts: z.array(z.object({ name: z.string().min(1), value: z.string().min(1) })).default([]).optional(),
+  })
+  .superRefine((data, ctx) => {
+    const inr = parseFloat(String(data.price_inr || "0"));
+    if (!(inr > 0)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["price_inr"], message: "Price must be greater than 0" });
+    }
+  });
 
-  // --- NEW: Nutrition fields ---
-  ingredients: z.string().optional(),
-  allergens: z.string().optional(),
-  nutrition_notes: z.string().optional(),
-  nutrition_facts: z.array(z.object({
-    name: z.string().min(1),
-    value: z.string().min(1),
-  })).default([]).optional(),
-});
 type FormValues = z.infer<typeof formSchema>;
+
+/* ---------------- types ---------------- */
+type Cat = { id: number; name: string; slug?: string; parent_id?: number | null; parent?: number | { id: number } | null };
+function dedupeBy<T>(rows: T[], keyFn: (r: T) => string) {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const r of rows) {
+    const k = keyFn(r);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(r);
+  }
+  return out;
+}
 
 /* ---------------- component ---------------- */
 export function ProductForm() {
@@ -163,15 +126,53 @@ export function ProductForm() {
   const { toast } = useToast();
   const isEditMode = !!id;
 
+  // refs to force focus/scroll on required elements
+  const nameRef = useRef<HTMLInputElement | null>(null);
+  const priceRef = useRef<HTMLInputElement | null>(null);
+  const parentSelectTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const categoryCardRef = useRef<HTMLDivElement | null>(null);
+
   const { data: vendors = [] } = useVendors();
   const { data: stores = [] } = useStores();
 
-  // Categories (normalized)
   const { data: categoriesData } = useCategories();
-  const categories = categoriesData?.list ?? [];
+  const flatCats: Cat[] = useMemo(() => {
+    const d: any = categoriesData || {};
+    const raw: any[] = Array.isArray(d) ? d : d.list ?? d.results ?? d.items ?? [];
+    return (raw || []).map((c: any) => ({
+      id: Number(c.id),
+      name: String(c.name ?? `#${c.id}`),
+      slug: c.slug,
+      parent_id:
+        typeof c.parent_id === "number"
+          ? c.parent_id
+          : typeof c.parent === "number"
+          ? c.parent
+          : (c.parent && typeof c.parent === "object" && typeof c.parent.id === "number")
+          ? c.parent.id
+          : null,
+    })) as Cat[];
+  }, [categoriesData]);
+
+  const parents = useMemo(() => flatCats.filter((c) => !c.parent_id), [flatCats]);
+  const childrenByParent = useMemo(() => {
+    const m = new Map<number, Cat[]>();
+    flatCats.forEach((c) => {
+      if (!c.parent_id) return;
+      if (!m.has(c.parent_id)) m.set(c.parent_id, []);
+      m.get(c.parent_id)!.push(c);
+    });
+    m.forEach((arr) => arr.sort((a, b) => a.name.localeCompare(b.name)));
+    return m;
+  }, [flatCats]);
+
+  const byId = useMemo(() => {
+    const m = new Map<number, Cat>();
+    flatCats.forEach((c) => m.set(c.id, c));
+    return m;
+  }, [flatCats]);
 
   const productQ = useProduct(isEditMode ? Number(id) : undefined);
-
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
@@ -182,8 +183,15 @@ export function ProductForm() {
   const [specs, setSpecs] = useState<SpecRow[]>([]);
   const [showDescPreview, setShowDescPreview] = useState(false);
 
+  const [parentCatId, setParentCatId] = useState<number | null>(null);
+  const [childCatId, setChildCatId] = useState<number | null>(null);
+
   const userEditedInrRef = useRef(false);
   const lastAutoInrRef = useRef<string | null>(null);
+
+  // Remember server's original variants (key <-> id) to turn inserts into updates
+  const originalKeyToIdRef = useRef<Map<string, number>>(new Map());
+  const originalIdToKeyRef = useRef<Map<number, string>>(new Map());
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -193,7 +201,7 @@ export function ProductForm() {
       mode,
       name: "",
       description: "",
-      category_id: null as any, // force user to pick
+      category_id: 0 as any,
       vendor_id: null,
       store_id: null,
       price_inr: "0.00",
@@ -203,8 +211,6 @@ export function ProductForm() {
       discount_percent: 0,
       quantity: 0,
       featured: false,
-      new_arrival: false,
-      hot_deal: false,
       origin_country: "IN",
       grade: "",
       is_perishable: false,
@@ -217,8 +223,7 @@ export function ProductForm() {
       gst_rate: "0.00",
       mrp_price: "0.00",
       cost_price: "0.00",
-      hot_deal_ends_at: null,
-      warranty_months: 0,
+      warranty_months: 12,
       is_published: true,
       ingredients: "",
       allergens: "",
@@ -227,17 +232,33 @@ export function ProductForm() {
     } as any,
   });
 
+  // Better UX: focus/scroll to the exact control that failed
+  const focusRequired = (field: "name" | "category" | "price") => {
+    if (field === "name" && nameRef.current) {
+      nameRef.current.focus();
+      nameRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    if (field === "price" && priceRef.current) {
+      priceRef.current.focus();
+      priceRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    if (field === "category") {
+      if (categoryCardRef.current) categoryCardRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (parentSelectTriggerRef.current) parentSelectTriggerRef.current.focus();
+    }
+  };
+
   const handleModeChange = (m: "standard" | "grocery") => {
     setMode(m);
-    form.setValue("mode", m, { shouldDirty: true, shouldValidate: true });
+    form.setValue("mode", m, { shouldDirty: true, shouldValidate: false });
   };
 
   // watches
   const watchedName = form.watch("name");
-  const watchedAedMode = form.watch("aed_pricing_mode");
   const basePrice = parseFloat(form.watch("price_inr") || "0");
   const watchedDiscount = form.watch("discount_percent");
-
   const watchedManufactureDate = form.watch("manufacture_date" as any);
   const watchedShelfLife = form.watch("shelf_life_days" as any);
   const suggestedBestBefore =
@@ -245,7 +266,7 @@ export function ProductForm() {
       ? new Date(new Date(watchedManufactureDate as any).getTime() + Number(watchedShelfLife || 0) * 86400000).toLocaleDateString()
       : null;
 
-  // auto INR from variants
+  // Auto-calc INR from variants
   useEffect(() => {
     if (userEditedInrRef.current) return;
     const nums: number[] = [];
@@ -256,7 +277,7 @@ export function ProductForm() {
     if (nums.length === 0) {
       const current = form.getValues("price_inr") || "0.00";
       if (!current || current === "0" || current === "0.00" || current === lastAutoInrRef.current) {
-        form.setValue("price_inr", "0.00", { shouldDirty: true, shouldValidate: true });
+        form.setValue("price_inr", "0.00", { shouldDirty: true, shouldValidate: false });
         lastAutoInrRef.current = "0.00";
       }
       return;
@@ -265,77 +286,123 @@ export function ProductForm() {
     const next = picked.toFixed(2);
     const current = form.getValues("price_inr") || "0.00";
     if (current !== next) {
-      form.setValue("price_inr", next, { shouldDirty: true, shouldValidate: true });
+      form.setValue("price_inr", next, { shouldDirty: true, shouldValidate: false });
       lastAutoInrRef.current = next;
     }
-  }, [weightVariants]); // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weightVariants]);
+
+  // Auto-sum total qty
+  useEffect(() => {
+    const totalStock = (weightVariants || []).reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
+    form.setValue("quantity", totalStock, { shouldDirty: true, shouldValidate: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weightVariants]);
 
   /* ---------- load product (edit) ---------- */
+  const hydratedRef = useRef(false);
+
   useEffect(() => {
-    if (!isEditMode || !productQ.data) return;
+    if (!isEditMode || !productQ.data || hydratedRef.current) return;
     const p: any = productQ.data;
 
-    form.reset({
-      mode: p?.origin_country ? "grocery" : "standard",
-      name: p.name ?? "",
-      description: p.description ?? "",
-      category_id: p.category?.id ?? null,
-      vendor_id: p.vendor?.id ?? null,
-      store_id: p.store?.id ?? null,
-      price_inr: String(p.price_inr ?? "0.00"),
-      price_usd: String(p.price_usd ?? "0.00"),
-      aed_pricing_mode: p.aed_pricing_mode ?? "STATIC",
-      price_aed_static: String(p.price_aed_static ?? "0.00"),
-      discount_percent: Number(p.discount_percent ?? 0),
-      quantity: Number(p.quantity ?? 0),
-      featured: !!p.featured,
-      new_arrival: !!p.new_arrival,
-      hot_deal: !!p.hot_deal,
-      origin_country: p.origin_country ?? "IN",
-      grade: p.grade ?? "",
-      is_perishable: !!p.is_perishable,
-      is_organic: !!p.is_organic,
-      manufacture_date: p.manufacture_date ?? null,
-      shelf_life_days: p.shelf_life_days ?? null,
-      default_uom: p.default_uom ?? "KG",
-      default_pack_qty: p.default_pack_qty != null ? String(p.default_pack_qty) : null,
-      hsn_sac: p.hsn_sac ?? "",
-      gst_rate: p.gst_rate != null ? String(p.gst_rate) : "0.00",
-      mrp_price: p.mrp_price != null ? String(p.mrp_price) : "0.00",
-      cost_price: p.cost_price != null ? String(p.cost_price) : "0.00",
-      hot_deal_ends_at: p.hot_deal_ends_at ?? null,
-      warranty_months: p.warranty_months ?? 0,
-      is_published: !!p.is_published,
-      ingredients: p.ingredients ?? "",
-      allergens: p.allergens ?? "",
-      nutrition_notes: p.nutrition_notes ?? "",
-      nutrition_facts: Array.isArray(p.nutrition_facts)
-        ? p.nutrition_facts
-        : (p.nutrition_facts && typeof p.nutrition_facts === "object"
-            ? Object.entries(p.nutrition_facts).map(([name, value]) => ({ name, value: String(value) }))
-            : []),
-    } as any);
+    // Preselect categories
+    const currentCatId: number | null = p?.category?.id ?? null;
+    let nextParent: number | null = null;
+    let nextChild: number | null = null;
+    if (currentCatId && byId.size) {
+      const current = byId.get(currentCatId);
+      if (current?.parent_id) {
+        nextParent = current.parent_id;
+        nextChild = current.id;
+      } else {
+        nextParent = current?.id ?? null;
+        nextChild = null;
+      }
+    }
+    setParentCatId(nextParent);
+    setChildCatId(nextChild);
+
+    form.reset(
+      {
+        mode: p?.origin_country ? "grocery" : "standard",
+        name: p.name ?? "",
+        description: p.description ?? "",
+        category_id: (nextChild ?? nextParent) as any,
+        vendor_id: p.vendor?.id ?? null,
+        store_id: p.store?.id ?? null,
+        price_inr: String(p.price_inr ?? "0.00"),
+        price_usd: String(p.price_usd ?? "0.00"),
+        aed_pricing_mode: p.aed_pricing_mode ?? "STATIC",
+        price_aed_static: String(p.price_aed_static ?? "0.00"),
+        discount_percent: Number(p.discount_percent ?? 0),
+        quantity: Number(p.quantity ?? 0),
+        featured: !!p.featured,
+        origin_country: p.origin_country ?? "IN",
+        grade: p.grade ?? "",
+        is_perishable: !!p.is_perishable,
+        is_organic: !!p.is_organic,
+        manufacture_date: p.manufacture_date ?? null,
+        shelf_life_days: p.shelf_life_days ?? null,
+        default_uom: p.default_uom ?? "KG",
+        default_pack_qty: p.default_pack_qty != null ? String(p.default_pack_qty) : null,
+        hsn_sac: p.hsn_sac ?? "",
+        gst_rate: p.gst_rate != null ? String(p.gst_rate) : "0.00",
+        mrp_price: p.mrp_price != null ? String(p.mrp_price) : "0.00",
+        cost_price: p.cost_price != null ? String(p.cost_price) : "0.00",
+        warranty_months: (() => {
+          const n = Number(p.warranty_months);
+          return !Number.isFinite(n) || n <= 0 ? 12 : Math.floor(n);
+        })(),
+        is_published: !!p.is_published,
+        ingredients: p.ingredients ?? "",
+        allergens: p.allergens ?? "",
+        nutrition_notes: p.nutrition_notes ?? "",
+        nutrition_facts: Array.isArray(p.nutrition_facts)
+          ? p.nutrition_facts
+          : (p.nutrition_facts && typeof p.nutrition_facts === "object"
+              ? Object.entries(p.nutrition_facts).map(([name, value]) => ({ name, value: String(value) }))
+              : []),
+      } as any,
+      { keepErrors: false, keepDirty: false }
+    );
 
     setMode(p?.origin_country ? "grocery" : "standard");
 
+    // Images
     const ims = Array.isArray(p.images)
       ? p.images.map((im: any) => ({ id: im.id, image: im.image, is_primary: !!im.is_primary }))
       : [];
     setImages(ims);
 
+    // Variants — snapshot original (key <-> id)
+    originalKeyToIdRef.current.clear();
+    originalIdToKeyRef.current.clear();
+
     if (Array.isArray(p.variants)) {
-      const mapped: WeightVariant[] = p.variants.map((v: any) => ({
-        id: String(v.id),
-        weight: v.weight_value ? String(v.weight_value) : "",
-        unit: v.weight_unit || "KG",
-        price: v.price_override != null ? String(v.price_override) : String(p.price_inr ?? "0.00"),
-        stock: Number(v.quantity ?? 0),
-        sku: v.sku,
-        isActive: !!v.is_active,
-      }));
-      setWeightVariants(mapped);
+      const mapped: WeightVariant[] = p.variants.map((v: any) => {
+        const key = vKey(v.weight_value, v.weight_unit);
+        const vid = Number(v.id);
+        if (Number.isFinite(vid)) {
+          originalKeyToIdRef.current.set(key, vid);
+          originalIdToKeyRef.current.set(vid, key);
+        }
+        return {
+          id: String(v.id ?? ""),
+          weight: v.weight_value ? String(v.weight_value) : "",
+          unit: v.weight_unit || "KG",
+          price: v.price_override != null ? String(v.price_override) : String(p.price_inr ?? "0.00"),
+          stock: Number(v.quantity ?? 0),
+          sku: v.sku,
+          isActive: !!v.is_active,
+        };
+      });
+      setWeightVariants(dedupeBy(mapped, (r) => vKey(r.weight, r.unit)));
+    } else {
+      setWeightVariants([]);
     }
 
+    // Specs
     const rows = Array.isArray(p.specifications)
       ? p.specifications.map((r: any) => ({
           id: r.id,
@@ -348,8 +415,19 @@ export function ProductForm() {
         }))
       : [];
     setSpecs(rows);
+
+    hydratedRef.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEditMode, productQ.data]);
+  }, [isEditMode, productQ.data, byId.size]);
+
+  // keep hidden category_id synced
+  useEffect(() => {
+    const effective = childCatId ?? parentCatId ?? undefined;
+    if (effective != null) {
+      form.setValue("category_id", effective as any, { shouldDirty: true, shouldValidate: false });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parentCatId, childCatId]);
 
   /* ---------- uploads & specs ---------- */
   async function uploadProductImages(productId: number) {
@@ -360,75 +438,119 @@ export function ProductForm() {
       fd.append("product", String(productId));
       fd.append("image", im.file as File);
       fd.append("is_primary", im.is_primary ? "true" : "false");
-      await uploadForm("/product-images/", fd);
+      await postMultipart("/product-images/", fd); // axios (uses Token from localStorage)
     }
   }
 
   async function replaceSpecs(productId: number) {
-    const payload = (specs || []).map((s, idx) => ({
-      group: s.group || "",
-      name: s.name,
-      value: s.value,
-      unit: s.unit || "",
-      is_highlight: !!s.is_highlight,
-      sort_order: Number.isFinite(s.sort_order as any) ? Number(s.sort_order) : idx,
-    }));
-    await api(`/products/${productId}/replace_specifications/`, {
-      method: "PUT",
-      body: JSON.stringify(payload),
-    });
+    const cleaned = dedupeBy(
+      (specs || []).map((s, idx) => ({
+        product: productId,
+        group: s.group || "",
+        name: s.name,
+        value: s.value,
+        unit: s.unit || "",
+        is_highlight: !!s.is_highlight,
+        sort_order: Number.isFinite(s.sort_order as any) ? Number(s.sort_order) : idx,
+      })),
+      (r) => `${(r.group || "").trim().toLowerCase()}|${r.name.trim().toLowerCase()}`
+    );
+    if (!cleaned.length) return;
+    await api.put(`/products/${productId}/replace_specifications/`, cleaned);
   }
 
-  // map variants for both inline create and upsert endpoint
-  function mapVariantsForWrite(usingInline: boolean) {
-    const baseInr = String(form.getValues("price_inr") || "0.00");
-    const rows = weightVariants
-      .filter((v) => String(v.weight || "").trim())
-      .map((v) => {
-        const priceStr = (() => {
-          const n = Number((v as any).price);
-          if (Number.isFinite(n)) return n.toFixed(2);
-          const b = Number(baseInr);
-          return Number.isFinite(b) ? b.toFixed(2) : "0.00";
-        })();
+  // Build variants payload (EDIT) with strong duplicate-prevention
+  // Build variants payload (EDIT) with strong duplicate-prevention
+function buildUpsertPayloadFromCurrent(): any[] {
+  const baseInr = String(form.getValues("price_inr") || "0.00");
 
-        return {
-          sku: v.sku || `${slugify(form.getValues("name") || "product")}-${String(v.weight).trim()}${(v.unit || "KG").toLowerCase()}`,
-          weight_value: String(v.weight ?? ""),
-          weight_unit: String(v.unit ?? "KG").toUpperCase(),
-          price: priceStr,
-          stock: Number.isFinite(v.stock as any) ? Number(v.stock) : 0,
-          is_active: !!v.isActive,
-          mrp: String((form.getValues("mrp_price" as any)) ?? ""),
-          min_order_qty: 1,
-          step_qty: 1,
-          ...(usingInline ? {} : { attributes: { Weight: `${v.weight}${(v.unit || "KG").toUpperCase()}` } }),
-        };
-      });
+  // 1) make UI list unique by key
+  const uiUnique = dedupeBy(weightVariants, (v) => vKey(v.weight, v.unit));
 
-    return rows;
+  // 2) map to server payload and inject original id when possible
+  const raw = uiUnique.map((v) => {
+    const priceStr = (() => {
+      const n = Number((v as any).price); // ← fixed (removed "the")
+      if (Number.isFinite(n)) return n.toFixed(2);
+      const b = Number(baseInr);
+      return Number.isFinite(b) ? b.toFixed(2) : "0.00";
+    })();
+    const key = vKey(v.weight, v.unit);
+    const injectedId = toIdNumber(v.id) ?? originalKeyToIdRef.current.get(key);
+    return {
+      id: injectedId,
+      sku:
+        v.sku ||
+        `${slugify(form.getValues("name") || "product")}-${String(v.weight).trim()}${(v.unit || "KG").toLowerCase()}`,
+      weight_value: String(v.weight ?? "").trim(),
+      weight_unit: String(v.unit ?? "KG").toUpperCase(),
+      price: priceStr,
+      stock: Number.isFinite((v as any).stock) ? Number(v.stock) : 0,
+      is_active: !!v.isActive,
+      mrp: String((form.getValues("mrp_price" as any)) ?? ""),
+      min_order_qty: 1,
+      step_qty: 1,
+      attributes: { Weight: `${String(v.weight ?? "").trim()}${String(v.unit ?? "KG").toUpperCase()}` },
+    };
+  });
+
+  // 3) If any duplicate keys still slipped in, reduce → prefer the row bound to the original id
+  const bestOf = new Map<string, any>();
+  for (const it of raw) {
+    const key = vKey(it.weight_value, it.weight_unit);
+    const existing = bestOf.get(key);
+
+    if (!existing) {
+      bestOf.set(key, it);
+      continue;
+    }
+
+    const originalId = originalKeyToIdRef.current.get(key);
+    // Prefer row with original server id, else any with id, else first
+    const score = (x: any) => (toIdNumber(x?.id) === originalId ? 2 : toIdNumber(x?.id) ? 1 : 0);
+    bestOf.set(key, score(it) >= score(existing) ? it : existing);
   }
+
+  return Array.from(bestOf.values());
+}
+gi
 
   async function syncWeightVariants(productId: number) {
-    const items = mapVariantsForWrite(false);
-    if (items.length === 0 || !Number.isFinite(productId)) return;
-    await api(`/products/${productId}/upsert_variants/`, {
-      method: "POST",
-      body: JSON.stringify({ variants: items }),
-    });
+    const variants = buildUpsertPayloadFromCurrent();
+    if (variants.length === 0 || !Number.isFinite(productId)) return;
+    await api.post(`/products/${productId}/upsert_variants/`, { variants });
   }
 
   /* ---------- submit ---------- */
   const onSubmit = async (raw: FormValues) => {
     try {
-      const category_id = Number(raw.category_id);
-      if (!Number.isFinite(category_id) || category_id <= 0) {
+      // Required checks with focus/scroll & friendly text
+      if (!raw.name?.trim()) {
+        toast({ title: "Product name is required", variant: "destructive" });
+        focusRequired("name");
+        return;
+      }
+      const effCat = childCatId ?? parentCatId;
+      if (!Number.isFinite(effCat as any) || (effCat as any) <= 0) {
         form.setError("category_id", { message: "Category is required" });
+        toast({ title: "Please choose a parent and/or subcategory", variant: "destructive" });
+        focusRequired("category");
+        return;
+      }
+      const inrOk = Number(raw.price_inr) > 0;
+      if (!inrOk) {
+        toast({ title: "Price must be greater than 0", variant: "destructive" });
+        focusRequired("price");
         return;
       }
 
+      const wm = (() => {
+        const n = Number(raw.warranty_months);
+        return !Number.isFinite(n) || n <= 0 ? 12 : Math.floor(n);
+      })();
+
       const commonPayload = prune({
-        category_id,
+        category_id: effCat!,
         name: toStringOrUndefined(raw.name),
         description: toStringOrUndefined(raw.description),
         vendor_id: raw.vendor_id ?? undefined,
@@ -440,10 +562,8 @@ export function ProductForm() {
         price_aed_static: raw.aed_pricing_mode === "STATIC" ? toStringOrUndefined(raw.price_aed_static) : "0.00",
         discount_percent: toNumberOrUndefined(raw.discount_percent),
         featured: !!raw.featured,
-        new_arrival: !!raw.new_arrival,
-        hot_deal: !!raw.hot_deal,
         is_published: !!raw.is_published,
-
+        warranty_months: wm,
         ingredients: toStringOrUndefined(raw.ingredients),
         allergens: toStringOrUndefined(raw.allergens),
         nutrition_notes: toStringOrUndefined(raw.nutrition_notes),
@@ -471,60 +591,107 @@ export function ProductForm() {
               gst_rate: toStringOrUndefined(raw.gst_rate) ?? "0.00",
               mrp_price: toStringOrUndefined(raw.mrp_price) ?? "0.00",
               cost_price: toStringOrUndefined(raw.cost_price) ?? "0.00",
-              hot_deal_ends_at: raw.hot_deal_ends_at ?? null,
-              warranty_months: toNumberOrUndefined(raw.warranty_months),
               price_usd: "0.00",
               aed_pricing_mode: "STATIC",
               price_aed_static: "0.00",
             })
           : {};
 
-      // include inline variants when creating/updating too (the serializer supports it)
-      const inlineVariants = mapVariantsForWrite(true);
-      const imagesMeta = images.map(im => ({ filename: (im.file as File | undefined)?.name ?? "", is_primary: !!im.is_primary }));
-
-      const payload: any = prune({
-        ...commonPayload,
-        ...groceryPayload,
-        variants: inlineVariants.length ? inlineVariants : undefined,
-        images_meta: imagesMeta.length ? imagesMeta : undefined,
-      });
+      const payloadBase: any = prune({ ...commonPayload, ...groceryPayload });
 
       if (isEditMode) {
-        const updated = await updateProduct.mutateAsync({ id: Number(id), ...payload });
-        const pid = getNumericIdLoose(updated) ?? Number(id);
+        const updated = await updateProduct.mutateAsync({ id: Number(id), ...payloadBase });
+        const pid = Number(id) || Number((updated as any)?.id) || Number((updated as any)?.data?.id);
 
-        if (Number.isFinite(pid)) {
-          if (images.some((im) => im.file)) await uploadProductImages(Number(pid));
-          await replaceSpecs(Number(pid));
-          await syncWeightVariants(Number(pid));
+        try {
+          if (images.some((im) => im.file)) await uploadProductImages(pid);
+          try {
+            await replaceSpecs(pid);
+          } catch {
+            toast({ title: "Saved (specs skipped)", description: "Duplicate spec rows were skipped.", variant: "secondary" });
+          }
+          // 🔒 strong no-duplicate upsert
+          await syncWeightVariants(pid);
+
           toast({ title: "Product updated" });
-        } else {
+        } catch (err: any) {
+          console.error("[Product save] error:", err?.response?.data || err?.message || err);
           toast({
-            title: "Product updated",
-            description: "Couldn’t confirm product id for follow-ups. Re-open product to add images/specs.",
+            title: "Update error",
+            description: err?.response?.data?.detail || err.message || "Please check your permissions.",
+            variant: "destructive",
           });
         }
       } else {
-        const created: any = await createProduct.mutateAsync(payload);
-        const pid = getNumericIdLoose(created);
+        // CREATE → send unique inline variants (OK), then also persist via upsert to guarantee save
+        const inlineVariants = dedupeBy(weightVariants, (v) => vKey(v.weight, v.unit)).map((v) => ({
+          sku:
+            v.sku ||
+            `${slugify(raw.name || "product")}-${String(v.weight).trim()}${(v.unit || "KG").toLowerCase()}`,
+          weight_value: String(v.weight ?? "").trim(),
+          weight_unit: String(v.unit ?? "KG").toUpperCase(),
+          price: (() => {
+            const n = Number(v.price);
+            const b = Number(raw.price_inr || "0");
+            if (Number.isFinite(n)) return n.toFixed(2);
+            return Number.isFinite(b) ? b.toFixed(2) : "0.00";
+          })(),
+          stock: Number.isFinite(v.stock as any) ? Number(v.stock) : 0,
+          is_active: !!v.isActive,
+          mrp: String(raw.mrp_price ?? ""),
+          min_order_qty: 1,
+          step_qty: 1,
+          attributes: { Weight: `${String(v.weight ?? "").trim()}${String(v.unit ?? "KG").toUpperCase()}` },
+        }));
 
-        if (pid != null) {
-          if (images.length) await uploadProductImages(pid);
-          if (specs.length) await replaceSpecs(pid);
-          await syncWeightVariants(Number(pid));
-          toast({ title: raw.mode === "grocery" ? "Grocery product created" : "Product created" });
+        const created: any = await createProduct.mutateAsync({
+          ...payloadBase,
+          variants: inlineVariants.length ? inlineVariants : undefined,
+          images_meta: images.map((im) => ({ filename: (im.file as File | undefined)?.name ?? "", is_primary: !!im.is_primary })),
+        });
+
+        const pid = Number((created as any)?.id) || Number((created as any)?.data?.id);
+        if (pid) {
+          try {
+            if (images.length) await uploadProductImages(pid);
+            try {
+              if (specs.length) await replaceSpecs(pid);
+            } catch {
+              toast({ title: "Created (specs skipped)", description: "Duplicate spec rows were skipped.", variant: "secondary" });
+            }
+
+            // ✅ ensure variants are saved & deduped after create as well
+            await syncWeightVariants(pid);
+
+            toast({ title: raw.mode === "grocery" ? "Grocery product created" : "Product created" });
+          } catch (err: any) {
+            console.error("[Product save] error:", err?.response?.data || err?.message || err);
+            toast({
+              title: "Post-create error",
+              description: err?.response?.data?.detail || err.message || "Please check your permissions.",
+              variant: "destructive",
+            });
+          }
+          navigate("/admin/products");
         } else {
           toast({
             title: "Product created",
             description: "Couldn’t read the new product ID from server response. Open it later to add images/specs.",
           });
         }
-        navigate("/admin/products");
       }
-    } catch (e) {
-      console.error(e);
-      toast({ title: "Error", description: "Failed to save product", variant: "destructive" });
+    } catch (e: any) {
+      console.error("[Product save] error:", e?.response?.data || e?.message || e);
+      const msg =
+        e?.response?.data?.detail ||
+        e?.message ||
+        "Please check the highlighted fields.";
+      toast({ title: "Error", description: msg, variant: "destructive" });
+
+      // put the caret where it helps most
+      if (form.formState.errors?.name) focusRequired("name");
+      else if (form.formState.errors?.category_id) focusRequired("category");
+      else if (form.formState.errors?.price_inr) focusRequired("price");
     }
   };
 
@@ -540,10 +707,7 @@ export function ProductForm() {
     }
   };
 
-  const discountedPrice =
-    basePrice && Number(watchedDiscount) > 0 ? basePrice * (1 - Number(watchedDiscount) / 100) : basePrice;
-
-  /* ---------------- render ---------------- */
+  const basePriceNum = Number.isFinite(basePrice) ? basePrice : 0;
   const desc = form.watch("description") || "";
 
   return (
@@ -557,52 +721,49 @@ export function ProductForm() {
             </Button>
             <div className="min-w-0">
               <h1 className="text-lg sm:text-xl font-semibold truncate">
-                {isEditMode ? (mode === "grocery" ? "Edit Grocery Product" : "Edit Product") : (mode === "grocery" ? "Add Grocery Product" : "Add Product")}
+                {isEditMode ? (mode === "grocery" ? "Edit Grocery Product" : "Edit Product") : mode === "grocery" ? "Add Grocery Product" : "Add Product"}
               </h1>
             </div>
           </div>
 
-          {/* mode switcher & actions */}
           <div className="flex items-center gap-3">
             <div className="hidden md:flex items-center gap-2 text-sm">
-              <Button type="button" variant={mode === "standard" ? "default" : "outline"} size="sm" onClick={() => handleModeChange("standard")}>Standard</Button>
-              <Button type="button" variant={mode === "grocery" ? "default" : "outline"} size="sm" onClick={() => handleModeChange("grocery")}>Grocery</Button>
+              <Button type="button" variant={mode === "grocery" ? "default" : "outline"} size="sm" onClick={() => handleModeChange("grocery")}>
+                Grocery
+              </Button>
             </div>
 
             {isEditMode && (
-              <>
-                <Button type="button" variant="outline" size="sm" className="hidden sm:inline-flex">
-                  <Eye className="h-4 w-4" />
-                  <span className="hidden sm:inline">Preview</span>
-                </Button>
-                <Button type="button" variant="outline" size="sm" className="hidden sm:inline-flex" onClick={onDelete}>
-                  <Trash2 className="h-4 w-4" />
-                  <span className="hidden sm:inline">Delete</span>
-                </Button>
-              </>
+              <Button type="button" variant="outline" size="sm" className="hidden sm:inline-flex" onClick={onDelete} title="Delete">
+                🗑️ <span className="hidden sm:inline ml-1">Delete</span>
+              </Button>
             )}
+
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={() => {
-                userEditedInrRef.current = false;
-                lastAutoInrRef.current = null;
-                form.reset({ ...form.getValues(), mode });
+                form.reset({ ...form.getValues(), mode }, { keepErrors: false });
               }}
             >
               <RotateCcw className="h-4 w-4" />
               <span className="hidden sm:inline">Discard</span>
             </Button>
 
-            {/* Guard submit so we never throw ZodError elsewhere */}
             <Button
               type="button"
               size="sm"
               onClick={async () => {
-                const ok = await form.trigger(); // runs zodResolver
+                const ok = await form.trigger();
                 if (!ok) {
-                  toast({ title: "Please fix the highlighted fields", variant: "destructive" });
+                  const errs = form.formState.errors;
+                  const first = Object.keys(errs)[0] as keyof typeof errs | undefined;
+                  let m = "Please fix the highlighted fields";
+                  if (first === "name") { m = "Product name is required"; focusRequired("name"); }
+                  else if (first === "category_id") { m = "Please choose a parent and/or subcategory"; focusRequired("category"); }
+                  else if (first === "price_inr") { m = "Price must be greater than 0"; focusRequired("price"); }
+                  toast({ title: "Validation failed", description: m, variant: "destructive" });
                   return;
                 }
                 await form.handleSubmit(onSubmit)();
@@ -616,21 +777,9 @@ export function ProductForm() {
       </header>
 
       <Form {...form}>
-        {/* keep the discriminator-like field mounted */}
-        <FormField
-          control={form.control}
-          name="mode"
-          render={({ field }) => <input type="hidden" {...field} value={mode} />}
-        />
+        <FormField control={form.control} name="mode" render={({ field }) => <input type="hidden" {...field} value={mode} />} />
 
-        <form
-          id="product-form"
-          className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 p-3 sm:p-6"
-          // prevent default submit (we use guarded "Save" button above)
-          onSubmit={(e) => {
-            e.preventDefault();
-          }}
-        >
+        <form id="product-form" className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 p-3 sm:p-6" onSubmit={(e) => e.preventDefault()}>
           {/* Main */}
           <div className="lg:col-span-8 space-y-4 sm:space-y-6">
             {/* Info */}
@@ -648,7 +797,14 @@ export function ProductForm() {
                         Product Name <span className="text-destructive">*</span>
                       </FormLabel>
                       <FormControl>
-                        <Input {...field} value={field.value ?? ""} placeholder="e.g., Organic Alphonso Mangoes - Premium Grade" />
+                        <Input
+                          {...field}
+                          ref={nameRef}
+                          name="name"
+                          value={field.value ?? ""}
+                          placeholder="e.g., Organic Alphonso Mangoes - Premium Grade"
+                          aria-invalid={!!form.formState.errors.name}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -660,7 +816,6 @@ export function ProductForm() {
                   <code className="bg-muted px-2 py-1 rounded">{slugify(watchedName || "")}</code>
                 </div>
 
-                {/* HTML Description + Preview */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <FormLabel>Description (HTML supported)</FormLabel>
@@ -717,6 +872,11 @@ export function ProductForm() {
                     }));
                     const next = [...images, ...previews];
                     if (!next.some((n) => n.is_primary) && next.length) next[0].is_primary = true;
+                    let seen = false;
+                    for (const im of next) {
+                      if (im.is_primary && !seen) { seen = true; }
+                      else { im.is_primary = false; }
+                    }
                     setImages(next);
                   }}
                   maxSizeMB={10}
@@ -725,80 +885,92 @@ export function ProductForm() {
             </Card>
 
             {/* Category */}
-            <Card>
+            <Card ref={categoryCardRef}>
               <CardHeader>
                 <CardTitle>{mode === "grocery" ? "Grocery Classification" : "Category"}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormItem>
+                    <FormLabel>
+                      Parent Category <span className="text-destructive">*</span>
+                    </FormLabel>
+                    <Select
+                      value={parentCatId ? String(parentCatId) : "0"}
+                      onValueChange={(v) => {
+                        const pid = Number(v);
+                        setParentCatId(pid > 0 ? pid : null);
+                        setChildCatId(null);
+                      }}
+                    >
+                      <FormControl>
+                        <SelectTrigger ref={parentSelectTriggerRef}>
+                          <SelectValue placeholder="Select a parent category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="0">Select…</SelectItem>
+                        {parents.map((c) => (
+                          <SelectItem key={c.id} value={String(c.id)}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {!parentCatId && <p className="text-xs text-muted-foreground mt-1">Pick a parent category first.</p>}
+                  </FormItem>
+
+                  <FormItem>
+                    <FormLabel>Subcategory</FormLabel>
+                    <Select
+                      value={childCatId ? String(childCatId) : "none"}
+                      onValueChange={(v) => {
+                        if (v === "none") setChildCatId(null);
+                        else setChildCatId(Number(v));
+                      }}
+                      disabled={!parentCatId || (childrenByParent.get(parentCatId!) ?? []).length === 0}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue
+                            placeholder={
+                              parentCatId
+                                ? (childrenByParent.get(parentCatId!) ?? []).length
+                                  ? "Select a subcategory"
+                                  : "No subcategories"
+                                : "Select parent first"
+                            }
+                          />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {(childrenByParent.get(parentCatId!) ?? []).map((c) => (
+                          <SelectItem key={c.id} value={String(c.id)}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground mt-1">If you don’t pick a subcategory, the product will be assigned to the parent.</p>
+                  </FormItem>
+                </div>
+
                 <FormField
                   control={form.control}
                   name="category_id"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        Category <span className="text-destructive">*</span>
-                      </FormLabel>
-                      <Select
-                        value={field.value ? String(field.value) : "0"}
-                        onValueChange={(v) => field.onChange(Number(v) > 0 ? Number(v) : null)}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a category" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="0">Select…</SelectItem>
-                          {categories.map((c: any) => (
-                            <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
+                    <input type="hidden" {...field} name="category_id" value={childCatId ?? parentCatId ?? ""} />
                   )}
                 />
-
-                {mode === "grocery" && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="origin_country"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Origin Country</FormLabel>
-                          <Select value={(field.value as any) ?? "IN"} onValueChange={field.onChange}>
-                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                            <SelectContent>
-                              {COUNTRIES.map((c) => <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="grade"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Grade</FormLabel>
-                          <FormControl><Input {...field} value={field.value ?? ""} placeholder="A, AA, AAA, Organic, Premium..." /></FormControl>
-                          <p className="text-xs text-muted-foreground">Quality grade or certification</p>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                )}
               </CardContent>
             </Card>
 
-            {/* Grocery extras */}
+            {/* Grocery variants */}
             {mode === "grocery" && (
               <WeightVariantManager
                 variants={weightVariants}
-                onVariantsChange={setWeightVariants}
+                onVariantsChange={(rows) => setWeightVariants(dedupeBy(rows, (r) => vKey(r.weight, r.unit)))}
                 productName={watchedName || "Product"}
               />
             )}
@@ -806,23 +978,28 @@ export function ProductForm() {
             {/* Pricing */}
             <Card>
               <CardHeader>
-                <CardTitle>{mode === "grocery" ? "Pricing (INR)" : "Pricing"}</CardTitle>
+                <CardTitle>Pricing</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="price_inr"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Price (INR)</FormLabel>
+                        <FormLabel>
+                          Price (₹) <span className="text-destructive">*</span>
+                        </FormLabel>
                         <FormControl>
                           <Input
                             {...field}
+                            ref={priceRef}
+                            name="price_inr"
                             value={field.value ?? ""}
                             type="number"
                             step="0.01"
                             placeholder="0.00"
+                            aria-invalid={!!form.formState.errors.price_inr}
                             onChange={(e) => {
                               userEditedInrRef.current = true;
                               field.onChange(e);
@@ -840,47 +1017,15 @@ export function ProductForm() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Price (USD)</FormLabel>
-                          <FormControl><Input {...field} value={field.value ?? ""} type="number" step="0.01" placeholder="0.00" /></FormControl>
+                          <FormControl>
+                            <Input {...field} value={field.value ?? ""} type="number" step="0.01" placeholder="0.00" />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
                   )}
                 </div>
-
-                <FormField
-                  control={form.control}
-                  name="aed_pricing_mode"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>AED Pricing Mode</FormLabel>
-                      <Select value={(field.value as any) ?? "STATIC"} onValueChange={field.onChange} disabled={mode === "grocery"}>
-                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                        <SelectContent>
-                          <SelectItem value="STATIC">Static Price</SelectItem>
-                          <SelectItem value="GOLD">Gold Based</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {(mode === "standard" || watchedAedMode === "STATIC") && (
-                  <FormField
-                    control={form.control}
-                    name="price_aed_static"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>AED Price (Static)</FormLabel>
-                        <FormControl>
-                          <Input {...field} value={field.value ?? ""} type="number" step="0.01" placeholder="0.00" disabled={mode === "grocery"} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
 
                 <FormField
                   control={form.control}
@@ -903,78 +1048,28 @@ export function ProductForm() {
                   )}
                 />
 
-                {basePrice > 0 && (
+                {Number.isFinite(basePriceNum) && basePriceNum > 0 && (
                   <div className="p-4 bg-muted rounded-lg">
                     <h4 className="font-medium mb-2">Price Preview</h4>
                     <div className="flex items-center gap-4">
                       {Number(watchedDiscount) > 0 ? (
                         <>
-                          <span className="text-lg line-through text-muted-foreground">₹{basePrice.toFixed(2)}</span>
-                          <span className="text-lg font-semibold text-green-600">₹{discountedPrice.toFixed(2)}</span>
+                          <span className="text-lg line-through text-muted-foreground">₹{basePriceNum.toFixed(2)}</span>
+                          <span className="text-lg font-semibold text-green-600">
+                            ₹{(basePriceNum * (1 - Number(watchedDiscount) / 100)).toFixed(2)}
+                          </span>
                           <Badge variant="secondary">{watchedDiscount}% off</Badge>
                         </>
                       ) : (
-                        <span className="text-lg font-semibold">₹{basePrice.toFixed(2)}</span>
+                        <span className="text-lg font-semibold">₹{basePriceNum.toFixed(2)}</span>
                       )}
                     </div>
                   </div>
                 )}
-
-                {mode === "grocery" && (
-                  <>
-                    <div className="grid grid-cols-3 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="mrp_price"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>MRP (₹)</FormLabel>
-                            <FormControl><Input {...field} value={field.value ?? ""} type="number" step="0.01" /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="cost_price"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Cost Price (₹)</FormLabel>
-                            <FormControl><Input {...field} value={field.value ?? ""} type="number" step="0.01" /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="gst_rate"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>GST Rate (%)</FormLabel>
-                            <FormControl><Input {...field} value={field.value ?? ""} type="number" step="0.01" /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <FormField
-                      control={form.control}
-                      name="hsn_sac"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>HSN/SAC Code</FormLabel>
-                          <FormControl><Input {...field} value={field.value ?? ""} placeholder="e.g., 0804 for mangoes" /></FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </>
-                )}
               </CardContent>
             </Card>
 
-            {/* NEW: Nutrition & Ingredients */}
+            {/* Nutrition & Ingredients */}
             <Card>
               <CardHeader>
                 <CardTitle>Nutrition & Ingredients</CardTitle>
@@ -1008,7 +1103,6 @@ export function ProductForm() {
                   )}
                 />
 
-                {/* Nutrition Facts (rows) */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <FormLabel>Nutrition Facts</FormLabel>
@@ -1036,7 +1130,7 @@ export function ProductForm() {
                             <p className="text-sm text-muted-foreground">No nutrition facts yet. Add a few (e.g., Calories, Protein…)</p>
                           )}
                           {rows.map((row: any, idx: number) => (
-                            <div key={idx} className="grid grid-cols-5 gap-2">
+                            <div key={idx} className="grid grid-cols-1 sm:grid-cols-5 gap-2">
                               <Input
                                 placeholder="Name (e.g., Calories)"
                                 value={row?.name ?? ""}
@@ -1045,7 +1139,7 @@ export function ProductForm() {
                                   next[idx] = { ...next[idx], name: e.target.value };
                                   form.setValue("nutrition_facts", next, { shouldDirty: true });
                                 }}
-                                className="col-span-2"
+                                className="sm:col-span-2"
                               />
                               <Input
                                 placeholder="Value (e.g., 120 kcal)"
@@ -1055,7 +1149,7 @@ export function ProductForm() {
                                   next[idx] = { ...next[idx], value: e.target.value };
                                   form.setValue("nutrition_facts", next, { shouldDirty: true });
                                 }}
-                                className="col-span-2"
+                                className="sm:col-span-2"
                               />
                               <Button
                                 type="button"
@@ -1091,7 +1185,7 @@ export function ProductForm() {
               </CardContent>
             </Card>
 
-            {/* Inventory & freshness */}
+            {/* Inventory */}
             <Card>
               <CardHeader>
                 <CardTitle>{mode === "grocery" ? "Inventory & Freshness" : "Inventory"}</CardTitle>
@@ -1102,16 +1196,11 @@ export function ProductForm() {
                   name="quantity"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{mode === "grocery" ? "Available Quantity" : "Quantity"}</FormLabel>
+                      <FormLabel>Available Quantity (auto)</FormLabel>
                       <FormControl>
-                        <Input
-                          {...field}
-                          value={Number.isFinite(field.value as any) ? field.value : 0}
-                          type="number"
-                          min="0"
-                          onChange={(e) => field.onChange(Number(e.target.value || 0))}
-                        />
+                        <Input {...field} value={Number.isFinite(field.value as any) ? field.value : 0} type="number" min="0" disabled />
                       </FormControl>
+                      <p className="text-xs text-muted-foreground">Auto-summed from all weight variant stocks.</p>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -1119,39 +1208,33 @@ export function ProductForm() {
 
                 {mode === "grocery" && (
                   <>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="flex items-center justify-between">
-                        <div>
+                        <div className="min-w-0">
                           <Label>Perishable Product</Label>
                           <p className="text-xs text-muted-foreground">Requires special storage/handling</p>
                         </div>
-                        <FormField
-                          control={form.control}
-                          name="is_perishable"
-                          render={({ field }) => <Switch checked={!!field.value} onCheckedChange={field.onChange} />}
-                        />
+                        <FormField control={form.control} name="is_perishable" render={({ field }) => <Switch checked={!!field.value} onCheckedChange={field.onChange} />} />
                       </div>
                       <div className="flex items-center justify-between">
-                        <div>
+                        <div className="min-w-0">
                           <Label>Organic Certified</Label>
                           <p className="text-xs text-muted-foreground">Organic certification</p>
                         </div>
-                        <FormField
-                          control={form.control}
-                          name="is_organic"
-                          render={({ field }) => <Switch checked={!!field.value} onCheckedChange={field.onChange} />}
-                        />
+                        <FormField control={form.control} name="is_organic" render={({ field }) => <Switch checked={!!field.value} onCheckedChange={field.onChange} />} />
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
                         name="manufacture_date"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Manufacture/Pack Date</FormLabel>
-                            <FormControl><Input {...field} value={field.value ?? ""} type="date" /></FormControl>
+                            <FormControl>
+                              <Input {...field} value={field.value ?? ""} type="date" />
+                            </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -1181,9 +1264,7 @@ export function ProductForm() {
                       <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-blue-600" />
-                          <span className="text-sm font-medium text-blue-900">
-                            Suggested Best Before: {suggestedBestBefore}
-                          </span>
+                          <span className="text-sm font-medium text-blue-900">Suggested Best Before: {suggestedBestBefore}</span>
                         </div>
                       </div>
                     )}
@@ -1205,15 +1286,11 @@ export function ProductForm() {
               <CardContent className="space-y-4">
                 {mode === "grocery" && (
                   <div className="flex items-center justify-between">
-                    <div>
+                    <div className="min-w-0">
                       <Label>Published</Label>
                       <p className="text-xs text-muted-foreground">Visible to customers</p>
                     </div>
-                    <FormField
-                      control={form.control}
-                      name="is_published"
-                      render={({ field }) => <Switch checked={!!field.value} onCheckedChange={field.onChange} />}
-                    />
+                    <FormField control={form.control} name="is_published" render={({ field }) => <Switch checked={!!field.value} onCheckedChange={field.onChange} />} />
                   </div>
                 )}
                 <FormField
@@ -1226,49 +1303,14 @@ export function ProductForm() {
                     </div>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="new_arrival"
-                  render={({ field }) => (
-                    <div className="flex items-center justify-between">
-                      <Label>New Arrival</Label>
-                      <Switch checked={!!field.value} onCheckedChange={field.onChange} />
-                    </div>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="hot_deal"
-                  render={({ field }) => (
-                    <div className="flex items-center justify-between">
-                      <Label>Hot Deal</Label>
-                      <Switch checked={!!field.value} onCheckedChange={field.onChange} />
-                    </div>
-                  )}
-                />
-                {mode === "grocery" && (
-                  <FormField
-                    control={form.control}
-                    name="hot_deal_ends_at"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Hot Deal Ends</FormLabel>
-                        <FormControl><Input {...field} value={field.value ?? ""} type="datetime-local" /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
               </CardContent>
             </Card>
 
-            {/* Organization */}
             <Card>
               <CardHeader>
                 <CardTitle>Organization</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Vendor */}
                 <FormField
                   control={form.control}
                   name="vendor_id"
@@ -1280,7 +1322,11 @@ export function ProductForm() {
                           value={field.value ? String(field.value) : "none"}
                           onValueChange={(value) => field.onChange(value === "none" ? null : Number(value))}
                         >
-                          <FormControl><SelectTrigger><SelectValue placeholder="Select vendor (optional)" /></SelectTrigger></FormControl>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select vendor (optional)" />
+                            </SelectTrigger>
+                          </FormControl>
                           <SelectContent>
                             <SelectItem value="none">No vendor</SelectItem>
                             {vendors.map((v: any) => (
@@ -1290,15 +1336,11 @@ export function ProductForm() {
                             ))}
                           </SelectContent>
                         </Select>
-                        <AddVendorDialog
-                          onCreated={(newId: number) => form.setValue("vendor_id", newId, { shouldDirty: true })}
-                        />
                       </div>
                     </FormItem>
                   )}
                 />
 
-                {/* Store */}
                 <FormField
                   control={form.control}
                   name="store_id"
@@ -1310,9 +1352,13 @@ export function ProductForm() {
                           value={field.value ? String(field.value) : "none"}
                           onValueChange={(value) => field.onChange(value === "none" ? null : Number(value))}
                         >
-                          <FormControl><SelectTrigger><SelectValue placeholder="Select store (optional)" /></SelectTrigger></FormControl>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select store (optional)" />
+                            </SelectTrigger>
+                          </FormControl>
                           <SelectContent>
-                            <SelectItem value="none">No store</SelectItem>
+                            {stores.length === 0 && <SelectItem value="none">No store</SelectItem>}
                             {stores.map((s: any) => (
                               <SelectItem key={s.id} value={String(s.id)}>
                                 {s.name}
@@ -1320,9 +1366,6 @@ export function ProductForm() {
                             ))}
                           </SelectContent>
                         </Select>
-                        <AddStoreDialog
-                          onCreated={(newId: number) => form.setValue("store_id", newId, { shouldDirty: true })}
-                        />
                       </div>
                     </FormItem>
                   )}

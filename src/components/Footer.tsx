@@ -141,9 +141,12 @@ export default function Footer() {
               <Link to="/terms" className="text-primary-foreground/80 hover:text-accent transition-colors">
                 Terms of Service
               </Link>
-              <Link to="/shipping" className="text-primary-foreground/80 hover:text-accent transition-colors">
+              <Link to="/shipping-policy" className="text-primary-foreground/80 hover:text-accent transition-colors">
                 Shipping Policy
               </Link>
+              <Link to="/return-policy" className="text-primary-foreground/80 hover:text-accent transition-colors">
+  Return Policy
+</Link>
             </div>
           </div>
         </div>
