@@ -39,7 +39,7 @@ export default function BlogListPage() {
   }, [q, tagQ, cat]);
 
   const { data: posts = [], isLoading, refetch, isFetching } = useBlogPosts(params);
-  const { mutateAsync: deletePost, isLoading: deleting } = useDeleteBlogPost();
+  const { mutateAsync: deletePost, isPending: deleting } = useDeleteBlogPost();
 
   async function togglePublish(id: number, current: boolean) {
     try {

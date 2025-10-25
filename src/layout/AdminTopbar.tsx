@@ -26,10 +26,9 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAdminNotifications, useMe } from "@/api/hooks/admin";
 
 export function AdminTopbar() {
-  const { userEmail, logout } = useAuth();
-  const { data: me } = useMe();
-  const { data: notif } = useAdminNotifications();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const userEmail = user?.email;
 
   const onLogout = () => {
     logout();

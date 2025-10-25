@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/api/client";
-import type { Product } from "@/types";
+import type { Product } from "@/types/index";
 
 type Paginated<T> = { count: number; next: string | null; previous: string | null; results: T[] };
 

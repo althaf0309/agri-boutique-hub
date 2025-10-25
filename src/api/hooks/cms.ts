@@ -105,7 +105,8 @@ export function useCreateTestimonial() {
   return useMutation({
     mutationFn: async (payload: Partial<Testimonial> & { avatar?: File | null }) => {
       // multipart only if file present
-      if (payload.avatar instanceof File) {
+      const hasFile = payload.avatar != null && typeof payload.avatar === 'object' && payload.avatar && 'name' in payload.avatar;
+      if (hasFile) {
         const fd = new FormData();
         Object.entries(payload).forEach(([k, v]: any) => {
           if (k === "avatar" && v instanceof File) fd.append("avatar", v);
@@ -124,7 +125,8 @@ export function useUpdateTestimonial() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...payload }: { id: ID } & (Partial<Testimonial> & { avatar?: File | null })) => {
-      if (payload.avatar instanceof File) {
+      const hasFile = payload.avatar != null && typeof payload.avatar === 'object' && payload.avatar && 'name' in payload.avatar;
+      if (hasFile) {
         const fd = new FormData();
         Object.entries(payload).forEach(([k, v]: any) => {
           if (k === "avatar" && v instanceof File) fd.append("avatar", v);
@@ -164,7 +166,9 @@ export function useCreateVideoTestimonial() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: Partial<VideoTestimonial> & { thumbnail?: File | null; video_file?: File | null }) => {
-      if (payload.thumbnail instanceof File || payload.video_file instanceof File) {
+      const hasThumbnail = payload.thumbnail != null && typeof payload.thumbnail === 'object' && payload.thumbnail && 'name' in payload.thumbnail;
+      const hasVideo = payload.video_file != null && typeof payload.video_file === 'object' && payload.video_file && 'name' in payload.video_file;
+      if (hasThumbnail || hasVideo) {
         const fd = new FormData();
         Object.entries(payload).forEach(([k, v]: any) => {
           if ((k === "thumbnail" || k === "video_file") && v instanceof File) fd.append(k, v);
@@ -183,7 +187,9 @@ export function useUpdateVideoTestimonial() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...payload }: { id: ID } & (Partial<VideoTestimonial> & { thumbnail?: File | null; video_file?: File | null })) => {
-      if (payload.thumbnail instanceof File || payload.video_file instanceof File) {
+      const hasThumbnail = payload.thumbnail != null && typeof payload.thumbnail === 'object' && payload.thumbnail && 'name' in payload.thumbnail;
+      const hasVideo = payload.video_file != null && typeof payload.video_file === 'object' && payload.video_file && 'name' in payload.video_file;
+      if (hasThumbnail || hasVideo) {
         const fd = new FormData();
         Object.entries(payload).forEach(([k, v]: any) => {
           if ((k === "thumbnail" || k === "video_file") && v instanceof File) fd.append(k, v);
@@ -223,7 +229,8 @@ export function useCreateAward() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: Partial<Award> & { emblem?: File | null }) => {
-      if (payload.emblem instanceof File) {
+      const hasFile = payload.emblem != null && typeof payload.emblem === 'object' && payload.emblem && 'name' in payload.emblem;
+      if (hasFile) {
         const fd = new FormData();
         Object.entries(payload).forEach(([k, v]: any) => {
           if (k === "emblem" && v instanceof File) fd.append("emblem", v);
@@ -242,7 +249,8 @@ export function useUpdateAward() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...payload }: { id: ID } & (Partial<Award> & { emblem?: File | null })) => {
-      if (payload.emblem instanceof File) {
+      const hasFile = payload.emblem != null && typeof payload.emblem === 'object' && payload.emblem && 'name' in payload.emblem;
+      if (hasFile) {
         const fd = new FormData();
         Object.entries(payload).forEach(([k, v]: any) => {
           if (k === "emblem" && v instanceof File) fd.append("emblem", v);
@@ -325,7 +333,8 @@ export function useCreateGalleryItem() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: Partial<GalleryItem> & { image?: File | null }) => {
-      if (payload.image instanceof File) {
+      const hasFile = payload.image != null && typeof payload.image === 'object' && payload.image && 'name' in payload.image;
+      if (hasFile) {
         const fd = new FormData();
         Object.entries(payload).forEach(([k, v]: any) => {
           if (k === "image" && v instanceof File) fd.append("image", v);
@@ -344,7 +353,8 @@ export function useUpdateGalleryItem() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...payload }: { id: ID } & (Partial<GalleryItem> & { image?: File | null })) => {
-      if (payload.image instanceof File) {
+      const hasFile = payload.image != null && typeof payload.image === 'object' && payload.image && 'name' in payload.image;
+      if (hasFile) {
         const fd = new FormData();
         Object.entries(payload).forEach(([k, v]: any) => {
           if (k === "image" && v instanceof File) fd.append("image", v);

@@ -89,7 +89,7 @@ export function ProductsPage() {
   const { data: rawCategories } = useCategories();
   const categoriesArr: any[] = Array.isArray(rawCategories)
     ? (rawCategories as any[])
-    : (rawCategories?.items ?? []);
+    : (rawCategories?.list ?? []);
 
   const groceryCategories = useMemo(
     () => (Array.isArray(categoriesArr) ? categoriesArr.filter((c: any) => isGroceryCat(c?.name)) : []),

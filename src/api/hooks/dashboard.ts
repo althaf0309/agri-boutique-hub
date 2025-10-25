@@ -1,7 +1,7 @@
 // src/api/hooks/dashboard.ts
 import { useQuery } from "@tanstack/react-query";
 import api from "@/api/client";
-import type { KpiData, Product, Review, ContactSubmission } from "@/types";
+import type { KpiData, Product, Review, ContactSubmission } from "@/types/index";
 
 type DRFList<T> = { count: number; next?: string | null; previous?: string | null; results: T[] };
 

@@ -34,8 +34,8 @@ export default function BlogFormPage() {
   const navigate = useNavigate();
 
   const { data: categories = [] } = useBlogCategories();
-  const { mutateAsync: createPost, isLoading: creating } = useCreateBlogPost();
-  const { mutateAsync: updatePost, isLoading: updating } = useUpdateBlogPost();
+  const { mutateAsync: createPost, isPending: creating } = useCreateBlogPost();
+  const { mutateAsync: updatePost, isPending: updating } = useUpdateBlogPost();
 
   const [loading, setLoading] = useState<boolean>(!!isEdit);
   const [initial, setInitial] = useState<Partial<BlogPost> | null>(null);
@@ -102,7 +102,7 @@ export default function BlogFormPage() {
       .map((t) => t.trim())
       .filter(Boolean);
 
-    const base: Partial<BlogPost> & { cover?: File | null } = {
+    const base: any = {
       title,
       excerpt,
       content_markdown: markdown,
@@ -111,8 +111,8 @@ export default function BlogFormPage() {
       is_published: isPublished,
       featured,
       published_at: dayjs(publishedAt).toISOString(),
-      cover: coverFile || undefined,
     };
+    if (coverFile) base.cover = coverFile;
     return base;
   }, [title, excerpt, markdown, categoryId, tagsStr, isPublished, featured, publishedAt, coverFile]);
 

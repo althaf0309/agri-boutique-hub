@@ -158,15 +158,12 @@ function toCardProduct(p: any): CardProduct {
     image,
     images,
     category: categoryName,
-    // @ts-expect-error keep for UI
     categorySlug,
     weight,
     organic: Boolean(p?.is_organic),
     inStock,
     description: p?.description ?? "",
-    // @ts-expect-error ProductCard will read this if present
     weightVariants,
-    // @ts-expect-error for sorting newest locally
     created_at: p?.created_at,
   } as CardProduct;
 }
@@ -346,7 +343,7 @@ export default function Shop() {
 
   // Fetch
   const { data, isLoading, isError } = useProducts(params);
-  const rawItems: any[] = data?.items ?? data?.results ?? [];
+  const rawItems: any[] = data?.items ?? [];
 
   // Map to cards
   const allCards: CardProduct[] = useMemo(() => rawItems.map(toCardProduct), [rawItems]);
@@ -408,8 +405,6 @@ export default function Shop() {
       inStock: variant ? variant.stockCount > 0 : product.inStock,
       // @ts-expect-error sku/variantId extra
       variantId: variant?.id,
-      // @ts-expect-error ProductCard passes sku
-      sku: variant?.sku,
     });
     toast({
       title: "Added to Cart",
@@ -466,7 +461,8 @@ export default function Shop() {
         title={c.label}
         aria-pressed={isChecked}
       >
-        <Checkbox checked={isChecked} onCheckedChange={toggle} />
+        {/* Controlled checkbox purely for visuals */}
+        <Checkbox checked={isChecked} onCheckedChange={() => {}} />
         <span className="text-sm" style={{ paddingLeft: c.depth * 12 }}>{c.label}</span>
       </div>
     );

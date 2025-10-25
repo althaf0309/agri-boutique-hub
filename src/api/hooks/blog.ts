@@ -148,11 +148,14 @@ export function useCreateBlogPost() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: Partial<BlogPost> & { cover?: File | null }) => {
-      // If we have any file, use multipart; else JSON is fine too.
-      const hasFile = payload.cover instanceof File;
+      const hasFile = payload.cover != null && typeof payload.cover === 'object' && payload.cover && 'name' in payload.cover;
       if (hasFile) {
-        const fd = buildFormData(payload);
-        const { data } = await api.post<BlogPost>("/blog/posts/", fd);
+        const fd = new FormData();
+        Object.entries(payload).forEach(([k, v]) => {
+          if (k === "cover" && v instanceof File) fd.append("cover", v);
+          else if (v != null) fd.append(k, Array.isArray(v) ? JSON.stringify(v) : String(v));
+        });
+        const { data } = await postMultipart<BlogPost>("/blog/posts/", fd);
         return data;
       }
       // JSON path also works (backend serializer accepts JSON)
@@ -177,10 +180,14 @@ export function useUpdateBlogPost() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...payload }: { id: number } & (Partial<BlogPost> & { cover?: File | null })) => {
-      const hasFile = payload.cover instanceof File;
+      const hasFile = payload.cover != null && typeof payload.cover === 'object' && payload.cover && 'name' in payload.cover;
       if (hasFile) {
-        const fd = buildFormData(payload);
-        const { data } = await api.patch<BlogPost>(`/blog/posts/${id}/`, fd);
+        const fd = new FormData();
+        Object.entries(payload).forEach(([k, v]) => {
+          if (k === "cover" && v instanceof File) fd.append("cover", v);
+          else if (v != null) fd.append(k, Array.isArray(v) ? JSON.stringify(v) : String(v));
+        });
+        const { data } = await patchMultipart<BlogPost>(`/blog/posts/${id}/`, fd);
         return data;
       }
       const { data } = await api.patch<BlogPost>(`/blog/posts/${id}/`, {

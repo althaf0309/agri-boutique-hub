@@ -116,7 +116,7 @@ function normalizeNutritionFacts(facts: any): Array<{ name: string; value: strin
   if (Array.isArray(facts)) {
     return facts
       .map((r) => (typeof r === "object" && r ? { name: String(r.name ?? ""), value: String(r.value ?? "") } : null))
-      .filter((r): r is { name: string; value: string } => !!r && r.name.trim() && r.value.trim());
+      .filter((r): r is { name: string; value: string } => !!r && !!r.name.trim() && !!r.value.trim());
   }
   if (typeof facts === "object") {
     return Object.entries(facts)

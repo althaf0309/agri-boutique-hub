@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/api/client";
-import type { Category, ID } from "@/types";
+import type { Category, ID } from "@/types/index";
 
 type Paginated<T> = { count: number; next: string | null; previous: string | null; results: T[] };
 
@@ -58,7 +58,7 @@ export function useCreateCategory() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: Partial<Category> & { image?: File | null; parent_id?: ID | null }) => {
-      const hasFile = payload?.image instanceof File;
+      const hasFile = payload?.image != null && typeof payload.image === 'object' && payload.image && 'name' in payload.image;
       if (hasFile) {
         const fd = new FormData();
         Object.entries(prune(payload as any)).forEach(([k, v]) => {
@@ -84,7 +84,7 @@ export function useUpdateCategory() {
       id,
       ...payload
     }: { id: ID } & Partial<Category> & { image?: File | null; parent_id?: ID | null }) => {
-      const hasFile = payload?.image instanceof File;
+      const hasFile = payload?.image != null && typeof payload.image === 'object' && payload.image && 'name' in payload.image;
       if (hasFile) {
         const fd = new FormData();
         Object.entries(prune(payload as any)).forEach(([k, v]) => {

@@ -1,6 +1,6 @@
 // src/api/hooks/reviews.ts
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/api/http";
+import api from "@/api/client";
 
 /** Adjust to your backend fields as needed */
 export type Review = {

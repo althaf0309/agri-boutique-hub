@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 
 export default function ProfilePage() {
-  const { user, isAuthenticated, refreshUser /* optional */, updateProfile /* optional */ } = useAuth();
+  const { user, isAuthenticated, refreshMe } = useAuth();
   const [form, setForm] = useState({
     first_name: "",
     last_name: "",
@@ -22,8 +22,8 @@ export default function ProfilePage() {
   useEffect(() => {
     if (user) {
       setForm({
-        first_name: user.first_name || user.name?.split(" ")?.[0] || "",
-        last_name: user.last_name || user.name?.split(" ")?.slice(1).join(" ") || "",
+        first_name: user.first_name || "",
+        last_name: user.last_name || "",
         email: user.email || "",
       });
     }
@@ -33,9 +33,9 @@ export default function ProfilePage() {
     e.preventDefault();
     try {
       // If you have a real updateProfile API, call it:
-      // await updateProfile?.({ first_name: form.first_name, last_name: form.last_name });
+      // await api.patch("/auth/me/", { first_name: form.first_name, last_name: form.last_name });
       toast.success("Profile updated");
-      await refreshUser?.();
+      await refreshMe?.();
     } catch (err: any) {
       toast.error(err?.message || "Could not update profile");
     }
