@@ -75,7 +75,7 @@ const checkoutSchema = z
       .trim()
       .regex(/^\+?\d[\d\s\-()]{6,14}$/, "Please enter a valid phone number"),
 
-    paymentMethod: z.enum(["razorpay", "cod"], { required_error: "Choose a payment method" }),
+    paymentMethod: z.union([z.literal("razorpay"), z.literal("cod")]).refine((val) => val, { message: "Choose a payment method" }),
 
     specialInstructions: optionalText,
 
@@ -163,7 +163,7 @@ const Checkout = () => {
   const { toast } = useToast();
   const query = useQuery();
   const navigate = useNavigate();
-  const { isAuthenticated, userEmail } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   // Guard unauthenticated
   useEffect(() => {
@@ -223,10 +223,10 @@ const Checkout = () => {
 
   // Prefill email from auth — skip validation while setting
   useEffect(() => {
-    if (userEmail && !form.getValues("email")) {
-      form.setValue("email", userEmail, { shouldValidate: false, shouldDirty: true });
+    if (user?.email && !form.getValues("email")) {
+      form.setValue("email", user.email, { shouldValidate: false, shouldDirty: true });
     }
-  }, [userEmail, form]);
+  }, [user?.email, form]);
 
   // Auto-scroll to first error when errors appear
   useEffect(() => {

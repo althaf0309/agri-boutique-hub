@@ -403,7 +403,6 @@ export default function Shop() {
       weight: variant?.weight || product.weight || "",
       quantity: 1,
       inStock: variant ? variant.stockCount > 0 : product.inStock,
-      // @ts-expect-error sku/variantId extra
       variantId: variant?.id,
     });
     toast({

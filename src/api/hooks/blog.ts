@@ -80,8 +80,9 @@ function buildFormData(payload: Partial<BlogPost> & { cover?: File | null }) {
   }
 
   // cover file
-  if (payload.cover instanceof File) {
-    fd.append("cover", payload.cover);
+  const coverValue = payload.cover;
+  if (coverValue != null && (coverValue as any) instanceof File) {
+    fd.append("cover", coverValue);
   }
 
   return fd;
@@ -155,7 +156,9 @@ export function useCreateBlogPost() {
           if (k === "cover" && v instanceof File) fd.append("cover", v);
           else if (v != null) fd.append(k, Array.isArray(v) ? JSON.stringify(v) : String(v));
         });
-        const { data } = await postMultipart<BlogPost>("/blog/posts/", fd);
+        const { data } = await api.post<BlogPost>("/blog/posts/", fd, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
         return data;
       }
       // JSON path also works (backend serializer accepts JSON)
@@ -187,7 +190,9 @@ export function useUpdateBlogPost() {
           if (k === "cover" && v instanceof File) fd.append("cover", v);
           else if (v != null) fd.append(k, Array.isArray(v) ? JSON.stringify(v) : String(v));
         });
-        const { data } = await patchMultipart<BlogPost>(`/blog/posts/${id}/`, fd);
+        const { data } = await api.patch<BlogPost>(`/blog/posts/${id}/`, fd, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
         return data;
       }
       const { data } = await api.patch<BlogPost>(`/blog/posts/${id}/`, {

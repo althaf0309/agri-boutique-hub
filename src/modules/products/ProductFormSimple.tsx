@@ -513,7 +513,6 @@ function buildUpsertPayloadFromCurrent(): any[] {
 
   return Array.from(bestOf.values());
 }
-gi
 
   async function syncWeightVariants(productId: number) {
     const variants = buildUpsertPayloadFromCurrent();
@@ -608,7 +607,7 @@ gi
           try {
             await replaceSpecs(pid);
           } catch {
-            toast({ title: "Saved (specs skipped)", description: "Duplicate spec rows were skipped.", variant: "secondary" });
+            toast({ title: "Saved (specs skipped)", description: "Duplicate spec rows were skipped." });
           }
           // 🔒 strong no-duplicate upsert
           await syncWeightVariants(pid);
@@ -657,7 +656,7 @@ gi
             try {
               if (specs.length) await replaceSpecs(pid);
             } catch {
-              toast({ title: "Created (specs skipped)", description: "Duplicate spec rows were skipped.", variant: "secondary" });
+              toast({ title: "Created (specs skipped)", description: "Duplicate spec rows were skipped." });
             }
 
             // ✅ ensure variants are saved & deduped after create as well

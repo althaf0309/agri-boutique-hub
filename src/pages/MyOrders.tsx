@@ -52,7 +52,7 @@ export default function MyOrders() {
   }
 
   // ✅ Only the current user's orders
-  const { data: orders = [], isLoading: ordersLoading } = useOrders(user?.id);
+  const { data: orders = [], isLoading: ordersLoading } = useOrders({ currentUserId: user?.id });
   const { data: cart, isLoading: cartLoading } = useActiveCart();
 
   const loading = ordersLoading || cartLoading;

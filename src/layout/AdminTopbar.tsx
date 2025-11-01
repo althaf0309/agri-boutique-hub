@@ -30,6 +30,10 @@ export function AdminTopbar() {
   const navigate = useNavigate();
   const userEmail = user?.email;
 
+  // Fetch admin-specific data
+  const { data: me } = useMe();
+  const { data: notif } = useAdminNotifications();
+
   const onLogout = () => {
     logout();
     navigate("/login", { replace: true });
