@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Mail, Lock } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,15 +18,19 @@ export default function Login() {
     password: "",
     rememberMe: false,
   });
+  const [loading, setLoading] = useState(false);
 
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  // ⛔️ Removed the "if authenticated then navigate('/')" useEffect.
-  // RoleRedirect already handles this safely based on the actual user role.
+  // RoleRedirect on route level decides where to go
+  // if already authenticated, so no extra useEffect here.
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
+
+    setLoading(true);
     try {
       const me = await login(
         formData.email.trim(),
@@ -43,6 +47,8 @@ export default function Login() {
         err?.message ??
         "Login failed";
       toast.error(String(detail));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -122,7 +128,10 @@ export default function Login() {
                       checked={formData.rememberMe}
                       // Radix Checkbox uses boolean | "indeterminate"
                       onCheckedChange={(checked) =>
-                        setFormData((p) => ({ ...p, rememberMe: !!checked }))
+                        setFormData((p) => ({
+                          ...p,
+                          rememberMe: !!checked,
+                        }))
                       }
                     />
                     <Label htmlFor="rememberMe" className="text-sm">
@@ -132,8 +141,16 @@ export default function Login() {
                   {/* forgot password link can go here later */}
                 </div>
 
-                <Button type="submit" className="w-full" size="lg">
-                  Sign In
+                <Button
+                  type="submit"
+                  className="w-full"
+                  size="lg"
+                  disabled={loading}
+                >
+                  {loading && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  {loading ? "Signing in..." : "Sign In"}
                 </Button>
               </form>
 

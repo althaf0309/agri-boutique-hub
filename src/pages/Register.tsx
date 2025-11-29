@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,18 +20,28 @@ export default function Register() {
     email: "",
     password: "",
     confirmPassword: "",
-    agreeToTerms: false
+    agreeToTerms: false,
   });
+  const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
   const { mutateAsync: register } = useRegister();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
+
+    if (!formData.agreeToTerms) {
+      toast.error("You must agree to the Terms & Conditions and Privacy Policy.");
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
       toast.error("Passwords do not match");
       return;
     }
+
+    setLoading(true);
     try {
       await register({
         first_name: formData.firstName,
@@ -47,14 +57,16 @@ export default function Register() {
         err?.message ??
         "Could not create account";
       toast.error(detail);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
@@ -66,8 +78,12 @@ export default function Register() {
         <div className="max-w-md mx-auto">
           <Card className="shadow-lg">
             <CardHeader className="text-center">
-              <CardTitle className="text-3xl font-bold text-foreground">Create Account</CardTitle>
-              <p className="text-muted-foreground">Join Prakrithi Jaiva Kalavara for organic goodness</p>
+              <CardTitle className="text-3xl font-bold text-foreground">
+                Create Account
+              </CardTitle>
+              <p className="text-muted-foreground">
+                Join Prakrithi Jaiva Kalavara for organic goodness
+              </p>
             </CardHeader>
 
             <CardContent className="space-y-6">
@@ -143,7 +159,11 @@ export default function Register() {
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                     >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      {showPassword ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -164,10 +184,16 @@ export default function Register() {
                     />
                     <button
                       type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      onClick={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                     >
-                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      {showConfirmPassword ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -178,31 +204,47 @@ export default function Register() {
                     name="agreeToTerms"
                     checked={formData.agreeToTerms}
                     onCheckedChange={(checked) =>
-                      setFormData(prev => ({ ...prev, agreeToTerms: checked as boolean }))
+                      setFormData((prev) => ({
+                        ...prev,
+                        agreeToTerms: !!checked,
+                      }))
                     }
-                    required
                   />
                   <Label htmlFor="agreeToTerms" className="text-sm">
                     I agree to the{" "}
                     <Link to="/terms" className="text-primary hover:underline">
-                      Terms & Conditions
+                      Terms &amp; Conditions
                     </Link>{" "}
                     and{" "}
-                    <Link to="/privacy" className="text-primary hover:underline">
+                    <Link
+                      to="/privacy"
+                      className="text-primary hover:underline"
+                    >
                       Privacy Policy
                     </Link>
                   </Label>
                 </div>
 
-                <Button type="submit" className="w-full" size="lg">
-                  Create Account
+                <Button
+                  type="submit"
+                  className="w-full"
+                  size="lg"
+                  disabled={loading}
+                >
+                  {loading && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  {loading ? "Creating account..." : "Create Account"}
                 </Button>
               </form>
 
               <div className="text-center">
                 <p className="text-muted-foreground">
                   Already have an account?{" "}
-                  <Link to="/login" className="text-primary hover:underline font-medium">
+                  <Link
+                    to="/login"
+                    className="text-primary hover:underline font-medium"
+                  >
                     Sign in
                   </Link>
                 </p>

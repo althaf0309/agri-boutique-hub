@@ -1,3 +1,4 @@
+// src/pages/admin/CategoryFormPage.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { z } from "zod";
@@ -32,23 +33,19 @@ import {
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Save, Trash2 } from "lucide-react";
+import type { ID } from "@/types";
 
 /** All fields optional per your requirement */
 const categorySchema = z.object({
   name: z.string().optional(),
-  slug: z.string().optional(),
-  parent: z.number().nullable().optional(), // UI field; mapped to parent_id when submitting
+  slug: z.string().optional(), // optional; if empty, we DON'T send to server
+  // parent can be string or number or null
+  parent: z.union([z.string(), z.number()]).nullable().optional(),
   icon: z.string().optional(),
   description: z.string().optional(),
   image: z.any().optional().nullable(), // File | null | undefined
 });
 type CategoryFormData = z.infer<typeof categorySchema>;
-
-const slugify = (s: string) =>
-  (s || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
 
 function toFlatCats(data: unknown) {
   if (Array.isArray(data)) return data as any[];
@@ -59,6 +56,32 @@ function toFlatCats(data: unknown) {
   return [];
 }
 
+/** Normalize any ID to string or null. */
+function toKey(id: unknown): string | null {
+  if (id === null || id === undefined) return null;
+  if (typeof id === "string" && id.trim() === "") return null;
+  return String(id);
+}
+
+/** Extract parent id from backend category object, any shape. */
+function extractParentId(existing: any): string | null {
+  if (!existing) return null;
+  const parentField = existing.parent;
+  const parentIdField = existing.parent_id;
+
+  if (parentIdField != null) return toKey(parentIdField);
+
+  if (parentField != null) {
+    if (typeof parentField === "string" || typeof parentField === "number") {
+      return toKey(parentField);
+    }
+    if (typeof parentField === "object" && parentField.id != null) {
+      return toKey(parentField.id);
+    }
+  }
+  return null;
+}
+
 export function CategoryFormPage() {
   const { id } = useParams();
   const isEdit = !!id;
@@ -67,7 +90,7 @@ export function CategoryFormPage() {
 
   const { data: catsData } = useCategories();
   const categories = toFlatCats(catsData);
-  const { data: existing } = useCategory(isEdit ? Number(id) : undefined);
+  const { data: existing } = useCategory(isEdit ? (id as ID) : undefined);
 
   const create = useCreateCategory();
   const update = useUpdateCategory();
@@ -98,15 +121,12 @@ export function CategoryFormPage() {
   // hydrate when editing
   useEffect(() => {
     if (isEdit && existing) {
-      const parentId =
-        typeof (existing as any).parent === "number"
-          ? (existing as any).parent
-          : (existing as any).parent?.id ?? (existing as any).parent_id ?? null;
+      const parentId = extractParentId(existing);
 
       form.reset({
         name: (existing as any).name ?? "",
-        slug: (existing as any).slug ?? "",
-        parent: parentId ?? null,
+        slug: (existing as any).slug ?? "", // show existing slug but user can clear it
+        parent: parentId, // store as string id
         icon: (existing as any).icon ?? "",
         description: (existing as any).description ?? "",
         image: null, // keep empty; we only preview existing.image below
@@ -114,27 +134,16 @@ export function CategoryFormPage() {
       setPreview((existing as any)?.image || null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEdit, existing?.id]);
-
-  // Auto-slug from name if slug is empty (user can still override).
-  useEffect(() => {
-    const sub = form.watch((vals, { name }) => {
-      if (name === "name") {
-        const currSlug = (form.getValues("slug") || "").trim();
-        if (!currSlug) {
-          form.setValue("slug", slugify(vals.name || ""), { shouldDirty: true });
-        }
-      }
-    });
-    return () => sub.unsubscribe();
-  }, [form]);
+  }, [isEdit, (existing as any)?.id]);
 
   const onImageChange = (file?: File | null) => {
     form.setValue("image", file || null, { shouldDirty: true });
+
     if (createdUrlRef.current) {
       URL.revokeObjectURL(createdUrlRef.current);
       createdUrlRef.current = null;
     }
+
     if (file) {
       const url = URL.createObjectURL(file);
       createdUrlRef.current = url;
@@ -146,29 +155,33 @@ export function CategoryFormPage() {
   };
 
   const optionsWithoutSelf = useMemo(() => {
-    const selfId = isEdit ? Number(id) : null;
-    return (categories as any[]).filter((c) => c.id !== selfId);
+    const selfId = isEdit ? toKey(id) : null;
+    return (categories as any[]).filter((c) => toKey(c.id) !== selfId);
   }, [categories, isEdit, id]);
 
   const onSubmit = async (values: CategoryFormData) => {
     try {
-      // Ensure slug always exists: prefer typed slug, else derive from name.
       const nameTrim = (values.name || "").trim();
-      const slugTrim = (values.slug || "").trim();
-      const finalSlug = slugify(slugTrim || nameTrim);
+      const slugTrim = (values.slug || "").trim(); // may be empty → we omit slug in payload
 
-      // Map UI field -> API field expected by your hooks
+      // Map UI field -> API field expected by your backend
       const payload: any = {
         name: nameTrim || undefined,
-        slug: finalSlug || undefined,
-        parent_id: values.parent ?? null,
+        // NOTE: parent is string/number or null; send as-is
+        parent: values.parent ?? null,
         icon: (values.icon || "").trim() || undefined,
         description: (values.description || "").trim() || undefined,
         image: values.image ?? null, // File | null is handled by hooks (multipart)
       };
 
+      // Only send slug if user actually entered something.
+      // If left empty, backend auto-slug logic will run.
+      if (slugTrim) {
+        payload.slug = slugTrim;
+      }
+
       if (isEdit) {
-        await update.mutateAsync({ id: Number(id), ...payload });
+        await update.mutateAsync({ id: id as ID, ...payload });
         toast({ title: "Category updated" });
       } else {
         await create.mutateAsync(payload);
@@ -189,7 +202,7 @@ export function CategoryFormPage() {
     const ok = window.confirm("Delete this category? This cannot be undone.");
     if (!ok) return;
     try {
-      await del.mutateAsync({ id: Number(id) });
+      await del.mutateAsync({ id: id as ID });
       toast({ title: "Category deleted" });
       navigate("/admin/categories");
     } catch (e: any) {
@@ -234,7 +247,10 @@ export function CategoryFormPage() {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form className="grid grid-cols-1 md:grid-cols-2 gap-6" onSubmit={form.handleSubmit(onSubmit)}>
+            <form
+              className="grid grid-cols-1 md:grid-cols-2 gap-6"
+              onSubmit={form.handleSubmit(onSubmit)}
+            >
               <FormField
                 control={form.control}
                 name="name"
@@ -256,10 +272,11 @@ export function CategoryFormPage() {
                   <FormItem>
                     <FormLabel>Slug (optional)</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="fruits" />
+                      <Input {...field} placeholder="leave empty for auto" />
                     </FormControl>
                     <p className="text-xs text-muted-foreground">
-                      Leave empty to auto-generate from name.
+                      Leave empty to let the server auto-generate the slug from
+                      the name.
                     </p>
                     <FormMessage />
                   </FormItem>
@@ -273,8 +290,10 @@ export function CategoryFormPage() {
                   <FormItem>
                     <FormLabel>Parent</FormLabel>
                     <Select
-                      value={field.value ? String(field.value) : "none"}
-                      onValueChange={(v) => field.onChange(v === "none" ? null : Number(v))}
+                      value={field.value ?? "none"}
+                      onValueChange={(v) =>
+                        field.onChange(v === "none" ? null : v)
+                      }
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -297,26 +316,16 @@ export function CategoryFormPage() {
 
               <FormField
                 control={form.control}
-                name="icon"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Icon (class or name)</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="e.g., lucide:apple" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
                 name="description"
                 render={({ field }) => (
                   <FormItem className="md:col-span-2">
                     <FormLabel>Description (optional)</FormLabel>
                     <FormControl>
-                      <Textarea {...field} placeholder="Short description…" rows={3} />
+                      <Textarea
+                        {...field}
+                        placeholder="Short description…"
+                        rows={3}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -330,7 +339,9 @@ export function CategoryFormPage() {
                   <Input
                     type="file"
                     accept="image/*"
-                    onChange={(e) => onImageChange(e.target.files?.[0] || null)}
+                    onChange={(e) =>
+                      onImageChange(e.target.files?.[0] || null)
+                    }
                   />
                   {preview ? (
                     <img
@@ -351,11 +362,14 @@ export function CategoryFormPage() {
                     </Button>
                   )}
                 </div>
-                {isEdit && (existing as any)?.image && !form.getValues("image") && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Using existing image. Uploading a new file will replace it.
-                  </p>
-                )}
+                {isEdit &&
+                  (existing as any)?.image &&
+                  !form.getValues("image") && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Using existing image. Uploading a new file will replace
+                      it.
+                    </p>
+                  )}
               </div>
             </form>
           </Form>

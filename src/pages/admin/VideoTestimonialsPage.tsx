@@ -125,15 +125,15 @@ export default function VideoTestimonialsPage() {
                 <Label>Video File (optional)</Label>
                 <Input type="file" accept="video/*" onChange={(e) => setVideoFile(e.target.files?.[0] || null)} />
               </div>
-              <div>
+              {/* <div>
                 <Label>Video URL (optional)</Label>
                 <Input value={editing.video_url || ""} onChange={(e) => setEditing((p)=>({ ...p!, video_url: e.target.value }))} />
-              </div>
+              </div> */}
               <div className="flex items-center gap-6">
-                <label className="flex items-center gap-2">
+                {/* <label className="flex items-center gap-2">
                   <Checkbox checked={!!editing.is_active} onCheckedChange={(v)=>setEditing((p)=>({ ...p!, is_active: !!v }))} />
                   <span>Active</span>
-                </label>
+                </label> */}
               </div>
               <div>
                 <Label>Sort</Label>

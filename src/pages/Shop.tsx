@@ -6,10 +6,23 @@ import ProductCard from "@/components/ProductCard";
 import QuickView from "@/components/QuickView";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
-import { Filter, Grid, List, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Filter,
+  Grid,
+  List,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useProducts } from "@/api/hooks/products";
 import { useCategories, type CategoryNode } from "@/api/hooks/categories";
@@ -27,16 +40,27 @@ const MEDIA_BASE =
   "";
 
 const slugify = (s: string) =>
-  (s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+  (s || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
 
 function normalizeUrl(raw?: string): string {
   if (!raw) return "";
   let u = String(raw).trim();
   const hasProto = /^https?:\/\//i.test(u);
   if (!hasProto && !u.startsWith("/")) u = `/${u}`;
-  u = u.replace(/([^:]\/)\/+/g, "$1").replace(/ /g, "%20").replace(/"/g, "%22").replace(/'/g, "%27");
+  u = u
+    .replace(/([^:]\/)\/+/g, "$1")
+    .replace(/ /g, "%20")
+    .replace(/"/g, "%22")
+    .replace(/'/g, "%27");
   if (/^https?:\/\//i.test(u)) {
-    if (typeof window !== "undefined" && window.location.protocol === "https:" && u.startsWith("http://")) {
+    if (
+      typeof window !== "undefined" &&
+      window.location.protocol === "https:" &&
+      u.startsWith("http://")
+    ) {
       u = "https://" + u.slice("http://".length);
     }
     return u;
@@ -44,11 +68,16 @@ function normalizeUrl(raw?: string): string {
   const base = (MEDIA_BASE || "").replace(/\/+$/, "");
   const path = u.replace(/^\/+/, "");
   const full = base ? `${base}/${path}` : `/${path}`;
-  if (typeof window !== "undefined" && window.location.protocol === "https:" && full.startsWith("http://")) {
+  if (
+    typeof window !== "undefined" &&
+    window.location.protocol === "https:" &&
+    full.startsWith("http://")
+  ) {
     return "https://" + full.slice("http://".length);
   }
   return full;
 }
+
 function pickFromObj(obj: any, keys: string[]): string | undefined {
   for (const k of keys) {
     const v = obj?.[k];
@@ -60,13 +89,26 @@ function pickFromObj(obj: any, keys: string[]): string | undefined {
   }
   return undefined;
 }
+
 function collectImages(p: any): string[] {
   const urls: string[] = [];
-  const topLevel = pickFromObj(p, ["primary_image_url", "image_url", "image", "thumbnail"]);
+  const topLevel = pickFromObj(p, [
+    "primary_image_url",
+    "image_url",
+    "image",
+    "thumbnail",
+  ]);
   if (topLevel) urls.push(topLevel);
-  const primary = pickFromObj(p?.primary_image, ["url", "image", "path", "src"]);
+  const primary = pickFromObj(p?.primary_image, [
+    "url",
+    "image",
+    "path",
+    "src",
+  ]);
   if (primary) urls.push(primary);
-  const arrays = [p?.images, p?.gallery, p?.media, p?.image_paths].filter(Array.isArray) as any[][];
+  const arrays = [p?.images, p?.gallery, p?.media, p?.image_paths].filter(
+    Array.isArray,
+  ) as any[][];
   for (const arr of arrays) {
     for (const item of arr) {
       if (typeof item === "string") urls.push(item);
@@ -82,7 +124,11 @@ function collectImages(p: any): string[] {
 
 /* ---------------- variant mapping ---------------- */
 function mapWeightVariants(p: any): CardVariant[] | undefined {
-  const list = Array.isArray(p?.variants) ? p.variants : (Array.isArray(p?.weight_variants) ? p.weight_variants : []);
+  const list = Array.isArray(p?.variants)
+    ? p.variants
+    : Array.isArray(p?.weight_variants)
+    ? p.weight_variants
+    : [];
   if (!list.length) return undefined;
 
   const productBase = Number(p?.price_inr ?? p?.price ?? 0) || 0;
@@ -96,19 +142,21 @@ function mapWeightVariants(p: any): CardVariant[] | undefined {
           : Number(v?.price_inr ?? v?.price ?? productBase) || 0;
 
       const vDisc =
-        v?.discount_override != null
-          ? Number(v.discount_override)
-          : productDisc;
+        v?.discount_override != null ? Number(v.discount_override) : productDisc;
 
-      const price = vDisc > 0 ? Number((vBase * (1 - vDisc / 100)).toFixed(2)) : Number(vBase.toFixed(2));
-      const originalPrice = vDisc > 0 ? Number(vBase.toFixed(2)) : undefined;
+      const price =
+        vDisc > 0
+          ? Number((vBase * (1 - vDisc / 100)).toFixed(2))
+          : Number(vBase.toFixed(2));
+      const originalPrice =
+        vDisc > 0 ? Number(vBase.toFixed(2)) : undefined;
 
       const wv = v?.weight_value ?? v?.pack_qty;
       const wu = (v?.weight_unit || v?.uom || "").toUpperCase();
       const weight =
         wv != null && wu
           ? `${String(wv).replace(/\.0+$/, "")}${wu}`
-          : (v?.attributes?.Weight || v?.label || v?.weight || "");
+          : v?.attributes?.Weight || v?.label || v?.weight || "";
 
       return {
         id: Number(v?.id ?? idx + 1),
@@ -131,7 +179,10 @@ function toCardProduct(p: any): CardProduct {
 
   const productBase = Number(p?.price_inr ?? p?.price ?? 0) || 0;
   const productDisc = Number(p?.discount_percent ?? 0) || 0;
-  const price = productDisc > 0 ? Number((productBase * (1 - productDisc / 100)).toFixed(2)) : productBase;
+  const price =
+    productDisc > 0
+      ? Number((productBase * (1 - productDisc / 100)).toFixed(2))
+      : productBase;
   const originalPrice = productDisc > 0 ? productBase : undefined;
 
   const weight =
@@ -140,12 +191,17 @@ function toCardProduct(p: any): CardProduct {
       : p?.default_uom || p?.uom || "";
 
   const weightVariants = mapWeightVariants(p);
-  const inStock = Array.isArray(weightVariants) && weightVariants.length
-    ? weightVariants.some((v) => v.stockCount > 0)
-    : (typeof p?.in_stock === "boolean" ? p.in_stock : Number(p?.quantity ?? 0) > 0);
+  const inStock =
+    Array.isArray(weightVariants) && weightVariants.length
+      ? weightVariants.some((v) => v.stockCount > 0)
+      : typeof p?.in_stock === "boolean"
+      ? p.in_stock
+      : Number(p?.quantity ?? 0) > 0;
 
   const categoryName = p?.category?.name ?? p?.category_name ?? "";
-  const categorySlug = p?.category?.slug ?? (categoryName ? slugify(categoryName) : undefined);
+  const categorySlug =
+    p?.category?.slug ??
+    (categoryName ? slugify(String(categoryName)) : undefined);
 
   return {
     id: p.id,
@@ -158,6 +214,8 @@ function toCardProduct(p: any): CardProduct {
     image,
     images,
     category: categoryName,
+    // extra fields for filtering
+    // @ts-expect-error extended
     categorySlug,
     weight,
     organic: Boolean(p?.is_organic),
@@ -171,8 +229,10 @@ function toCardProduct(p: any): CardProduct {
 /* ---------------- Category tree flattening + descendant map ---------------- */
 type FlatCategory = { label: string; slug: string; depth: number };
 
-const getNodeSlug = (n: CategoryNode) => (n as any).slug || slugify(n.name);
+const getNodeSlug = (n: CategoryNode) =>
+  (n as any).slug || slugify(n.name);
 
+/** Flatten tree for sidebar display */
 function flattenTree(nodes: CategoryNode[], depth = 0): FlatCategory[] {
   const out: FlatCategory[] = [];
   for (const n of nodes) {
@@ -183,17 +243,29 @@ function flattenTree(nodes: CategoryNode[], depth = 0): FlatCategory[] {
   return out;
 }
 
-/** Map slug -> all descendant slugs (including itself). */
+/**
+ * Map slug -> all descendant slugs/names (lowercased), including itself.
+ * Used so selecting a parent category shows all child categories’ products.
+ */
 function buildDescendantSlugMap(nodes: CategoryNode[]): Map<string, string[]> {
   const map = new Map<string, string[]>();
 
   const dfs = (n: CategoryNode): string[] => {
-    const self = getNodeSlug(n);
-    let collected = [self];
+    const slug = getNodeSlug(n).toLowerCase();
+    const nameKey = slugify(n.name).toLowerCase();
+    let collected = [slug, nameKey];
+
     if (n.children?.length) {
-      for (const c of n.children) collected = collected.concat(dfs(c));
+      for (const c of n.children) {
+        collected = collected.concat(dfs(c));
+      }
     }
-    map.set(self, collected);
+
+    const existing = map.get(slug) ?? [];
+    const merged = Array.from(
+      new Set([...existing, ...collected.map((s) => s.toLowerCase())]),
+    );
+    map.set(slug, merged);
     return collected;
   };
 
@@ -217,7 +289,9 @@ const tags = ["Organic", "Vegan", "Gluten-Free", "Non-GMO", "Fair Trade"];
 function effectivePrice(cp: CardProduct): number {
   const vs = (cp as any).weightVariants as CardVariant[] | undefined;
   if (vs?.length) {
-    const prices = vs.map(v => Number(v.price)).filter(n => Number.isFinite(n));
+    const prices = vs
+      .map((v) => Number(v.price))
+      .filter((n) => Number.isFinite(n));
     if (prices.length) return Math.min(...prices);
   }
   return Number(cp.price) || 0;
@@ -225,7 +299,9 @@ function effectivePrice(cp: CardProduct): number {
 function matchesTags(cp: CardProduct, selectedTags: string[]) {
   if (!selectedTags.length) return true;
   const hay = `${cp.name} ${cp.description}`.toLowerCase();
-  return selectedTags.every(tag => hay.includes(tag.toLowerCase()));
+  return selectedTags.every((tag) =>
+    hay.includes(tag.toLowerCase()),
+  );
 }
 function localSearchMatch(cp: CardProduct, q: string) {
   if (!q.trim()) return true;
@@ -242,7 +318,9 @@ function sortCards(cards: CardProduct[], sortBy: string) {
       copy.sort((a, b) => effectivePrice(b) - effectivePrice(a));
       break;
     case "popular":
-      copy.sort((a, b) => (b.reviewCount || 0) - (a.reviewCount || 0));
+      copy.sort(
+        (a, b) => (b.reviewCount || 0) - (a.reviewCount || 0),
+      );
       break;
     case "rating":
       copy.sort((a, b) => (b.rating || 0) - (a.rating || 0));
@@ -263,7 +341,9 @@ export default function Shop() {
 
   // URL is the single source of truth for q and category
   const urlQ = (searchParams.get("q") || "").trim();
-  const urlCat = (searchParams.get("category") || "all").trim().toLowerCase();
+  const urlCat = (searchParams.get("category") || "all")
+    .trim()
+    .toLowerCase();
 
   // categories API
   const { data: catData, isLoading: catsLoading } = useCategories();
@@ -271,10 +351,13 @@ export default function Shop() {
   // Flat list for sidebar
   const flatCats: FlatCategory[] = useMemo(() => {
     if (!catData?.tree?.length) return fallbackSidebar;
-    return [{ label: "All Categories", slug: "all", depth: 0 }, ...flattenTree(catData.tree)];
+    return [
+      { label: "All Categories", slug: "all", depth: 0 },
+      ...flattenTree(catData.tree),
+    ];
   }, [catData]);
 
-  // Descendant slug map for server/client filtering
+  // Descendant slug map for parent->children
   const descendantMap = useMemo(() => {
     if (!catData?.tree?.length) return new Map<string, string[]>();
     return buildDescendantSlugMap(catData.tree);
@@ -283,24 +366,27 @@ export default function Shop() {
   // UI-only states
   const [searchQuery, setSearchQuery] = useState(urlQ);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [priceRange, setPriceRange] = useState([0, 2000]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([
+    0, 2000,
+  ]);
   const [sortBy, setSortBy] = useState("newest");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showFilters, setShowFilters] = useState(false);
+
+  // 🔢 pagination state (server-side)
+  const [page, setPage] = useState(1);
 
   // keep input in sync with URL q (when header changes it)
   useEffect(() => {
     setSearchQuery(urlQ);
   }, [urlQ]);
 
-  // Derived: all slugs to include for the selected category (parent + children)
-  const selectedSlugSet: Set<string> = useMemo(() => {
-    if (!urlCat || urlCat === "all") return new Set();
-    const list = descendantMap.get(urlCat) ?? [urlCat];
-    return new Set(list);
-  }, [urlCat, descendantMap]);
+  // reset to first page when filters/search change
+  useEffect(() => {
+    setPage(1);
+  }, [urlQ, urlCat, priceRange, selectedTags, sortBy]);
 
-  // API params (server category filter via category__slug / category__slug__in)
+  // API fetch first, then we filter client-side
   const params = useMemo(() => {
     const serverOrdering =
       sortBy === "price-low"
@@ -312,7 +398,7 @@ export default function Shop() {
         : undefined;
 
     const q: Record<string, any> = {
-      page: 1,
+      page,
       page_size: 12,
       include_images: true,
     };
@@ -324,42 +410,93 @@ export default function Shop() {
       q.q = urlQ;
     }
 
+    // For server we send simple category slug(s) as best-effort;
+    // client-side filter will *definitely* enforce parent+children.
     if (urlCat && urlCat !== "all") {
       const desc = descendantMap.get(urlCat);
       if (desc && desc.length > 1) {
-        q["category__slug__in"] = desc.join(",");
+        const joined = Array.from(new Set(desc)).join(",");
+        q["category__slug__in"] = joined;
+        q["category_slug__in"] = joined;
       } else {
         q["category__slug"] = urlCat;
+        q["category_slug"] = urlCat;
+        q["category"] = urlCat;
       }
     }
 
-    // client-side filters
+    // also pass price hints to backend (if implemented)
     q.min_price = priceRange[0];
     q.max_price = priceRange[1];
+    q.price_min = priceRange[0];
+    q.price_max = priceRange[1];
+
     if (selectedTags.length) q.tags = selectedTags.join(",");
 
     return q;
-  }, [sortBy, urlQ, urlCat, priceRange, selectedTags, descendantMap]);
+  }, [page, sortBy, urlQ, urlCat, priceRange, selectedTags, descendantMap]);
 
-  // Fetch
+  // Fetch products
   const { data, isLoading, isError } = useProducts(params);
   const rawItems: any[] = data?.items ?? [];
 
-  // Map to cards
-  const allCards: CardProduct[] = useMemo(() => rawItems.map(toCardProduct), [rawItems]);
+  // Map backend objects -> CardProduct
+  const allCards: CardProduct[] = useMemo(
+    () => rawItems.map(toCardProduct),
+    [rawItems],
+  );
 
-  // Client-side filtering + sorting (also enforce parent+child when server doesn’t)
+  // dynamic max for slider based on loaded products
+  const maxPriceInData = useMemo(() => {
+    if (!allCards.length) return 2000;
+    const prices = allCards
+      .map(effectivePrice)
+      .filter((n) => Number.isFinite(n));
+    if (!prices.length) return 2000;
+    const max = Math.max(...prices);
+    // round up to nearest 50
+    return Math.ceil(max / 50) * 50;
+  }, [allCards]);
+
+  // keep priceRange upper bound in sync with maxPriceInData
+  useEffect(() => {
+    if (!maxPriceInData) return;
+    setPriceRange((prev) => {
+      const [min, max] = prev;
+      const newMax = maxPriceInData;
+      return [Math.min(min, newMax), newMax];
+    });
+  }, [maxPriceInData]);
+
+  // Derived: all slugs to include for the selected category (parent + children)
+  const selectedSlugSet: Set<string> = useMemo(() => {
+    if (!urlCat || urlCat === "all") return new Set();
+    const list =
+      descendantMap.get(urlCat) ??
+      [urlCat, slugify(urlCat)].map((x) => x.toLowerCase());
+    return new Set(list.map((s) => s.toLowerCase()));
+  }, [urlCat, descendantMap]);
+
+  // Client-side filtering + sorting
   const filteredSortedCards = useMemo(() => {
     const minP = priceRange[0] ?? 0;
-    const maxP = priceRange[1] ?? Number.MAX_SAFE_INTEGER;
+    const maxP =
+      priceRange[1] ?? Number.MAX_SAFE_INTEGER;
 
     const filtered = allCards.filter((cp: any) => {
       if (!localSearchMatch(cp, urlQ)) return false;
       if (!matchesTags(cp, selectedTags)) return false;
 
+      // parent + child category matching, slug OR name (case-insensitive)
       if (selectedSlugSet.size > 0) {
-        const pSlug = (cp as any).categorySlug as string | undefined;
-        if (!pSlug || !selectedSlugSet.has(pSlug)) return false;
+        const pSlug = (cp.categorySlug || "").toLowerCase();
+        const pName = (cp.category || "").toLowerCase();
+        if (
+          !selectedSlugSet.has(pSlug) &&
+          !selectedSlugSet.has(slugify(pName))
+        ) {
+          return false;
+        }
       }
 
       const p = effectivePrice(cp);
@@ -369,9 +506,28 @@ export default function Shop() {
     });
 
     return sortCards(filtered, sortBy);
-  }, [allCards, urlQ, selectedTags, priceRange, sortBy, selectedSlugSet]);
+  }, [
+    allCards,
+    urlQ,
+    selectedTags,
+    priceRange,
+    sortBy,
+    selectedSlugSet,
+  ]);
 
-  // For QuickView
+  // Pagination numbers (based on filtered list so filters actually reflect)
+  const pageSize = Number((params as any).page_size ?? 12);
+  const totalCount = filteredSortedCards.length;
+  const totalPages = Math.max(
+    1,
+    Math.ceil(totalCount / pageSize),
+  );
+  const currentPage = Math.min(page, totalPages);
+  const startIndex =
+    totalCount === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endIndex = Math.min(currentPage * pageSize, totalCount);
+
+  // For QuickView raw fetch
   const rawById = useMemo(() => {
     const m: Record<number, any> = {};
     rawItems.forEach((p: any) => (m[p.id] = p));
@@ -381,38 +537,61 @@ export default function Shop() {
   // Carousel + QuickView
   const carouselRef = useRef<HTMLDivElement>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [quickViewProduct, setQuickViewProduct] = useState<(CardProduct & { selectedVariantId?: number }) | null>(null);
+  const [quickViewProduct, setQuickViewProduct] =
+    useState<(CardProduct & { selectedVariantId?: number }) | null>(
+      null,
+    );
 
   const scrollLeft = () => {
-    carouselRef.current?.scrollBy({ left: -300, behavior: "smooth" });
+    carouselRef.current?.scrollBy({
+      left: -300,
+      behavior: "smooth",
+    });
     setCurrentIndex((i) => Math.max(0, i - 1));
   };
   const scrollRight = () => {
-    carouselRef.current?.scrollBy({ left: 300, behavior: "smooth" });
-    setCurrentIndex((i) => Math.min(filteredSortedCards.length - 1, i + 1));
+    carouselRef.current?.scrollBy({
+      left: 300,
+      behavior: "smooth",
+    });
+    setCurrentIndex((i) =>
+      Math.min(filteredSortedCards.length - 1, i + 1),
+    );
   };
 
   // Add to cart respects variant
-  const handleAddToCart = (product: CardProduct, variant?: CardVariant) => {
+  const handleAddToCart = (
+    product: CardProduct,
+    variant?: CardVariant,
+  ) => {
     cartAdd({
       id: product.id,
       name: product.name,
       price: variant ? variant.price : product.price,
-      originalPrice: variant ? variant.originalPrice : product.originalPrice,
+      originalPrice: variant
+        ? variant.originalPrice
+        : product.originalPrice,
       image: product.image,
       weight: variant?.weight || product.weight || "",
       quantity: 1,
-      inStock: variant ? variant.stockCount > 0 : product.inStock,
+      inStock: variant
+        ? variant.stockCount > 0
+        : product.inStock,
       // @ts-expect-error sku/variantId extra
       variantId: variant?.id,
     });
     toast({
       title: "Added to Cart",
-      description: `${product.name}${variant?.weight ? ` (${variant.weight})` : ""} added to your cart.`,
+      description: `${product.name}${
+        variant?.weight ? ` (${variant.weight})` : ""
+      } added to your cart.`,
     });
   };
 
-  const handleQuickView = (product: CardProduct, variant?: CardVariant) => {
+  const handleQuickView = (
+    product: CardProduct,
+    variant?: CardVariant,
+  ) => {
     setQuickViewProduct({
       ...product,
       selectedVariantId: variant?.id,
@@ -421,7 +600,8 @@ export default function Shop() {
 
   // Tag handling
   const handleTagChange = (tag: string, checked: boolean) => {
-    if (checked) setSelectedTags((t) => [...t, tag]);
+    if (checked)
+      setSelectedTags((t) => [...t, tag]);
     else setSelectedTags((t) => t.filter((x) => x !== tag));
   };
 
@@ -430,6 +610,8 @@ export default function Shop() {
     const next = new URLSearchParams(searchParams);
     if (slug && slug !== "all") next.set("category", slug);
     else next.delete("category");
+    // reset page when changing category
+    next.delete("page");
     setSearchParams(next, { replace: true });
   };
 
@@ -439,13 +621,19 @@ export default function Shop() {
     const q = (searchQuery || "").trim();
     if (q) next.set("q", q);
     else next.delete("q");
+    // reset page when changing search
+    next.delete("page");
     setSearchParams(next, { replace: true });
   };
 
   /* ----------- Category item (single-select w/ parent & child support) ----------- */
   const CategoryItem = ({ c }: { c: FlatCategory }) => {
-    const isChecked = urlCat === c.slug || (urlCat === "all" && c.slug === "all");
-    const toggle = () => setCategoryInUrl(isChecked ? "all" : c.slug);
+    const slug = c.slug.toLowerCase();
+    const isChecked =
+      urlCat === slug || (urlCat === "all" && slug === "all");
+    const toggle = () =>
+      setCategoryInUrl(isChecked ? "all" : slug);
+
     return (
       <div
         role="button"
@@ -461,9 +649,17 @@ export default function Shop() {
         title={c.label}
         aria-pressed={isChecked}
       >
-        {/* Controlled checkbox purely for visuals */}
-        <Checkbox checked={isChecked} onCheckedChange={() => {}} />
-        <span className="text-sm" style={{ paddingLeft: c.depth * 12 }}>{c.label}</span>
+        {/* pointer-events-none so we don't double-toggle via checkbox + row */}
+        <Checkbox
+          checked={isChecked}
+          className="pointer-events-none"
+        />
+        <span
+          className="text-sm"
+          style={{ paddingLeft: c.depth * 12 }}
+        >
+          {c.label}
+        </span>
       </div>
     );
   };
@@ -475,18 +671,25 @@ export default function Shop() {
       <main className="container mx-auto px-4 py-8 max-w-full">
         {/* Breadcrumbs */}
         <nav className="text-sm text-muted-foreground mb-6">
-          <span>Home</span> <span className="mx-2">/</span> <span className="text-primary">Shop</span>
+          <span>Home</span> <span className="mx-2">/</span>{" "}
+          <span className="text-primary">Shop</span>
           {urlCat !== "all" && (
             <>
               <span className="mx-2">/</span>
-              <span className="text-primary capitalize">{urlCat.replace(/-/g, " ")}</span>
+              <span className="text-primary capitalize">
+                {urlCat.replace(/-/g, " ")}
+              </span>
             </>
           )}
         </nav>
 
         <div className="grid lg:grid-cols-4 gap-8">
           {/* Sidebar Filters */}
-          <aside className={`lg:block ${showFilters ? "block" : "hidden"} space-y-6`}>
+          <aside
+            className={`lg:block ${
+              showFilters ? "block" : "hidden"
+            } space-y-6`}
+          >
             <div className="bg-card p-6 rounded-lg border border-border">
               <h3 className="font-semibold text-lg mb-4">Filters</h3>
 
@@ -494,17 +697,36 @@ export default function Shop() {
               <div className="space-y-3 mb-6">
                 <div className="flex items-center justify-between">
                   <h4 className="font-medium">Category</h4>
-                  {catsLoading && <span className="text-xs text-muted-foreground">Loading…</span>}
+                  {catsLoading && (
+                    <span className="text-xs text-muted-foreground">
+                      Loading…
+                    </span>
+                  )}
                 </div>
                 {flatCats.map((c) => (
-                  <CategoryItem key={`${c.slug}-${c.depth}`} c={c} />
+                  <CategoryItem
+                    key={`${c.slug}-${c.depth}`}
+                    c={c}
+                  />
                 ))}
               </div>
 
               {/* Price Range */}
               <div className="space-y-3 mb-6">
                 <h4 className="font-medium">Price Range</h4>
-                <Slider value={priceRange} onValueChange={setPriceRange} max={2000} step={50} className="w-full" />
+                <Slider
+                  value={priceRange}
+                  onValueChange={(val) =>
+                    setPriceRange([
+                      val[0] ?? 0,
+                      val[1] ?? maxPriceInData,
+                    ])
+                  }
+                  min={0}
+                  max={maxPriceInData}
+                  step={50}
+                  className="w-full"
+                />
                 <div className="flex justify-between text-sm text-muted-foreground">
                   <span>₹{priceRange[0]}</span>
                   <span>₹{priceRange[1]}</span>
@@ -515,10 +737,15 @@ export default function Shop() {
               <div className="space-y-3">
                 <h4 className="font-medium">Tags</h4>
                 {tags.map((tag) => (
-                  <label key={tag} className="flex items-center space-x-2 cursor-pointer">
+                  <label
+                    key={tag}
+                    className="flex items-center space-x-2 cursor-pointer"
+                  >
                     <Checkbox
                       checked={selectedTags.includes(tag)}
-                      onCheckedChange={(checked) => handleTagChange(tag, !!checked)}
+                      onCheckedChange={(checked) =>
+                        handleTagChange(tag, !!checked)
+                      }
                     />
                     <span className="text-sm">{tag}</span>
                   </label>
@@ -531,51 +758,90 @@ export default function Shop() {
           <div className="lg:col-span-3">
             {/* Search & Sort */}
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <form onSubmit={submitLocalSearch} className="relative flex-1">
+              <form
+                onSubmit={submitLocalSearch}
+                className="relative flex-1"
+              >
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <Input
                   placeholder="Search products..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) =>
+                    setSearchQuery(e.target.value)
+                  }
                   className="pl-10"
                   aria-label="Search products"
                 />
                 {/* hidden button ensures Enter on mobile submits */}
-                <button type="submit" className="hidden" aria-hidden="true" />
+                <button
+                  type="submit"
+                  className="hidden"
+                  aria-hidden="true"
+                />
               </form>
 
               <div className="flex gap-2 items-center">
-                <Button variant="outline" size="sm" className="lg:hidden" onClick={() => setShowFilters(!showFilters)}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="lg:hidden"
+                  onClick={() =>
+                    setShowFilters((s) => !s)
+                  }
+                >
                   <Filter className="w-4 h-4 mr-2" />
                   Filters
                 </Button>
 
-                <Select value={sortBy} onValueChange={setSortBy}>
+                <Select
+                  value={sortBy}
+                  onValueChange={setSortBy}
+                >
                   <SelectTrigger className="w-48">
                     <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="newest">Newest</SelectItem>
-                    <SelectItem value="price-low">Price: Low to High</SelectItem>
-                    <SelectItem value="price-high">Price: High to Low</SelectItem>
-                    <SelectItem value="popular">Most Popular</SelectItem>
-                    <SelectItem value="rating">Highest Rated</SelectItem>
+                    <SelectItem value="price-low">
+                      Price: Low to High
+                    </SelectItem>
+                    <SelectItem value="price-high">
+                      Price: High to Low
+                    </SelectItem>
+                    <SelectItem value="popular">
+                      Most Popular
+                    </SelectItem>
+                    <SelectItem value="rating">
+                      Highest Rated
+                    </SelectItem>
                   </SelectContent>
                 </Select>
 
                 <div className="flex border border-border rounded-lg">
                   <Button
-                    variant={viewMode === "grid" ? "default" : "ghost"}
+                    variant={
+                      viewMode === "grid"
+                        ? "default"
+                        : "ghost"
+                    }
                     size="sm"
-                    onClick={() => setViewMode("grid")}
+                    onClick={() =>
+                      setViewMode("grid")
+                    }
                     className="rounded-r-none"
                   >
                     <Grid className="w-4 h-4" />
                   </Button>
                   <Button
-                    variant={viewMode === "list" ? "default" : "ghost"}
+                    variant={
+                      viewMode === "list"
+                        ? "default"
+                        : "ghost"
+                    }
                     size="sm"
-                    onClick={() => setViewMode("list")}
+                    onClick={() =>
+                      setViewMode("list")
+                    }
                     className="rounded-l-none"
                   >
                     <List className="w-4 h-4" />
@@ -585,13 +851,31 @@ export default function Shop() {
             </div>
 
             {/* Results status */}
-            {isError && <p className="text-muted-foreground mb-6">Couldn’t load products. Please try again.</p>}
-            {isLoading && <p className="text-muted-foreground mb-6">Loading products…</p>}
+            {isError && (
+              <p className="text-muted-foreground mb-6">
+                Couldn’t load products. Please try again.
+              </p>
+            )}
+            {isLoading && (
+              <p className="text-muted-foreground mb-6">
+                Loading products…
+              </p>
+            )}
             {!isLoading && !isError && (
               <p className="text-muted-foreground mb-6">
-                Showing {filteredSortedCards.length} product(s)
-                {typeof (data as any)?.count === "number" ? ` (of ${(data as any).count})` : ""}
-                {urlCat !== "all" ? ` in “${urlCat.replace(/-/g, " ")}”` : ""}
+                {totalCount > 0 ? (
+                  <>
+                    Showing <strong>{startIndex}</strong>–
+                    <strong>{endIndex}</strong> of{" "}
+                    <strong>{totalCount}</strong> product
+                    {totalCount === 1 ? "" : "s"}
+                  </>
+                ) : (
+                  <>Showing 0 products</>
+                )}
+                {urlCat !== "all"
+                  ? ` in “${urlCat.replace(/-/g, " ")}”`
+                  : ""}
               </p>
             )}
 
@@ -613,19 +897,33 @@ export default function Shop() {
                   size="sm"
                   className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm shadow-md hover:bg-white border-0 rounded-full w-10 h-10 p-0"
                   onClick={scrollRight}
-                  disabled={currentIndex >= filteredSortedCards.length - 1}
+                  disabled={
+                    currentIndex >=
+                    filteredSortedCards.length - 1
+                  }
                 >
                   <ChevronRight className="w-5 h-5 text-primary" />
                 </Button>
 
-                <div ref={carouselRef} className="product-carousel px-12 max-w-full" style={{ maxWidth: "100vw" }}>
+                <div
+                  ref={carouselRef}
+                  className="product-carousel px-12 max-w-full"
+                  style={{ maxWidth: "100vw" }}
+                >
                   {filteredSortedCards.map((product) => (
-                    <div key={product.id} className="product-carousel-item">
+                    <div
+                      key={product.id}
+                      className="product-carousel-item"
+                    >
                       <ProductCard
                         product={product}
                         images={product.images}
-                        onAddToCart={(p, v) => handleAddToCart(p, v)}
-                        onQuickView={(p, v) => handleQuickView(p, v)}
+                        onAddToCart={(p, v) =>
+                          handleAddToCart(p, v)
+                        }
+                        onQuickView={(p, v) =>
+                          handleQuickView(p, v)
+                        }
                       />
                     </div>
                   ))}
@@ -635,7 +933,14 @@ export default function Shop() {
                   {filteredSortedCards.map((_, index) => (
                     <div
                       key={index}
-                      className={`carousel-dot ${Math.floor(currentIndex / 2) === Math.floor(index / 2) ? "active" : "inactive"}`}
+                      className={`carousel-dot ${
+                        Math.floor(
+                          currentIndex / 2,
+                        ) ===
+                        Math.floor(index / 2)
+                          ? "active"
+                          : "inactive"
+                      }`}
                     />
                   ))}
                 </div>
@@ -644,18 +949,63 @@ export default function Shop() {
 
             {/* Desktop Grid/List */}
             {!isLoading && filteredSortedCards.length > 0 && (
-              <div className={`hidden sm:grid gap-6 ${viewMode === "grid" ? "grid-cols-2 xl:grid-cols-3" : "grid-cols-1"}`}>
+              <div
+                className={`hidden sm:grid gap-6 ${
+                  viewMode === "grid"
+                    ? "grid-cols-2 xl:grid-cols-3"
+                    : "grid-cols-1"
+                }`}
+              >
                 {filteredSortedCards.map((product) => (
                   <ProductCard
                     key={product.id}
                     product={product}
                     images={product.images}
-                    onAddToCart={(p, v) => handleAddToCart(p, v)}
-                    onQuickView={(p, v) => handleQuickView(p, v)}
+                    onAddToCart={(p, v) =>
+                      handleAddToCart(p, v)
+                    }
+                    onQuickView={(p, v) =>
+                      handleQuickView(p, v)
+                    }
                   />
                 ))}
               </div>
             )}
+
+            {/* Pagination footer */}
+            {!isLoading &&
+              !isError &&
+              filteredSortedCards.length > 0 &&
+              totalPages > 1 && (
+                <div className="flex items-center justify-center gap-3 mt-8">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage <= 1}
+                    onClick={() =>
+                      setPage((p) => Math.max(1, p - 1))
+                    }
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-sm text-muted-foreground">
+                    Page <strong>{currentPage}</strong> of{" "}
+                    <strong>{totalPages}</strong>
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage >= totalPages}
+                    onClick={() =>
+                      setPage((p) =>
+                        Math.min(totalPages, p + 1),
+                      )
+                    }
+                  >
+                    Next
+                  </Button>
+                </div>
+              )}
           </div>
         </div>
       </main>

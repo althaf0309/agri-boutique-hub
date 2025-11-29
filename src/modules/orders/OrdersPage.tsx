@@ -52,7 +52,7 @@ export function OrdersPage() {
   const { user } = useAuth();
   const isAdmin = !!user?.is_superuser;
 
-  // 👇 superadmin sees ALL orders; others see their own (hook handles fallback)
+  // superadmin sees ALL orders; others see their own
   const { data: orders = [], isLoading } = useOrders({ showAll: isAdmin });
 
   const confirmOrder = useConfirmOrder();
@@ -118,7 +118,9 @@ export function OrdersPage() {
     <div className="p-4 sm:p-6 mx-auto w-full">
       {/* header / filters */}
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-lg sm:text-xl font-semibold">Orders{isAdmin ? " (All)" : ""}</h1>
+        <h1 className="text-lg sm:text-xl font-semibold">
+          Orders{isAdmin ? " (All)" : ""}
+        </h1>
         <div className="flex flex-wrap gap-2">
           <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
             <SelectTrigger className="w-40 sm:w-44">
@@ -163,7 +165,7 @@ export function OrdersPage() {
                     <th className="text-left py-2 px-2">#</th>
                     <th className="text-left py-2 px-2">Customer</th>
                     <th className="text-left py-2 px-2">Email / Phone</th>
-                    <th className="text-left py-2 px-2">Items</th>
+                    <th className="text-left py-2 px-2">Items / Qty</th>
                     <th className="text-left py-2 px-2">Total</th>
                     <th className="text-left py-2 px-2">Order</th>
                     <th className="text-left py-2 px-2">Shipment</th>
@@ -179,7 +181,13 @@ export function OrdersPage() {
 
                     const lines = Array.isArray(o.lines) ? o.lines : [];
                     const first = lines[0];
-                    const count = lines.length;
+
+                    const productCount = lines.length;
+                    const totalQty = lines.reduce(
+                      (sum: number, l: any) =>
+                        sum + Number(l.qty ?? l.quantity ?? 0),
+                      0
+                    );
 
                     const total = o.totals?.grand_total ?? 0;
                     const shipStatus: "placed" | "pending" | "processing" | "delivered" =
@@ -193,31 +201,44 @@ export function OrdersPage() {
 
                         <td className="py-2 px-2 break-all">
                           <div className="leading-5">{email}</div>
-                          {phone ? <div className="text-xs text-muted-foreground">{phone}</div> : null}
+                          {phone ? (
+                            <div className="text-xs text-muted-foreground">
+                              {phone}
+                            </div>
+                          ) : null}
                         </td>
 
                         <td className="py-2 px-2">
-                          {first?.image ? (
+                          {productCount === 0 ? (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          ) : (
                             <div className="flex items-center gap-2">
-                              <img
-                                src={first.image}
-                                alt={first.name || "Item"}
-                                className="h-9 w-9 rounded object-cover flex-shrink-0"
-                              />
-                              <div className="text-xs text-muted-foreground">
-                                {count} item{count === 1 ? "" : "s"}
+                              {first?.image && (
+                                <img
+                                  src={first.image}
+                                  alt={first.name || "Item"}
+                                  className="h-9 w-9 rounded object-cover flex-shrink-0"
+                                />
+                              )}
+                              <div className="text-xs">
+                                <div className="font-medium line-clamp-1">
+                                  {first?.name || "Item"}
+                                </div>
+                                <div className="text-muted-foreground">
+                                  {productCount} product
+                                  {productCount !== 1 ? "s" : ""} • total qty{" "}
+                                  {totalQty}
+                                </div>
                               </div>
                             </div>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">
-                              {count ? `${count} item${count === 1 ? "" : "s"}` : "—"}
-                            </span>
                           )}
                         </td>
 
                         <td className="py-2 px-2 break-words">{fmtINR(total)}</td>
 
-                        <td className="py-2 px-2"><StatusPill status={o.status} /></td>
+                        <td className="py-2 px-2">
+                          <StatusPill status={o.status} />
+                        </td>
 
                         <td className="py-2 px-2">
                           <div className="flex items-center gap-2 flex-wrap">
@@ -265,14 +286,25 @@ export function OrdersPage() {
 
                         <td className="py-2 px-2 text-right">
                           <div className="flex justify-end gap-2 flex-wrap">
-                            <Button asChild size="sm" variant="outline" title="View" className="px-2">
+                            <Button
+                              asChild
+                              size="sm"
+                              variant="outline"
+                              title="View"
+                              className="px-2"
+                            >
                               <Link to={`/admin/orders/${o.id}`}>
                                 <Eye className="h-4 w-4 mr-1" />
                                 <span className="hidden md:inline">View</span>
                               </Link>
                             </Button>
                             {String(o.status).toLowerCase() === "pending" && (
-                              <Button size="sm" className="px-2" onClick={() => onConfirm(o.id)} title="Confirm">
+                              <Button
+                                size="sm"
+                                className="px-2"
+                                onClick={() => onConfirm(o.id)}
+                                title="Confirm"
+                              >
                                 <CheckCircle2 className="h-4 w-4 mr-1" />
                                 <span className="hidden md:inline">Confirm</span>
                               </Button>

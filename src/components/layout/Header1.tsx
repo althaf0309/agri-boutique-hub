@@ -55,7 +55,7 @@ export default function Header() {
     document.documentElement.setAttribute("lang", i18n.language);
   }, [i18n.language]);
 
-  // categories → pills
+  // categories â†’ pills
   const { data: categoriesData, isLoading } = useCategories();
   const categories: NavCategory[] = useMemo(() => {
     const flat = toFlatCats(categoriesData);
@@ -108,8 +108,7 @@ export default function Header() {
   };
 
   const initials =
-    (
-      user?.first_name?.[0] ||
+    (user?.first_name?.[0] ||
       (user as any)?.name?.[0] ||
       user?.email?.[0] ||
       "U"
@@ -122,10 +121,7 @@ export default function Header() {
         <div className="container mx-auto px-3 sm:px-4 py-2 sm:py-3">
           <div className="flex items-center justify-between min-h-[44px]">
             {/* Logo */}
-            <Link
-              to="/"
-              className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0"
-            >
+            <Link to="/" className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
               <div className="w-7 h-7 sm:w-8 sm:h-8 bg-primary rounded-full flex items-center justify-center">
                 <span className="text-primary-foreground font-bold text-xs sm:text-sm">
                   {t("brand.short")}
@@ -141,74 +137,25 @@ export default function Header() {
             <div className="flex items-center space-x-1 sm:space-x-3 flex-shrink-0">
               {/* Desktop Navigation */}
               <nav className="hidden lg:flex items-center space-x-4">
-                <Link
-                  to="/"
-                  className={`text-sm hover:text-primary transition-colors ${
-                    isActive("/")
-                      ? "text-primary font-medium"
-                      : "text-muted-foreground"
-                  }`}
-                >
+                <Link to="/" className={`text-sm hover:text-primary transition-colors ${isActive("/") ? "text-primary font-medium" : "text-muted-foreground"}`}>
                   {t("nav.home")}
                 </Link>
-                <Link
-                  to="/about"
-                  className={`text-sm hover:text-primary transition-colors ${
-                    isActive("/about")
-                      ? "text-primary font-medium"
-                      : "text-muted-foreground"
-                  }`}
-                >
+                <Link to="/about" className={`text-sm hover:text-primary transition-colors ${isActive("/about") ? "text-primary font-medium" : "text-muted-foreground"}`}>
                   {t("nav.about")}
                 </Link>
-                <Link
-                  to="/awards"
-                  className={`text-sm hover:text-primary transition-colors ${
-                    isActive("/awards")
-                      ? "text-primary font-medium"
-                      : "text-muted-foreground"
-                  }`}
-                >
+                <Link to="/awards" className={`text-sm hover:text-primary transition-colors ${isActive("/awards") ? "text-primary font-medium" : "text-muted-foreground"}`}>
                   {t("nav.awards")}
                 </Link>
-                <Link
-                  to="/testimonials"
-                  className={`text-sm hover:text-primary transition-colors ${
-                    isActive("/testimonials")
-                      ? "text-primary font-medium"
-                      : "text-muted-foreground"
-                  }`}
-                >
+                <Link to="/testimonials" className={`text-sm hover:text-primary transition-colors ${isActive("/testimonials") ? "text-primary font-medium" : "text-muted-foreground"}`}>
                   {t("nav.testimonials")}
                 </Link>
-                <Link
-                  to="/gallery"
-                  className={`text-sm hover:text-primary transition-colors ${
-                    isActive("/gallery")
-                      ? "text-primary font-medium"
-                      : "text-muted-foreground"
-                  }`}
-                >
+                <Link to="/gallery" className={`text-sm hover:text-primary transition-colors ${isActive("/gallery") ? "text-primary font-medium" : "text-muted-foreground"}`}>
                   {t("nav.gallery")}
                 </Link>
-                <Link
-                  to="/blog"
-                  className={`text-sm hover:text-primary transition-colors ${
-                    isActive("/blog")
-                      ? "text-primary font-medium"
-                      : "text-muted-foreground"
-                  }`}
-                >
+                <Link to="/blog" className={`text-sm hover:text-primary transition-colors ${isActive("/blog") ? "text-primary font-medium" : "text-muted-foreground"}`}>
                   {t("nav.blog")}
                 </Link>
-                <Link
-                  to="/contact"
-                  className={`text-sm hover:text-primary transition-colors ${
-                    isActive("/contact")
-                      ? "text-primary font-medium"
-                      : "text-muted-foreground"
-                  }`}
-                >
+                <Link to="/contact" className={`text-sm hover:text-primary transition-colors ${isActive("/contact") ? "text-primary font-medium" : "text-muted-foreground"}`}>
                   {t("nav.contact")}
                 </Link>
               </nav>
@@ -216,14 +163,8 @@ export default function Header() {
               {/* Auth area */}
               {!isAuthenticated ? (
                 <Link to="/login" aria-label="Sign in">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-xs sm:text-sm px-2 sm:px-3 h-8 sm:h-9"
-                  >
-                    <span className="hidden sm:inline">
-                      {t("nav.sign_in")}
-                    </span>
+                  <Button variant="ghost" size="sm" className="text-xs sm:text-sm px-2 sm:px-3 h-8 sm:h-9">
+                    <span className="hidden sm:inline">{t("nav.sign_in")}</span>
                     <span className="sm:hidden">{t("nav.login")}</span>
                   </Button>
                 </Link>
@@ -241,23 +182,13 @@ export default function Header() {
                         {initials}
                       </div>
                       <span className="hidden sm:block text-xs">
-                        {user?.first_name ||
-                          (user as any)?.name ||
-                          user?.email}
+                        {user?.first_name || (user as any)?.name || user?.email}
                       </span>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="end"
-                    className="bg-card border border-border shadow-lg z-[60] min-w-[190px]"
-                  >
-                    <DropdownMenuLabel className="text-xs">
-                      Account
-                    </DropdownMenuLabel>
-                    <DropdownMenuItem
-                      className="hover:bg-muted cursor-pointer"
-                      onClick={() => navigate("/profile")}
-                    >
+                  <DropdownMenuContent align="end" className="bg-card border border-border shadow-lg z-[60] min-w-[190px]">
+                    <DropdownMenuLabel className="text-xs">Account</DropdownMenuLabel>
+                    <DropdownMenuItem className="hover:bg-muted cursor-pointer" onClick={() => navigate("/profile")}>
                       <UserCircle2 className="w-4 h-4 mr-2" />
                       Profile
                     </DropdownMenuItem>
@@ -293,13 +224,9 @@ export default function Header() {
             {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </Button>
 
-          {/* Category Pills - Desktop (centered, scrollable) */}
-          <nav className="hidden md:flex flex-1 items-center justify-center gap-2 overflow-x-auto no-scrollbar px-2">
-            {isLoading && (
-              <span className="text-xs text-muted-foreground">
-                {t("generic.loading_categories")}
-              </span>
-            )}
+          {/* Category Pills - Desktop */}
+          <nav className="hidden md:flex items-center space-x-2">
+            {isLoading && <span className="text-xs text-muted-foreground">{t("generic.loading_categories")}</span>}
             {!isLoading &&
               categories.map((c) => (
                 <button
@@ -316,8 +243,8 @@ export default function Header() {
 
           {/* Search & Actions */}
           <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-4 flex-shrink-0">
-            {/* Desktop Search (still available if you want to un-comment) */}
-            {/* <form onSubmit={onSubmitDesktop} className="relative max-w-28 sm:max-w-sm hidden sm:block">
+            {/* Desktop Search */}
+            <form onSubmit={onSubmitDesktop} className="relative max-w-28 sm:max-w-sm hidden sm:block">
               <Search className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-3 h-3 sm:w-4 sm:h-4" />
               <Input
                 placeholder={t("generic.search_placeholder")}
@@ -327,7 +254,7 @@ export default function Header() {
                 aria-label="Search products"
               />
               <button type="submit" className="hidden" aria-hidden="true" />
-            </form> */}
+            </form>
 
             {/* Mobile Search Icon */}
             <Button
@@ -342,22 +269,14 @@ export default function Header() {
 
             {/* Shop Button */}
             <Link to="/shop">
-              <Button
-                variant="outline"
-                size="sm"
-                className="hidden sm:flex text-xs sm:text-sm px-2 sm:px-3 h-8 sm:h-10"
-              >
+              <Button variant="outline" size="sm" className="hidden sm:flex text-xs sm:text-sm px-2 sm:px-3 h-8 sm:h-10">
                 Shop
               </Button>
             </Link>
 
             {/* Cart */}
             <Link to="/cart" aria-label="Open cart">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="relative p-2 flex-shrink-0"
-              >
+              <Button variant="ghost" size="sm" className="relative p-2 flex-shrink-0">
                 <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
                 {cartCount > 0 && (
                   <span className="absolute -top-1 -right-1 bg-accent text-accent-foreground text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center font-medium">
@@ -385,14 +304,12 @@ export default function Header() {
                 />
               </div>
               <div className="mt-3">
-                <Button type="submit" className="w-full h-10">
-                  Search
-                </Button>
+                <Button type="submit" className="w-full h-10">Search</Button>
               </div>
             </form>
 
             {/* Links */}
-            <div className="flex.flex-col space-y-1 mt-4 px-4">
+            <div className="flex flex-col space-y-1 mt-4 px-4">
               {[
                 { to: "/", label: t("nav.home") },
                 { to: "/about", label: t("nav.about") },
@@ -400,7 +317,7 @@ export default function Header() {
                 { to: "/testimonials", label: t("nav.testimonials") },
                 { to: "/gallery", label: t("nav.gallery") },
                 { to: "/blog", label: t("nav.blog") },
-                { to: "/contact", label: t("nav.contact") },
+                { to: "/contact", label: t("nav.contact") }
               ].map((item) => (
                 <Link
                   key={item.to}
@@ -423,9 +340,7 @@ export default function Header() {
                 {t("generic.categories")}
               </h3>
               {isLoading ? (
-                <div className="text-xs text-muted-foreground py-2">
-                  {t("generic.loading_categories")}
-                </div>
+                <div className="text-xs text-muted-foreground py-2">{t("generic.loading_categories")}</div>
               ) : (
                 <div className="flex flex-col space-y-1">
                   {categories.map((c) => (
@@ -447,17 +362,13 @@ export default function Header() {
             <div className="mt-4 px-4 flex gap-2">
               <Link to="/shop" onClick={() => setIsMenuOpen(false)}>
                 <Button variant="outline" size="sm" className="w-full h-10">
-                  🛒 {t("nav.shop_all")}
+                  ðŸ›’ {t("nav.shop_all")}
                 </Button>
               </Link>
 
               {!isAuthenticated ? (
                 <Link to="/login" onClick={() => setIsMenuOpen(false)}>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="w-full h-10"
-                  >
+                  <Button variant="secondary" size="sm" className="w-full h-10">
                     {t("nav.sign_in")}
                   </Button>
                 </Link>

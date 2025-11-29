@@ -132,7 +132,7 @@ export default function Footer() {
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <p className="text-primary-foreground/80 text-sm">
-              © 2024 Prakrithi Jaiva Kalavara. All rights reserved.
+              © 2025 Prakrithi Jaiva Kalavara. All rights reserved.
             </p>
             <div className="flex space-x-6 text-sm">
               <Link to="/privacy" className="text-primary-foreground/80 hover:text-accent transition-colors">

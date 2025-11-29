@@ -1,3 +1,4 @@
+// ProductForm.tsx (full, fixed)
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -28,7 +29,7 @@ import { WeightVariantManager, WeightVariant } from "@/components/product/Weight
 import { ImageUpload } from "@/components/product/ImageUpload";
 import { SpecificationsManager, SpecRow } from "@/components/product/SpecificationsManager";
 
-// API client (axios with auth auto-injected)
+// API client
 import api, { postMultipart } from "@/api/client";
 
 /* ---------------- helpers ---------------- */
@@ -94,6 +95,8 @@ const formSchema = z
     ingredients: z.string().optional(),
     allergens: z.string().optional(),
     nutrition_notes: z.string().optional(),
+
+    // IMPORTANT: keep as array for backend JSONField
     nutrition_facts: z.array(z.object({ name: z.string().min(1), value: z.string().min(1) })).default([]).optional(),
   })
   .superRefine((data, ctx) => {
@@ -126,7 +129,7 @@ export function ProductForm() {
   const { toast } = useToast();
   const isEditMode = !!id;
 
-  // refs to force focus/scroll on required elements
+  // refs
   const nameRef = useRef<HTMLInputElement | null>(null);
   const priceRef = useRef<HTMLInputElement | null>(null);
   const parentSelectTriggerRef = useRef<HTMLButtonElement | null>(null);
@@ -189,7 +192,7 @@ export function ProductForm() {
   const userEditedInrRef = useRef(false);
   const lastAutoInrRef = useRef<string | null>(null);
 
-  // Remember server's original variants (key <-> id) to turn inserts into updates
+  // original variants map
   const originalKeyToIdRef = useRef<Map<string, number>>(new Map());
   const originalIdToKeyRef = useRef<Map<number, string>>(new Map());
 
@@ -232,7 +235,7 @@ export function ProductForm() {
     } as any,
   });
 
-  // Better UX: focus/scroll to the exact control that failed
+  // helpers: focus
   const focusRequired = (field: "name" | "category" | "price") => {
     if (field === "name" && nameRef.current) {
       nameRef.current.focus();
@@ -266,31 +269,52 @@ export function ProductForm() {
       ? new Date(new Date(watchedManufactureDate as any).getTime() + Number(watchedShelfLife || 0) * 86400000).toLocaleDateString()
       : null;
 
-  // Auto-calc INR from variants
+  // --- pricing selection logic ---
+  const activeVariantIndex = useMemo(() => {
+    const idx = (weightVariants || []).findIndex((v) => !!v.isActive);
+    return idx >= 0 ? idx : null;
+  }, [weightVariants]);
+
+  const displayedPrice = useMemo(() => {
+    // 1) prefer explicitly active variant
+    if (activeVariantIndex != null) {
+      const n = Number((weightVariants[activeVariantIndex] as any)?.price);
+      if (Number.isFinite(n)) return n;
+    }
+    // 2) else choose LOWEST priced variant (most attractive)
+    const nums = (weightVariants || [])
+      .map((v) => Number((v as any).price))
+      .filter((n) => Number.isFinite(n));
+    if (nums.length) return Math.min(...nums);
+    // 3) fallback to price_inr input
+    const b = Number(basePrice);
+    return Number.isFinite(b) ? b : 0;
+  }, [weightVariants, activeVariantIndex, basePrice]);
+
+  // enforce single active variant
+  const enforceSingleActive = (rows: WeightVariant[]) => {
+    let seen = false;
+    return rows.map((r) => {
+      if (r.isActive && !seen) {
+        seen = true;
+        return r;
+      }
+      return { ...r, isActive: false };
+    });
+  };
+
+  // Auto-calc INR from variants (use displayedPrice, not max)
   useEffect(() => {
     if (userEditedInrRef.current) return;
-    const nums: number[] = [];
-    for (const v of weightVariants) {
-      const n = Number((v as any).price);
-      if (Number.isFinite(n)) nums.push(n);
-    }
-    if (nums.length === 0) {
-      const current = form.getValues("price_inr") || "0.00";
-      if (!current || current === "0" || current === "0.00" || current === lastAutoInrRef.current) {
-        form.setValue("price_inr", "0.00", { shouldDirty: true, shouldValidate: false });
-        lastAutoInrRef.current = "0.00";
-      }
-      return;
-    }
-    const picked = Math.max(...nums);
-    const next = picked.toFixed(2);
+    const next = Number(displayedPrice);
+    const fixed = Number.isFinite(next) ? next.toFixed(2) : "0.00";
     const current = form.getValues("price_inr") || "0.00";
-    if (current !== next) {
-      form.setValue("price_inr", next, { shouldDirty: true, shouldValidate: false });
-      lastAutoInrRef.current = next;
+    if (current !== fixed) {
+      form.setValue("price_inr", fixed, { shouldDirty: true, shouldValidate: false });
+      lastAutoInrRef.current = fixed;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weightVariants]);
+  }, [displayedPrice]);
 
   // Auto-sum total qty
   useEffect(() => {
@@ -358,6 +382,7 @@ export function ProductForm() {
         ingredients: p.ingredients ?? "",
         allergens: p.allergens ?? "",
         nutrition_notes: p.nutrition_notes ?? "",
+        // IMPORTANT: keep array shape if server returned dict
         nutrition_facts: Array.isArray(p.nutrition_facts)
           ? p.nutrition_facts
           : (p.nutrition_facts && typeof p.nutrition_facts === "object"
@@ -380,7 +405,7 @@ export function ProductForm() {
     originalIdToKeyRef.current.clear();
 
     if (Array.isArray(p.variants)) {
-      const mapped: WeightVariant[] = p.variants.map((v: any) => {
+      const mapped: WeightVariant[] = p.variants.map((v: any, i: number) => {
         const key = vKey(v.weight_value, v.weight_unit);
         const vid = Number(v.id);
         if (Number.isFinite(vid)) {
@@ -394,10 +419,11 @@ export function ProductForm() {
           price: v.price_override != null ? String(v.price_override) : String(p.price_inr ?? "0.00"),
           stock: Number(v.quantity ?? 0),
           sku: v.sku,
-          isActive: !!v.is_active,
+          // keep the very first active if multiple came active by mistake
+          isActive: !!v.is_active && i === 0,
         };
       });
-      setWeightVariants(dedupeBy(mapped, (r) => vKey(r.weight, r.unit)));
+      setWeightVariants(enforceSingleActive(dedupeBy(mapped, (r) => vKey(r.weight, r.unit))));
     } else {
       setWeightVariants([]);
     }
@@ -438,7 +464,7 @@ export function ProductForm() {
       fd.append("product", String(productId));
       fd.append("image", im.file as File);
       fd.append("is_primary", im.is_primary ? "true" : "false");
-      await postMultipart("/product-images/", fd); // axios (uses Token from localStorage)
+      await postMultipart("/product-images/", fd);
     }
   }
 
@@ -459,61 +485,51 @@ export function ProductForm() {
     await api.put(`/products/${productId}/replace_specifications/`, cleaned);
   }
 
-  // Build variants payload (EDIT) with strong duplicate-prevention
-  // Build variants payload (EDIT) with strong duplicate-prevention
-function buildUpsertPayloadFromCurrent(): any[] {
-  const baseInr = String(form.getValues("price_inr") || "0.00");
+  // ---- variants upsert (no duplicates; inject original ids) ----
+  function buildUpsertPayloadFromCurrent(): any[] {
+    const baseInr = String(form.getValues("price_inr") || "0.00");
+    const uiUnique = dedupeBy(enforceSingleActive(weightVariants), (v) => vKey(v.weight, v.unit));
 
-  // 1) make UI list unique by key
-  const uiUnique = dedupeBy(weightVariants, (v) => vKey(v.weight, v.unit));
+    const raw = uiUnique.map((v) => {
+      const priceStr = (() => {
+        const n = Number((v as any).price);
+        if (Number.isFinite(n)) return n.toFixed(2);
+        const b = Number(baseInr);
+        return Number.isFinite(b) ? b.toFixed(2) : "0.00";
+      })();
+      const key = vKey(v.weight, v.unit);
+      const injectedId = toIdNumber(v.id) ?? originalKeyToIdRef.current.get(key);
+      return {
+        id: injectedId,
+        sku:
+          v.sku ||
+          `${slugify(form.getValues("name") || "product")}-${String(v.weight).trim()}${(v.unit || "KG").toLowerCase()}`,
+        weight_value: String(v.weight ?? "").trim(),
+        weight_unit: String(v.unit ?? "KG").toUpperCase(),
+        price: priceStr,
+        stock: Number.isFinite((v as any).stock) ? Number(v.stock) : 0,
+        is_active: !!v.isActive,
+        mrp: String((form.getValues("mrp_price" as any)) ?? ""),
+        min_order_qty: 1,
+        step_qty: 1,
+        attributes: { Weight: `${String(v.weight ?? "").trim()}${String(v.unit ?? "KG").toUpperCase()}` },
+      };
+    });
 
-  // 2) map to server payload and inject original id when possible
-  const raw = uiUnique.map((v) => {
-    const priceStr = (() => {
-      const n = Number((v as any).price); // ← fixed (removed "the")
-      if (Number.isFinite(n)) return n.toFixed(2);
-      const b = Number(baseInr);
-      return Number.isFinite(b) ? b.toFixed(2) : "0.00";
-    })();
-    const key = vKey(v.weight, v.unit);
-    const injectedId = toIdNumber(v.id) ?? originalKeyToIdRef.current.get(key);
-    return {
-      id: injectedId,
-      sku:
-        v.sku ||
-        `${slugify(form.getValues("name") || "product")}-${String(v.weight).trim()}${(v.unit || "KG").toLowerCase()}`,
-      weight_value: String(v.weight ?? "").trim(),
-      weight_unit: String(v.unit ?? "KG").toUpperCase(),
-      price: priceStr,
-      stock: Number.isFinite((v as any).stock) ? Number(v.stock) : 0,
-      is_active: !!v.isActive,
-      mrp: String((form.getValues("mrp_price" as any)) ?? ""),
-      min_order_qty: 1,
-      step_qty: 1,
-      attributes: { Weight: `${String(v.weight ?? "").trim()}${String(v.unit ?? "KG").toUpperCase()}` },
-    };
-  });
-
-  // 3) If any duplicate keys still slipped in, reduce → prefer the row bound to the original id
-  const bestOf = new Map<string, any>();
-  for (const it of raw) {
-    const key = vKey(it.weight_value, it.weight_unit);
-    const existing = bestOf.get(key);
-
-    if (!existing) {
-      bestOf.set(key, it);
-      continue;
+    const bestOf = new Map<string, any>();
+    for (const it of raw) {
+      const key = vKey(it.weight_value, it.weight_unit);
+      const existing = bestOf.get(key);
+      if (!existing) {
+        bestOf.set(key, it);
+        continue;
+      }
+      const originalId = originalKeyToIdRef.current.get(key);
+      const score = (x: any) => (toIdNumber(x?.id) === originalId ? 2 : toIdNumber(x?.id) ? 1 : 0);
+      bestOf.set(key, score(it) >= score(existing) ? it : existing);
     }
-
-    const originalId = originalKeyToIdRef.current.get(key);
-    // Prefer row with original server id, else any with id, else first
-    const score = (x: any) => (toIdNumber(x?.id) === originalId ? 2 : toIdNumber(x?.id) ? 1 : 0);
-    bestOf.set(key, score(it) >= score(existing) ? it : existing);
+    return Array.from(bestOf.values());
   }
-
-  return Array.from(bestOf.values());
-}
-gi
 
   async function syncWeightVariants(productId: number) {
     const variants = buildUpsertPayloadFromCurrent();
@@ -522,176 +538,158 @@ gi
   }
 
   /* ---------- submit ---------- */
-  const onSubmit = async (raw: FormValues) => {
-    try {
-      // Required checks with focus/scroll & friendly text
-      if (!raw.name?.trim()) {
-        toast({ title: "Product name is required", variant: "destructive" });
-        focusRequired("name");
-        return;
-      }
-      const effCat = childCatId ?? parentCatId;
-      if (!Number.isFinite(effCat as any) || (effCat as any) <= 0) {
-        form.setError("category_id", { message: "Category is required" });
-        toast({ title: "Please choose a parent and/or subcategory", variant: "destructive" });
-        focusRequired("category");
-        return;
-      }
-      const inrOk = Number(raw.price_inr) > 0;
-      if (!inrOk) {
-        toast({ title: "Price must be greater than 0", variant: "destructive" });
-        focusRequired("price");
-        return;
+  const runSubmit = async (raw: FormValues) => {
+    // basic checks
+    if (!raw.name?.trim()) {
+      toast({ title: "Product name is required", variant: "destructive" });
+      focusRequired("name");
+      return;
+    }
+    const effCat = childCatId ?? parentCatId;
+    if (!Number.isFinite(effCat as any) || (effCat as any) <= 0) {
+      form.setError("category_id", { message: "Category is required" });
+      toast({ title: "Please choose a parent and/or subcategory", variant: "destructive" });
+      focusRequired("category");
+      return;
+    }
+    if (!(Number(raw.price_inr) > 0)) {
+      toast({ title: "Price must be greater than 0", variant: "destructive" });
+      focusRequired("price");
+      return;
+    }
+
+    const wm = (() => {
+      const n = Number(raw.warranty_months);
+      return !Number.isFinite(n) || n <= 0 ? 12 : Math.floor(n);
+    })();
+
+    const commonPayload = prune({
+      category_id: effCat!,
+      name: toStringOrUndefined(raw.name),
+      description: toStringOrUndefined(raw.description),
+      vendor_id: raw.vendor_id ?? undefined,
+      store_id: raw.store_id ?? undefined,
+      quantity: toNumberOrUndefined(raw.quantity),
+      price_inr: toStringOrUndefined(raw.price_inr),
+      price_usd: raw.mode === "grocery" ? "0.00" : toStringOrUndefined(raw.price_usd),
+      aed_pricing_mode: raw.aed_pricing_mode ?? "STATIC",
+      price_aed_static: raw.aed_pricing_mode === "STATIC" ? toStringOrUndefined(raw.price_aed_static) : "0.00",
+      discount_percent: toNumberOrUndefined(raw.discount_percent),
+      featured: !!raw.featured,
+      is_published: !!raw.is_published,
+      warranty_months: wm,
+      ingredients: toStringOrUndefined(raw.ingredients),
+      allergens: toStringOrUndefined(raw.allergens),
+      nutrition_notes: toStringOrUndefined(raw.nutrition_notes),
+
+      // ✅ keep array shape to avoid edit failures
+      nutrition_facts: Array.isArray(raw.nutrition_facts)
+        ? raw.nutrition_facts.filter((r) => (r?.name || "").trim() && (r?.value || "").trim())
+        : [],
+    });
+
+    const groceryPayload =
+      raw.mode === "grocery"
+        ? prune({
+            origin_country: raw.origin_country ?? "IN",
+            grade: toStringOrUndefined(raw.grade),
+            is_perishable: !!raw.is_perishable,
+            is_organic: !!raw.is_organic,
+            manufacture_date: raw.manufacture_date || null,
+            shelf_life_days: raw.shelf_life_days ?? null,
+            default_uom: raw.default_uom ?? "KG",
+            default_pack_qty: raw.default_pack_qty ?? null,
+            hsn_sac: toStringOrUndefined(raw.hsn_sac),
+            gst_rate: toStringOrUndefined(raw.gst_rate) ?? "0.00",
+            mrp_price: toStringOrUndefined(raw.mrp_price) ?? "0.00",
+            cost_price: toStringOrUndefined(raw.cost_price) ?? "0.00",
+            price_usd: "0.00",
+            aed_pricing_mode: "STATIC",
+            price_aed_static: "0.00",
+          })
+        : {};
+
+    const payloadBase: any = prune({ ...commonPayload, ...groceryPayload });
+
+    if (isEditMode) {
+      const updated = await updateProduct.mutateAsync({ id: Number(id), ...payloadBase });
+      const pid = Number(id) || Number((updated as any)?.id) || Number((updated as any)?.data?.id);
+
+      // Post-save tasks must all succeed for "updated" toast:
+      // If any fails, we show precise messaging.
+      try {
+        if (images.some((im) => im.file)) await uploadProductImages(pid);
+      } catch {
+        toast({ title: "Saved (images skipped)", description: "Some images failed to upload.", variant: "secondary" });
       }
 
-      const wm = (() => {
-        const n = Number(raw.warranty_months);
-        return !Number.isFinite(n) || n <= 0 ? 12 : Math.floor(n);
-      })();
+      try {
+        if (specs.length) await replaceSpecs(pid);
+      } catch {
+        toast({ title: "Saved (specs skipped)", description: "Duplicate or invalid spec rows were skipped.", variant: "secondary" });
+      }
 
-      const commonPayload = prune({
-        category_id: effCat!,
-        name: toStringOrUndefined(raw.name),
-        description: toStringOrUndefined(raw.description),
-        vendor_id: raw.vendor_id ?? undefined,
-        store_id: raw.store_id ?? undefined,
-        quantity: toNumberOrUndefined(raw.quantity),
-        price_inr: toStringOrUndefined(raw.price_inr),
-        price_usd: raw.mode === "grocery" ? "0.00" : toStringOrUndefined(raw.price_usd),
-        aed_pricing_mode: raw.aed_pricing_mode ?? "STATIC",
-        price_aed_static: raw.aed_pricing_mode === "STATIC" ? toStringOrUndefined(raw.price_aed_static) : "0.00",
-        discount_percent: toNumberOrUndefined(raw.discount_percent),
-        featured: !!raw.featured,
-        is_published: !!raw.is_published,
-        warranty_months: wm,
-        ingredients: toStringOrUndefined(raw.ingredients),
-        allergens: toStringOrUndefined(raw.allergens),
-        nutrition_notes: toStringOrUndefined(raw.nutrition_notes),
-        nutrition_facts: Array.isArray(raw.nutrition_facts)
-          ? Object.fromEntries(
-              raw.nutrition_facts
-                .filter((r) => (r?.name || "").trim() && (r?.value || "").trim())
-                .map((r) => [r.name.trim(), r.value.trim()])
-            )
-          : {},
+      try {
+        await syncWeightVariants(pid);
+      } catch {
+        toast({ title: "Saved (variants unchanged)", description: "Couldn’t update variants; please retry.", variant: "secondary" });
+      }
+
+      toast({ title: "Product updated" });
+    } else {
+      // CREATE with inline variants (unique) to increase success chance
+      const inlineVariants = dedupeBy(enforceSingleActive(weightVariants), (v) => vKey(v.weight, v.unit)).map((v) => ({
+        sku: v.sku || `${slugify(raw.name || "product")}-${String(v.weight).trim()}${(v.unit || "KG").toLowerCase()}`,
+        weight_value: String(v.weight ?? "").trim(),
+        weight_unit: String(v.unit ?? "KG").toUpperCase(),
+        price: (() => {
+          const n = Number(v.price);
+          const b = Number(raw.price_inr || "0");
+          if (Number.isFinite(n)) return n.toFixed(2);
+          return Number.isFinite(b) ? b.toFixed(2) : "0.00";
+        })(),
+        stock: Number.isFinite(v.stock as any) ? Number(v.stock) : 0,
+        is_active: !!v.isActive,
+        mrp: String(raw.mrp_price ?? ""),
+        min_order_qty: 1,
+        step_qty: 1,
+        attributes: { Weight: `${String(v.weight ?? "").trim()}${String(v.unit ?? "KG").toUpperCase()}` },
+      }));
+
+      const created: any = await createProduct.mutateAsync({
+        ...payloadBase,
+        variants: inlineVariants.length ? inlineVariants : undefined,
+        images_meta: images.map((im) => ({ filename: (im.file as File | undefined)?.name ?? "", is_primary: !!im.is_primary })),
       });
 
-      const groceryPayload =
-        raw.mode === "grocery"
-          ? prune({
-              origin_country: raw.origin_country ?? "IN",
-              grade: toStringOrUndefined(raw.grade),
-              is_perishable: !!raw.is_perishable,
-              is_organic: !!raw.is_organic,
-              manufacture_date: raw.manufacture_date || null,
-              shelf_life_days: raw.shelf_life_days ?? null,
-              default_uom: raw.default_uom ?? "KG",
-              default_pack_qty: raw.default_pack_qty ?? null,
-              hsn_sac: toStringOrUndefined(raw.hsn_sac),
-              gst_rate: toStringOrUndefined(raw.gst_rate) ?? "0.00",
-              mrp_price: toStringOrUndefined(raw.mrp_price) ?? "0.00",
-              cost_price: toStringOrUndefined(raw.cost_price) ?? "0.00",
-              price_usd: "0.00",
-              aed_pricing_mode: "STATIC",
-              price_aed_static: "0.00",
-            })
-          : {};
-
-      const payloadBase: any = prune({ ...commonPayload, ...groceryPayload });
-
-      if (isEditMode) {
-        const updated = await updateProduct.mutateAsync({ id: Number(id), ...payloadBase });
-        const pid = Number(id) || Number((updated as any)?.id) || Number((updated as any)?.data?.id);
+      const pid = Number((created as any)?.id) || Number((created as any)?.data?.id);
+      if (pid) {
+        try {
+          if (images.length) await uploadProductImages(pid);
+        } catch {
+          toast({ title: "Created (images skipped)", description: "Some images failed to upload.", variant: "secondary" });
+        }
 
         try {
-          if (images.some((im) => im.file)) await uploadProductImages(pid);
-          try {
-            await replaceSpecs(pid);
-          } catch {
-            toast({ title: "Saved (specs skipped)", description: "Duplicate spec rows were skipped.", variant: "secondary" });
-          }
-          // 🔒 strong no-duplicate upsert
+          if (specs.length) await replaceSpecs(pid);
+        } catch {
+          toast({ title: "Created (specs skipped)", description: "Duplicate or invalid spec rows were skipped.", variant: "secondary" });
+        }
+
+        try {
           await syncWeightVariants(pid);
-
-          toast({ title: "Product updated" });
-        } catch (err: any) {
-          console.error("[Product save] error:", err?.response?.data || err?.message || err);
-          toast({
-            title: "Update error",
-            description: err?.response?.data?.detail || err.message || "Please check your permissions.",
-            variant: "destructive",
-          });
+        } catch {
+          toast({ title: "Created (variants unchanged)", description: "Couldn’t update variants; please retry.", variant: "secondary" });
         }
+
+        toast({ title: raw.mode === "grocery" ? "Grocery product created" : "Product created" });
+        navigate("/admin/products");
       } else {
-        // CREATE → send unique inline variants (OK), then also persist via upsert to guarantee save
-        const inlineVariants = dedupeBy(weightVariants, (v) => vKey(v.weight, v.unit)).map((v) => ({
-          sku:
-            v.sku ||
-            `${slugify(raw.name || "product")}-${String(v.weight).trim()}${(v.unit || "KG").toLowerCase()}`,
-          weight_value: String(v.weight ?? "").trim(),
-          weight_unit: String(v.unit ?? "KG").toUpperCase(),
-          price: (() => {
-            const n = Number(v.price);
-            const b = Number(raw.price_inr || "0");
-            if (Number.isFinite(n)) return n.toFixed(2);
-            return Number.isFinite(b) ? b.toFixed(2) : "0.00";
-          })(),
-          stock: Number.isFinite(v.stock as any) ? Number(v.stock) : 0,
-          is_active: !!v.isActive,
-          mrp: String(raw.mrp_price ?? ""),
-          min_order_qty: 1,
-          step_qty: 1,
-          attributes: { Weight: `${String(v.weight ?? "").trim()}${String(v.unit ?? "KG").toUpperCase()}` },
-        }));
-
-        const created: any = await createProduct.mutateAsync({
-          ...payloadBase,
-          variants: inlineVariants.length ? inlineVariants : undefined,
-          images_meta: images.map((im) => ({ filename: (im.file as File | undefined)?.name ?? "", is_primary: !!im.is_primary })),
+        toast({
+          title: "Product created",
+          description: "Couldn’t read the new product ID. You can open it later to add images/specs.",
         });
-
-        const pid = Number((created as any)?.id) || Number((created as any)?.data?.id);
-        if (pid) {
-          try {
-            if (images.length) await uploadProductImages(pid);
-            try {
-              if (specs.length) await replaceSpecs(pid);
-            } catch {
-              toast({ title: "Created (specs skipped)", description: "Duplicate spec rows were skipped.", variant: "secondary" });
-            }
-
-            // ✅ ensure variants are saved & deduped after create as well
-            await syncWeightVariants(pid);
-
-            toast({ title: raw.mode === "grocery" ? "Grocery product created" : "Product created" });
-          } catch (err: any) {
-            console.error("[Product save] error:", err?.response?.data || err?.message || err);
-            toast({
-              title: "Post-create error",
-              description: err?.response?.data?.detail || err.message || "Please check your permissions.",
-              variant: "destructive",
-            });
-          }
-          navigate("/admin/products");
-        } else {
-          toast({
-            title: "Product created",
-            description: "Couldn’t read the new product ID from server response. Open it later to add images/specs.",
-          });
-        }
       }
-    } catch (e: any) {
-      console.error("[Product save] error:", e?.response?.data || e?.message || e);
-      const msg =
-        e?.response?.data?.detail ||
-        e?.message ||
-        "Please check the highlighted fields.";
-      toast({ title: "Error", description: msg, variant: "destructive" });
-
-      // put the caret where it helps most
-      if (form.formState.errors?.name) focusRequired("name");
-      else if (form.formState.errors?.category_id) focusRequired("category");
-      else if (form.formState.errors?.price_inr) focusRequired("price");
     }
   };
 
@@ -710,65 +708,77 @@ gi
   const basePriceNum = Number.isFinite(basePrice) ? basePrice : 0;
   const desc = form.watch("description") || "";
 
+  // unified save function (used by header and footer save)
+  const doValidateAndSave = async () => {
+    const ok = await form.trigger();
+    if (!ok) {
+      const errs = form.formState.errors;
+      const first = Object.keys(errs)[0] as keyof typeof errs | undefined;
+      let m = "Please fix the highlighted fields";
+      if (first === "name") { m = "Product name is required"; focusRequired("name"); }
+      else if (first === "category_id") { m = "Please choose a parent and/or subcategory"; focusRequired("category"); }
+      else if (first === "price_inr") { m = "Price must be greater than 0"; focusRequired("price"); }
+      toast({ title: "Validation failed", description: m, variant: "destructive" });
+      return;
+    }
+    await form.handleSubmit(runSubmit)();
+  };
+
+  // store a clean snapshot for "Discard"
+  const lastLoadedRef = useRef<FormValues | null>(null);
+  useEffect(() => {
+    if (productQ.data && isEditMode) {
+      lastLoadedRef.current = form.getValues();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productQ.data]);
+
+  const doDiscard = () => {
+    // Discard = reset to last loaded (or initial defaults if creating)
+    const snap = lastLoadedRef.current;
+    if (snap) {
+      form.reset(snap, { keepErrors: false });
+      toast({ title: "Changes discarded" });
+      return;
+    }
+    form.reset({ ...form.getValues(), mode }, { keepErrors: false });
+    toast({ title: "Cleared unsaved changes" });
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-background border-b px-3 sm:px-6 py-4">
+      <header className="sticky top-0 z-10 bg-background/80 backdrop-blur border-b px-3 sm:px-6 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-            <Button type="button" variant="ghost" size="sm" onClick={() => navigate("/admin/products")}>
+            <Button type="button" variant="ghost" size="sm" onClick={() => navigate("/admin/products")} title="Back">
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="min-w-0">
               <h1 className="text-lg sm:text-xl font-semibold truncate">
                 {isEditMode ? (mode === "grocery" ? "Edit Grocery Product" : "Edit Product") : mode === "grocery" ? "Add Grocery Product" : "Add Product"}
               </h1>
+              <p className="text-xs text-muted-foreground">
+                {mode === "grocery"
+                  ? "Grocery mode enables weight variants, freshness, GST/HSN fields."
+                  : "Standard mode for non-grocery items."}
+              </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="hidden md:flex items-center gap-2 text-sm">
-              <Button type="button" variant={mode === "grocery" ? "default" : "outline"} size="sm" onClick={() => handleModeChange("grocery")}>
-                Grocery
-              </Button>
-            </div>
-
+          <div className="flex items-center gap-2">
             {isEditMode && (
               <Button type="button" variant="outline" size="sm" className="hidden sm:inline-flex" onClick={onDelete} title="Delete">
                 🗑️ <span className="hidden sm:inline ml-1">Delete</span>
               </Button>
             )}
 
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                form.reset({ ...form.getValues(), mode }, { keepErrors: false });
-              }}
-            >
+            <Button type="button" variant="outline" size="sm" onClick={doDiscard} title="Discard all unsaved changes">
               <RotateCcw className="h-4 w-4" />
               <span className="hidden sm:inline">Discard</span>
             </Button>
 
-            <Button
-              type="button"
-              size="sm"
-              onClick={async () => {
-                const ok = await form.trigger();
-                if (!ok) {
-                  const errs = form.formState.errors;
-                  const first = Object.keys(errs)[0] as keyof typeof errs | undefined;
-                  let m = "Please fix the highlighted fields";
-                  if (first === "name") { m = "Product name is required"; focusRequired("name"); }
-                  else if (first === "category_id") { m = "Please choose a parent and/or subcategory"; focusRequired("category"); }
-                  else if (first === "price_inr") { m = "Price must be greater than 0"; focusRequired("price"); }
-                  toast({ title: "Validation failed", description: m, variant: "destructive" });
-                  return;
-                }
-                await form.handleSubmit(onSubmit)();
-              }}
-            >
+            <Button type="button" size="sm" onClick={doValidateAndSave} title="Save product">
               <Save className="h-4 w-4" />
               <span className="hidden sm:inline">Save</span>
             </Button>
@@ -813,7 +823,7 @@ gi
 
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Label>URL Slug:</Label>
-                  <code className="bg-muted px-2 py-1 rounded">{slugify(watchedName || "")}</code>
+                  <code className="bg-muted px-2 py-1 rounded">{slugify(form.watch("name") || "")}</code>
                 </div>
 
                 <div className="space-y-2">
@@ -845,7 +855,7 @@ gi
                     />
                   ) : (
                     <div className="prose max-w-none border rounded-md p-4">
-                      <div dangerouslySetInnerHTML={{ __html: desc }} />
+                      <div dangerouslySetInnerHTML={{ __html: form.watch("description") || "" }} />
                     </div>
                   )}
                 </div>
@@ -862,7 +872,15 @@ gi
               <CardContent>
                 <ImageUpload
                   images={images}
-                  onImagesChange={setImages}
+                  onImagesChange={(rows) => {
+                    // ensure single primary
+                    let seen = false;
+                    const next = rows.map((r) => {
+                      if (r.is_primary && !seen) { seen = true; return r; }
+                      return { ...r, is_primary: false };
+                    });
+                    setImages(next);
+                  }}
                   onUpload={async (files) => {
                     const previews = files.map((f, idx) => ({
                       image: URL.createObjectURL(f),
@@ -870,14 +888,13 @@ gi
                       file: f,
                       __preview: true,
                     }));
-                    const next = [...images, ...previews];
-                    if (!next.some((n) => n.is_primary) && next.length) next[0].is_primary = true;
+                    const merged = [...images, ...previews];
                     let seen = false;
-                    for (const im of next) {
+                    for (const im of merged) {
                       if (im.is_primary && !seen) { seen = true; }
                       else { im.is_primary = false; }
                     }
-                    setImages(next);
+                    setImages(merged);
                   }}
                   maxSizeMB={10}
                 />
@@ -970,7 +987,10 @@ gi
             {mode === "grocery" && (
               <WeightVariantManager
                 variants={weightVariants}
-                onVariantsChange={(rows) => setWeightVariants(dedupeBy(rows, (r) => vKey(r.weight, r.unit)))}
+                onVariantsChange={(rows) => {
+                  const unique = dedupeBy(rows, (r) => vKey(r.weight, r.unit));
+                  setWeightVariants(enforceSingleActive(unique));
+                }}
                 productName={watchedName || "Product"}
               />
             )}
@@ -1048,24 +1068,30 @@ gi
                   )}
                 />
 
-                {Number.isFinite(basePriceNum) && basePriceNum > 0 && (
-                  <div className="p-4 bg-muted rounded-lg">
-                    <h4 className="font-medium mb-2">Price Preview</h4>
-                    <div className="flex items-center gap-4">
-                      {Number(watchedDiscount) > 0 ? (
-                        <>
-                          <span className="text-lg line-through text-muted-foreground">₹{basePriceNum.toFixed(2)}</span>
-                          <span className="text-lg font-semibold text-green-600">
-                            ₹{(basePriceNum * (1 - Number(watchedDiscount) / 100)).toFixed(2)}
-                          </span>
-                          <Badge variant="secondary">{watchedDiscount}% off</Badge>
-                        </>
-                      ) : (
-                        <span className="text-lg font-semibold">₹{basePriceNum.toFixed(2)}</span>
-                      )}
-                    </div>
+                {/* Pricing Preview uses active variant (else lowest), then applies discount */}
+                <div className="p-4 bg-muted rounded-lg">
+                  <h4 className="font-medium mb-2">Price Preview {activeVariantIndex != null && `(Active Variant)`}</h4>
+                  <div className="flex items-center gap-4">
+                    {Number(watchedDiscount) > 0 ? (
+                      <>
+                        <span className="text-lg line-through text-muted-foreground">
+                          ₹{Number(displayedPrice).toFixed(2)}
+                        </span>
+                        <span className="text-lg font-semibold text-green-600">
+                          ₹{(Number(displayedPrice) * (1 - Number(watchedDiscount) / 100)).toFixed(2)}
+                        </span>
+                        <Badge variant="secondary">{watchedDiscount}% off</Badge>
+                      </>
+                    ) : (
+                      <span className="text-lg font-semibold">₹{Number(displayedPrice).toFixed(2)}</span>
+                    )}
                   </div>
-                )}
+                  {mode === "grocery" && weightVariants.length > 1 && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Pricing preview picks the <strong>active</strong> variant. If none active, it uses the <strong>lowest priced</strong> variant.
+                    </p>
+                  )}
+                </div>
               </CardContent>
             </Card>
 
@@ -1274,7 +1300,21 @@ gi
             </Card>
 
             {/* Specifications */}
-            <SpecificationsManager specs={specs} onChange={setSpecs} />
+            <SpecificationsManager
+              specs={specs}
+              onChange={setSpecs}
+            />
+
+            {/* --- END OF MAIN: non-sticky Save section --- */}
+            {/* <div className="flex items-center justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={doDiscard} title="Discard unsaved changes">
+                Discard
+              </Button>
+              <Button type="button" onClick={doValidateAndSave} title="Save product">
+                <Save className="h-4 w-4 mr-2" />
+                Save
+              </Button>
+            </div> */}
           </div>
 
           {/* Sidebar */}
@@ -1375,6 +1415,19 @@ gi
           </div>
         </form>
       </Form>
+
+      {/* Sticky bottom action bar (Save at end) */}
+      <div className="sticky bottom-0 z-10 border-t bg-background/80 backdrop-blur">
+        <div className="mx-auto max-w-screen-2xl px-3 sm:px-6 py-3 flex items-center justify-end gap-2">
+          <Button variant="outline" onClick={doDiscard} title="Discard unsaved changes">
+            Discard
+          </Button>
+          <Button onClick={doValidateAndSave} title="Save product">
+            <Save className="h-4 w-4 mr-2" />
+            Save
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

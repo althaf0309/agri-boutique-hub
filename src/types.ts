@@ -63,3 +63,16 @@ export type Order = {
   lines?: OrderLine[];     // <-- items ready for UI (with image)
   totals?: OrderTotals;    // <-- subtotal/shipping/tax/grand_total
 };
+export interface Category {
+  id: ID;
+  name: string;
+  slug: string;
+  // backend might also send parent_id or full parent object,
+  // but for typing we keep the basic FK:
+  parent?: ID | null;
+  icon?: string;
+  image?: string | null;
+
+  // optional extra fields the backend might send:
+  parent_id?: ID | null;
+}

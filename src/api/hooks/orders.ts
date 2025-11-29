@@ -32,6 +32,7 @@ function normalizeOrder(order: Order): Order {
       }
     : undefined;
 
+  // we leave order.payment as-is; backend already supplies method/provider/status/transaction_id
   return { ...order, lines, totals };
 }
 
@@ -52,17 +53,24 @@ export function useOrders(opts?: { showAll?: boolean; currentUserId?: number }) 
 
       if (showAll) {
         // Admin/superuser: get the full list explicitly
-        const res = await api.get<Order[] | { results: Order[]; items?: Order[] }>("/orders/");
+        const res = await api.get<Order[] | { results: Order[]; items?: Order[] }>(
+          "/orders/",
+        );
         list = toList<Order>(res.data);
       } else {
         // Normal user: try mine=1 first for efficiency; fall back if backend doesn’t support it
         try {
-          const mine = await api.get<Order[] | { results: Order[]; items?: Order[] }>("/orders/", {
-            params: { mine: 1 },
-          });
+          const mine = await api.get<Order[] | { results: Order[]; items?: Order[] }>(
+            "/orders/",
+            {
+              params: { mine: 1 },
+            },
+          );
           list = toList<Order>(mine.data);
         } catch {
-          const res = await api.get<Order[] | { results: Order[]; items?: Order[] }>("/orders/");
+          const res = await api.get<
+            Order[] | { results: Order[]; items?: Order[] }
+          >("/orders/");
           list = toList<Order>(res.data);
         }
       }
@@ -95,7 +103,10 @@ export function useConfirmOrder() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id }: { id: ID }) => {
-      const { data } = await api.post<{ status: string }>(`/orders/${id}/confirm/`, {});
+      const { data } = await api.post<{ status: string }>(
+        `/orders/${id}/confirm/`,
+        {},
+      );
       return data;
     },
     onSuccess: (_data, { id }) => {

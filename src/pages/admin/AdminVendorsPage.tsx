@@ -1,16 +1,48 @@
 // src/pages/admin/AdminVendorsPage.tsx
 import { useMemo, useState } from "react";
-import { useVendors, useCreateVendor, useUpdateVendor, useDeleteVendor, Vendor } from "@/api/hooks/vendors";
+import {
+  useVendors,
+  useCreateVendor,
+  useUpdateVendor,
+  useDeleteVendor,
+  Vendor,
+} from "@/api/hooks/vendors";
 import { useStores } from "@/api/hooks/stores";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Trash2, Pencil, Search, Store as StoreIcon, Users } from "lucide-react";
+import {
+  Loader2,
+  Plus,
+  Trash2,
+  Pencil,
+  Search,
+  Store as StoreIcon,
+  Users,
+} from "lucide-react";
 
 export default function AdminVendorsPage() {
   const { data: vendors = [], isLoading } = useVendors();
@@ -27,7 +59,7 @@ export default function AdminVendorsPage() {
   // includes all writable model/serializer fields; read-only shown separately
   const [form, setForm] = useState<Partial<Vendor>>({
     display_name: "",
-    store_id: undefined,  // FK via *_id
+    store_id: undefined, // FK via *_id
     is_active: true,
   });
 
@@ -60,10 +92,44 @@ export default function AdminVendorsPage() {
     setOpen(true);
   };
 
+  const extractErrorMessage = (e: any): string => {
+    // DRF errors: { field: ["msg"] } or ["msg"]
+    const data = e?.response?.data;
+    if (!data) return e?.message ?? String(e);
+
+    if (typeof data === "string") return data;
+
+    if (Array.isArray(data)) {
+      return data.join(", ");
+    }
+
+    if (typeof data === "object") {
+      const parts: string[] = [];
+      for (const [field, val] of Object.entries(data)) {
+        if (Array.isArray(val)) {
+          parts.push(`${field}: ${val.join(" ")}`);
+        } else {
+          parts.push(`${field}: ${String(val)}`);
+        }
+      }
+      return parts.join(" | ");
+    }
+
+    return e?.message ?? String(e);
+  };
+
   const save = async () => {
     try {
+      if (!form.display_name?.trim()) {
+        toast({ title: "Display name is required", variant: "destructive" });
+        return;
+      }
+
       if (editing) {
-        await updateVendor.mutateAsync({ id: editing.id, ...form });
+        await updateVendor.mutateAsync({
+          id: editing.id,
+          ...form,
+        });
         toast({ title: "Vendor updated" });
       } else {
         await createVendor.mutateAsync(form);
@@ -71,7 +137,12 @@ export default function AdminVendorsPage() {
       }
       setOpen(false);
     } catch (e: any) {
-      toast({ title: "Save failed", description: e?.message ?? String(e), variant: "destructive" });
+      console.error("Vendor save error", e);
+      toast({
+        title: "Save failed",
+        description: extractErrorMessage(e),
+        variant: "destructive",
+      });
     }
   };
 
@@ -81,7 +152,12 @@ export default function AdminVendorsPage() {
       await deleteVendor.mutateAsync({ id });
       toast({ title: "Vendor deleted" });
     } catch (e: any) {
-      toast({ title: "Delete failed", description: e?.message ?? String(e), variant: "destructive" });
+      console.error("Vendor delete error", e);
+      toast({
+        title: "Delete failed",
+        description: extractErrorMessage(e),
+        variant: "destructive",
+      });
     }
   };
 
@@ -94,7 +170,12 @@ export default function AdminVendorsPage() {
         <div className="flex items-center gap-2">
           <div className="relative">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input className="pl-8 w-64" placeholder="Search vendors..." value={q} onChange={(e) => setQ(e.target.value)} />
+            <Input
+              className="pl-8 w-64"
+              placeholder="Search vendors..."
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
           </div>
           <Button onClick={startCreate}>
             <Plus className="h-4 w-4 mr-1" />
@@ -113,7 +194,9 @@ export default function AdminVendorsPage() {
               <Loader2 className="h-4 w-4 animate-spin" /> Loading…
             </div>
           ) : filtered.length === 0 ? (
-            <div className="py-8 text-center text-muted-foreground">No vendors found.</div>
+            <div className="py-8 text-center text-muted-foreground">
+              No vendors found.
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -140,15 +223,28 @@ export default function AdminVendorsPage() {
                       <td className="px-2 py-2">{v.total_units_sold ?? 0}</td>
                       <td className="px-2 py-2">{v.total_revenue ?? "0.00"}</td>
                       <td className="px-2 py-2">
-                        <span className={v.is_active ? "text-green-600" : "text-muted-foreground"}>
+                        <span
+                          className={
+                            v.is_active ? "text-green-600" : "text-muted-foreground"
+                          }
+                        >
                           {v.is_active ? "Yes" : "No"}
                         </span>
                       </td>
                       <td className="px-2 py-2 text-right">
-                        <Button size="sm" variant="outline" className="mr-2" onClick={() => startEdit(v)}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="mr-2"
+                          onClick={() => startEdit(v)}
+                        >
                           <Pencil className="h-4 w-4 mr-1" /> Edit
                         </Button>
-                        <Button size="sm" variant="destructive" onClick={() => onDelete(v.id)}>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => onDelete(v.id)}
+                        >
                           <Trash2 className="h-4 w-4 mr-1" /> Delete
                         </Button>
                       </td>
@@ -166,7 +262,8 @@ export default function AdminVendorsPage() {
           <DialogHeader>
             <DialogTitle>{editing ? "Edit Vendor" : "Create Vendor"}</DialogTitle>
             <DialogDescription className="sr-only">
-              Vendors have a display name, an optional store, and active status. User is assigned automatically.
+              Vendors have a display name, an optional store, and active status. User is
+              assigned automatically.
             </DialogDescription>
           </DialogHeader>
 
@@ -176,21 +273,25 @@ export default function AdminVendorsPage() {
               <Label>Display Name</Label>
               <Input
                 value={form.display_name || ""}
-                onChange={(e) => setForm((f) => ({ ...f, display_name: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, display_name: e.target.value }))
+                }
               />
             </div>
 
             <div className="sm:col-span-2">
               <Label>Store</Label>
               <Select
-                // IMPORTANT: undefined shows placeholder; do NOT use empty string
                 value={
                   form.store_id !== undefined && form.store_id !== null
                     ? String(form.store_id)
-                    : undefined
+                    : "none"
                 }
                 onValueChange={(v) =>
-                  setForm((f) => ({ ...f, store_id: v === "none" ? undefined : Number(v) }))
+                  setForm((f) => ({
+                    ...f,
+                    store_id: v === "none" ? undefined : Number(v),
+                  }))
                 }
               >
                 <SelectTrigger>
@@ -210,7 +311,9 @@ export default function AdminVendorsPage() {
             <div className="sm:col-span-2 flex items-center gap-2 mt-1">
               <Switch
                 checked={!!form.is_active}
-                onCheckedChange={(v) => setForm((f) => ({ ...f, is_active: v }))}
+                onCheckedChange={(v) =>
+                  setForm((f) => ({ ...f, is_active: v }))
+                }
               />
               <span>Active</span>
             </div>

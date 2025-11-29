@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { Navigate } from "react-router-dom";
 import api from "@/api/client";
 import { clear as clearCart } from "@/lib/cart";
@@ -19,7 +25,11 @@ type AuthContextType = {
   user: AuthUser | null;
   isAuthenticated: boolean;
   booting: boolean;
-  login: (email: string, password: string, remember?: boolean) => Promise<AuthUser>;
+  login: (
+    email: string,
+    password: string,
+    remember?: boolean
+  ) => Promise<AuthUser>;
   refreshMe: () => Promise<AuthUser>;
   logout: () => void;
 };
@@ -121,7 +131,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const login = async (email: string, password: string, remember?: boolean) => {
-    const r = await api.post<{ token: string }>("/auth/token/", { email, password });
+    const r = await api.post<{ token: string }>("/auth/token/", {
+      email,
+      password,
+    });
     if (!r.data?.token) throw new Error("No token in response");
 
     // Remember previous identity to isolate carts between users
@@ -188,4 +201,20 @@ export function RoleRedirect({ children }: { children: React.ReactNode }) {
   if (!isAuthenticated) return <>{children}</>;
   if (user?.is_superuser) return <Navigate to="/admin" replace />;
   return <Navigate to="/" replace />;
+}
+
+/**
+ * NEW: Guard for "public / shop" pages.
+ *
+ * - If booting → show loader
+ * - If user is superuser → always send to /admin
+ * - Otherwise → show the normal page
+ */
+export function NonAdminRoute({ children }: { children: React.ReactNode }) {
+  const { user, booting } = useAuth();
+  if (booting) return <Loader />;
+  if (user?.is_superuser) {
+    return <Navigate to="/admin" replace />;
+  }
+  return <>{children}</>;
 }

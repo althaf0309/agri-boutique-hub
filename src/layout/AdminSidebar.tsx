@@ -15,14 +15,11 @@ import {
   Package,
   FolderTree,
   Image as ImageIcon,
-  Grid3X3,
-  Percent,
-  Star,
   MessageSquare,
   ShoppingCart,
   Mail,
   FileText,
-  Briefcase,
+  Star,
   Users,
   BarChart3,
   Settings,
@@ -37,7 +34,6 @@ const menuItems = [
   { title: "Products", url: "/admin/products", icon: Package },
   { title: "Categories", url: "/admin/categories", icon: FolderTree },
 
-  // ✅ NEW
   { title: "Stores", url: "/admin/stores", icon: StoreIcon },
   { title: "Vendors", url: "/admin/vendors", icon: Users },
   { title: "Testimonials", url: "/admin/testimonials", icon: MessageSquare },
@@ -46,17 +42,11 @@ const menuItems = [
   { title: "Certifications", url: "/admin/certifications", icon: FileText },
   { title: "Gallery", url: "/admin/gallery", icon: ImageIcon },
   { title: "Promo Banners", url: "/admin/promo-banners", icon: ImageIcon },
-  // { title: "Product Grids", url: "/admin/product-grids", icon: Grid3X3 },
-  // { title: "Special Offers", url: "/admin/special-offers", icon: Percent },
-  // { title: "Collections", url: "/admin/collections", icon: Star },
   { title: "Reviews", url: "/admin/reviews", icon: MessageSquare },
   { title: "Orders", url: "/admin/orders", icon: ShoppingCart },
   { title: "Contact", url: "/admin/contact", icon: Mail },
   { title: "Blog", url: "/admin/blog", icon: FileText },
-  // { title: "Jobs", url: "/admin/jobs", icon: Briefcase },
-  // { title: "Job Applications", url: "/admin/job-applications", icon: Users },
   { title: "Analytics", url: "/admin/analytics", icon: BarChart3 },
-  // { title: "Settings", url: "/admin/settings", icon: Settings },
 ];
 
 export function AdminSidebar() {
@@ -87,18 +77,21 @@ export function AdminSidebar() {
         {/* Header with Logo and Toggle */}
         <div className="flex h-16 items-center border-b border-border/30 px-4 bg-gradient-to-r from-primary/5 to-secondary/5">
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary via-primary-glow to-secondary text-primary-foreground shadow-lg shadow-primary/20 flex-shrink-0">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary/80 via-primary/70 to-secondary/70 text-white shadow-md">
               <LayoutDashboard className="h-5 w-5" />
             </div>
             {showLabels && (
               <div className="flex flex-col min-w-0 overflow-hidden">
-                <span className="text-base font-bold text-foreground truncate tracking-tight">Admin Panel</span>
-                <span className="text-sm text-muted-foreground/80 truncate font-medium">E-Commerce Dashboard</span>
+                <span className="text-base font-bold text-foreground truncate tracking-tight">
+                  Admin Panel
+                </span>
+                <span className="text-sm text-muted-foreground/80 truncate font-medium">
+                  E-Commerce Dashboard
+                </span>
               </div>
             )}
           </div>
 
-          {/* Toggle Button - desktop only */}
           {!isMobile && (
             <Button
               variant="ghost"
@@ -106,7 +99,11 @@ export function AdminSidebar() {
               onClick={toggleSidebar}
               className="h-9 w-9 flex-shrink-0 hover:bg-primary/10 hover:text-primary transition-colors"
             >
-              {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+              {isCollapsed ? (
+                <ChevronRight className="h-4 w-4" />
+              ) : (
+                <ChevronLeft className="h-4 w-4" />
+              )}
             </Button>
           )}
         </div>
@@ -129,18 +126,25 @@ export function AdminSidebar() {
                         <NavLink
                           to={item.url}
                           end={item.url === "/admin"}
-                          className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-300 font-medium ${
-                            itemIsActive
-                              ? "bg-gradient-to-r from-primary via-primary-glow to-secondary text-primary-foreground shadow-lg shadow-primary/25 scale-[1.02]"
-                              : "hover:bg-gradient-to-r hover:from-primary/5 hover:to-secondary/5 text-foreground/80 hover:text-foreground hover:scale-[1.01] hover:shadow-md"
-                          }`}
+                          className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 font-medium
+                            ${
+                              itemIsActive
+                                ? "bg-primary/10 border border-primary/20 text-primary shadow-sm"
+                                : "text-foreground/80 hover:text-foreground hover:bg-primary/5"
+                            }`}
                           title={!showLabels ? item.title : undefined}
                         >
                           <item.icon
-                            className={`flex-shrink-0 transition-all ${itemIsActive ? "h-5 w-5" : "h-4 w-4"}`}
+                            className={`flex-shrink-0 h-4 w-4 transition-all ${
+                              itemIsActive
+                                ? "text-primary"
+                                : "text-foreground/70 group-hover:text-foreground"
+                            }`}
                           />
                           {showLabels && (
-                            <span className="truncate text-sm font-semibold tracking-tight">{item.title}</span>
+                            <span className="truncate text-sm font-semibold tracking-tight">
+                              {item.title}
+                            </span>
                           )}
                         </NavLink>
                       </SidebarMenuButton>

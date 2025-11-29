@@ -31,23 +31,52 @@ export async function listVendors(): Promise<Vendor[]> {
   return unpack<Vendor>(data);
 }
 
+/**
+ * Create vendor
+ * - backend attaches current user; do NOT send user_id
+ * - only send fields that are actually set
+ */
 export async function createVendorRequest(payload: Partial<Vendor>): Promise<Vendor> {
-  // backend attaches current user; do NOT send user_id
-  const body = {
-    display_name: payload.display_name,
-    store_id: payload.store_id ?? null,
-    is_active: payload.is_active ?? true,
+  const body: any = {
+    display_name: payload.display_name?.trim() ?? "",
   };
+
+  // Only send store_id if selected
+  if (payload.store_id !== undefined && payload.store_id !== null) {
+    body.store_id = payload.store_id;
+  }
+
+  // Default active to true if not explicitly provided
+  if (typeof payload.is_active === "boolean") {
+    body.is_active = payload.is_active;
+  } else {
+    body.is_active = true;
+  }
+
   const { data } = await api.post<Vendor>("/vendors/", body);
   return data;
 }
 
+/**
+ * Update vendor
+ * - patch only the fields that changed
+ */
 export async function updateVendorRequest(id: number, payload: Partial<Vendor>): Promise<Vendor> {
-  const body: Partial<Vendor> = {
-    display_name: payload.display_name,
-    store_id: payload.store_id ?? null,
-    is_active: payload.is_active,
-  };
+  const body: any = {};
+
+  if (payload.display_name !== undefined) {
+    body.display_name = payload.display_name?.trim() ?? "";
+  }
+
+  // Only send store_id if user changed/selected it (including explicit "none")
+  if (payload.store_id !== undefined) {
+    body.store_id = payload.store_id; // can be null if you allow clearing
+  }
+
+  if (typeof payload.is_active === "boolean") {
+    body.is_active = payload.is_active;
+  }
+
   const { data } = await api.patch<Vendor>(`/vendors/${id}/`, body);
   return data;
 }

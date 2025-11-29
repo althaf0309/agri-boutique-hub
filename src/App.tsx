@@ -1,10 +1,23 @@
+// src/App.tsx
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-
-import { AuthProvider, ProtectedRoute, AdminRoute, RoleRedirect } from "@/lib/auth";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  Outlet,
+} from "react-router-dom";
+import FloatingSocialButtons from "@/components/FloatingSocialButtons";
+import {
+  AuthProvider,
+  ProtectedRoute,
+  AdminRoute,
+  RoleRedirect,
+  useAuth,      // ⬅️ make sure this is exported from "@/lib/auth"
+} from "@/lib/auth";
 
 import Index from "./pages/Index";
 import Shop from "./pages/Shop";
@@ -13,7 +26,6 @@ import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import NotFound from "./pages/NotFound";
 import Blog from "./pages/Blog";
-import ShippingPolicy from "./pages/ShippingPolicy";
 import BlogDetails from "./pages/BlogDetails";
 import Contact from "./pages/Contact";
 import AboutUs from "./pages/AboutUs";
@@ -58,72 +70,97 @@ import ReturnPolicy from "./pages/ReturnPolicy";
 
 const queryClient = new QueryClient();
 
+/**
+ * Wrapper for all NON-admin pages.
+ * If the current user is a superuser, redirect them to /admin.
+ */
+function NonAdminOnly() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    // optional: you can replace with a nice spinner
+    return <div className="p-6 text-muted-foreground">Checking access…</div>;
+  }
+
+  if (user?.is_superuser) {
+    // 🔥 superuser should NOT see normal shop pages → always go to admin
+    return <Navigate to="/admin" replace />;
+  }
+
+  // normal user / guest → allow nested routes to render
+  return <Outlet />;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <FloatingSocialButtons />
       <AuthProvider>
         <BrowserRouter>
           <Routes>
-            {/* Public */}
-            <Route path="/" element={<Index />} />
-            <Route path="/shop" element={<Shop />} />
-            <Route path="/product/:slug" element={<ProductDetails />} />
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/shipping-policy" element={<ShippingPolicy />} />
-            <Route path="/blog" element={<Blog />} />
-            <Route path="/blog/:slug" element={<BlogDetails />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/about" element={<AboutUs />} />
-            <Route path="/awards" element={<Awards />} />
-            <Route path="/testimonials" element={<Testimonials />} />
-            <Route path="/gallery" element={<Gallery />} />
-            <Route path="/return-policy" element={<ReturnPolicy />} />
+            {/* =======================
+                NON-ADMIN ROUTES (blocked for superuser)
+                ======================= */}
+            <Route element={<NonAdminOnly />}>
+              {/* Public */}
+              <Route path="/" element={<Index />} />
+              <Route path="/shop" element={<Shop />} />
+              <Route path="/product/:slug" element={<ProductDetails />} />
+              <Route path="/cart" element={<Cart />} />
+              <Route path="/checkout" element={<Checkout />} />
+              <Route path="/shipping-policy" element={<ShippingPolicy />} />
+              <Route path="/blog" element={<Blog />} />
+              <Route path="/blog/:slug" element={<BlogDetails />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/about" element={<AboutUs />} />
+              <Route path="/awards" element={<Awards />} />
+              <Route path="/testimonials" element={<Testimonials />} />
+              <Route path="/gallery" element={<Gallery />} />
+              <Route path="/return-policy" element={<ReturnPolicy />} />
 
-            {/* /login: RoleRedirect handles already-authed users by role */}
-            <Route
-              path="/login"
-              element={
-                <RoleRedirect>
-                  <Login />
-                </RoleRedirect>
-              }
-            />
+              {/* /login: RoleRedirect handles already-authed users by role */}
+              <Route
+                path="/login"
+                element={
+                  <RoleRedirect>
+                    <Login />
+                  </RoleRedirect>
+                }
+              />
 
-            <Route path="/register" element={<Register />} />
-            <Route path="/privacy" element={<PrivacyPolicy />} />
-            <Route path="/terms" element={<TermsConditions />} />
-            <Route path="/payment-success" element={<PaymentSuccess />} />
-            <Route path="/order-success" element={<OrderSuccess />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/terms" element={<TermsConditions />} />
+              <Route path="/payment-success" element={<PaymentSuccess />} />
+              <Route path="/order-success" element={<OrderSuccess />} />
 
-          <Route path="/register" element={<Register />} />
-          <Route path="/privacy" element={<PrivacyPolicy />} />
-          <Route path="/terms" element={<TermsConditions />} />
-          <Route path="/shipping" element={<ShippingPolicy />} />
-          <Route path="/payment-success" element={<PaymentSuccess />} />
-          <Route path="/order-success" element={<OrderSuccess />} />
-          <Route
-  path="/my-orders"
-  element={
-    <ProtectedRoute>
-      <MyOrders />
-    </ProtectedRoute>
-  }
-/>
-          {/* Example of a private non-admin page */}
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <ProfilePage />
-              </ProtectedRoute>
-            }
-          />
-          
+              {/* Private non-admin pages */}
+              <Route
+                path="/my-orders"
+                element={
+                  <ProtectedRoute>
+                    <MyOrders />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <ProfilePage />
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* Admin area: only superusers */}
+              {/* Global 404 for non-admin area */}
+              <Route path="*" element={<NotFound />} />
+            </Route>
+
+            {/* =======================
+                ADMIN AREA (only superusers)
+                ======================= */}
             <Route
               path="/admin"
               element={
@@ -137,7 +174,10 @@ const App = () => (
               <Route path="products/new" element={<ProductForm />} />
               <Route path="products/:id/edit" element={<ProductForm />} />
               <Route path="products/new-grocery" element={<GroceryProductForm />} />
-              <Route path="products/:id/edit-grocery" element={<GroceryProductForm />} />
+              <Route
+                path="products/:id/edit-grocery"
+                element={<GroceryProductForm />}
+              />
               <Route path="analytics" element={<AnalyticsDashboard />} />
               <Route path="categories" element={<CategoriesPage />} />
               <Route path="categories/new" element={<CategoryFormPage />} />
@@ -162,9 +202,6 @@ const App = () => (
               <Route path="promo-banners" element={<PromoBannersPage />} />
               <Route path="*" element={<div>Admin page not found</div>} />
             </Route>
-
-            {/* Global 404 */}
-            <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
       </AuthProvider>

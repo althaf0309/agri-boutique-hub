@@ -138,14 +138,14 @@ export default function TestimonialsPage() {
                 {editing.avatar_url && <img src={editing.avatar_url} alt="" className="h-16 mt-2 rounded" />}
               </div>
               <div className="flex items-center gap-6">
-                <label className="flex items-center gap-2">
+                {/* <label className="flex items-center gap-2">
                   <Checkbox checked={!!editing.verified} onCheckedChange={(v) => setEditing((p) => ({ ...p!, verified: !!v }))} />
                   <span>Verified</span>
-                </label>
-                <label className="flex items-center gap-2">
+                </label> */}
+                {/* <label className="flex items-center gap-2">
                   <Checkbox checked={!!editing.is_active} onCheckedChange={(v) => setEditing((p) => ({ ...p!, is_active: !!v }))} />
                   <span>Active</span>
-                </label>
+                </label> */}
               </div>
               <div>
                 <Label>Sort</Label>

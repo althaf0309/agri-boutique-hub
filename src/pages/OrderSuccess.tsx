@@ -20,9 +20,17 @@ function normalizeUrl(raw?: string): string {
   let u = String(raw).trim();
   const hasProto = /^https?:\/\//i.test(u);
   if (!hasProto && !u.startsWith("/")) u = `/${u}`;
-  u = u.replace(/([^:]\/)\/+/g, "$1").replace(/ /g, "%20").replace(/"/g, "%22").replace(/'/g, "%27");
+  u = u
+    .replace(/([^:]\/)\/+/g, "$1")
+    .replace(/ /g, "%20")
+    .replace(/"/g, "%22")
+    .replace(/'/g, "%27");
   if (/^https?:\/\//i.test(u)) {
-    if (typeof window !== "undefined" && window.location.protocol === "https:" && u.startsWith("http://")) {
+    if (
+      typeof window !== "undefined" &&
+      window.location.protocol === "https:" &&
+      u.startsWith("http://")
+    ) {
       u = "https://" + u.slice("http://".length);
     }
     return u;
@@ -30,7 +38,11 @@ function normalizeUrl(raw?: string): string {
   const base = (MEDIA_BASE || "").replace(/\/+$/, "");
   const path = u.replace(/^\/+/, "");
   const full = base ? `${base}/${path}` : `/${path}`;
-  if (typeof window !== "undefined" && window.location.protocol === "https:" && full.startsWith("http://")) {
+  if (
+    typeof window !== "undefined" &&
+    window.location.protocol === "https:" &&
+    full.startsWith("http://")
+  ) {
     return "https://" + full.slice("http://".length);
   }
   return full;
@@ -55,7 +67,11 @@ function addBusinessDays(from: Date, days: number) {
 }
 function formatDate(d: Date) {
   try {
-    return d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+    return d.toLocaleDateString(undefined, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
   } catch {
     return d.toDateString();
   }
@@ -91,7 +107,12 @@ export default function OrderSuccess() {
       };
       items: Array<OrderItem>;
       totals: { subtotal: number; shipping: number; tax: number; total: number };
-      gateway?: { provider: string; orderId?: string; paymentId?: string };
+      gateway?: {
+        provider: string;
+        orderId?: string;
+        paymentId?: string;
+        method?: string; // <-- upi / card / netbanking (optional)
+      };
     };
   };
   const navigate = useNavigate();
@@ -107,7 +128,9 @@ export default function OrderSuccess() {
               <CardTitle>No order data</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground mb-6">Looks like this page was opened directly.</p>
+              <p className="text-muted-foreground mb-6">
+                Looks like this page was opened directly.
+              </p>
               <Button asChild>
                 <Link to="/">Go home</Link>
               </Button>
@@ -120,6 +143,9 @@ export default function OrderSuccess() {
   }
 
   const { customer, items, totals, gateway } = state;
+
+  const paymentProviderLabel = (gateway?.provider || "").toUpperCase();
+  const paymentMethodLabel = (gateway?.method || "").toUpperCase();
 
   // Compute ETA once (based on "now"; if you store an order date, use that)
   const eta = getDeliveryWindow();
@@ -144,6 +170,10 @@ export default function OrderSuccess() {
       })
       .join("");
 
+    const provider = paymentProviderLabel || "-";
+    const method = paymentMethodLabel ? ` • ${paymentMethodLabel}` : "";
+    const paymentId = gateway?.paymentId ? ` • ${gateway.paymentId}` : "";
+
     const html = `
 <!doctype html>
 <html>
@@ -166,7 +196,7 @@ export default function OrderSuccess() {
 </head>
 <body>
   <h1>Invoice</h1>
-  <div class="muted">Payment: ${(gateway?.provider || "-").toUpperCase()} ${gateway?.paymentId ? `• ${gateway.paymentId}` : ""}</div>
+  <div class="muted">Payment: ${provider}${method}${paymentId}</div>
   <div class="muted">Order ID: ${gateway?.orderId || "-"}</div>
   <div class="muted" style="margin-top:6px">Expected delivery:
     <span class="pill">${formatDate(eta.start)} – ${formatDate(eta.end)}</span>
@@ -215,12 +245,21 @@ export default function OrderSuccess() {
     const blob = new Blob(
       [
         JSON.stringify(
-          { customer, items, totals, gateway, eta: { start: eta.start.toISOString(), end: eta.end.toISOString() } },
+          {
+            customer,
+            items,
+            totals,
+            gateway,
+            eta: {
+              start: eta.start.toISOString(),
+              end: eta.end.toISOString(),
+            },
+          },
           null,
-          2
+          2,
         ),
       ],
-      { type: "application/json" }
+      { type: "application/json" },
     );
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -238,19 +277,24 @@ export default function OrderSuccess() {
           <CardHeader className="flex items-center gap-3">
             <CheckCircle2 className="w-8 h-8 text-green-600" />
             <CardTitle>
-              Thank you! Your order is {customer.paymentStatus === "paid" ? "confirmed" : "received"}.
+              Thank you! Your order is{" "}
+              {customer.paymentStatus === "paid" ? "confirmed" : "received"}.
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="text-sm text-muted-foreground">
-              Payment: <strong>{(gateway?.provider || "").toUpperCase() || "—"}</strong>
+              Payment:{" "}
+              <strong>{paymentProviderLabel || "—"}</strong>
+              {paymentMethodLabel && ` • ${paymentMethodLabel}`}
               {gateway?.paymentId ? ` • ${gateway.paymentId}` : ""}
               {gateway?.orderId ? ` • Order: ${gateway.orderId}` : ""}
             </div>
 
             {/* ETA pill */}
             <div className="text-sm">
-              <span className="text-muted-foreground mr-2">Expected delivery:</span>
+              <span className="text-muted-foreground mr-2">
+                Expected delivery:
+              </span>
               <span className="inline-flex items-center px-2.5 py-1 rounded-full border bg-accent/40 text-foreground">
                 {eta.label}
               </span>
@@ -325,11 +369,19 @@ export default function OrderSuccess() {
                           </td>
                           <td className="p-2">
                             <div className="font-medium truncate">{i.name}</div>
-                            {i.weight && <div className="text-xs text-muted-foreground">{i.weight}</div>}
+                            {i.weight && (
+                              <div className="text-xs text-muted-foreground">
+                                {i.weight}
+                              </div>
+                            )}
                           </td>
                           <td className="p-2 text-right">{i.quantity}</td>
-                          <td className="p-2 text-right">₹{i.price.toFixed(2)}</td>
-                          <td className="p-2 text-right">₹{amount.toFixed(2)}</td>
+                          <td className="p-2 text-right">
+                            ₹{i.price.toFixed(2)}
+                          </td>
+                          <td className="p-2 text-right">
+                            ₹{amount.toFixed(2)}
+                          </td>
                         </tr>
                       );
                     })}
@@ -345,7 +397,11 @@ export default function OrderSuccess() {
               <Button variant="outline" onClick={downloadInvoiceJSON}>
                 Download JSON
               </Button>
-              <Button variant="secondary" onClick={() => navigate("/")} className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => navigate("/")}
+                className="flex items-center gap-2"
+              >
                 <Home className="w-4 h-4" /> Continue Shopping
               </Button>
             </div>

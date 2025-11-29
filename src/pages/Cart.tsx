@@ -301,7 +301,7 @@ export default function Cart() {
               <h3 className="font-semibold text-base sm:text-lg mb-4">Order Summary</h3>
               <div className="space-y-3">
                 <div className="flex justify-between text-sm sm:text-base"><span>Subtotal</span><span>₹{subtotal}</span></div>
-                <div className="flex justify-between text-sm sm:text-base">
+                {/* <div className="flex justify-between text-sm sm:text-base">
                   <span>Shipping</span>
                   <span className={shipping === 0 ? "text-accent" : ""}>{shipping === 0 ? "FREE" : `₹${shipping}`}</span>
                 </div>
@@ -310,7 +310,7 @@ export default function Cart() {
                   <div className="flex justify-between text-accent text-sm sm:text-base">
                     <span>Discount</span><span>-₹{discount}</span>
                   </div>
-                )}
+                )} */}
                 <div className="border-t border-border pt-3">
                   <div className="flex justify-between items-center text-base sm:text-lg font-bold">
                     <span>Total</span><span className="text-primary">₹{total}</span>

@@ -230,7 +230,7 @@ export function ProductsPage() {
               />
             </div>
 
-            {/* Category (grocery-first, then others) */}
+            {/* Category (grocery-first, then others)
             <Select value={category} onValueChange={setCategory}>
               <SelectTrigger>
                 <SelectValue placeholder="All Categories" />
@@ -260,10 +260,10 @@ export function ProductsPage() {
                   </>
                 )}
               </SelectContent>
-            </Select>
+            </Select> */}
 
             {/* UOM */}
-            <Select value={uom} onValueChange={setUom}>
+            {/* <Select value={uom} onValueChange={setUom}>
               <SelectTrigger><SelectValue placeholder="Unit" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All UOM</SelectItem>
@@ -274,7 +274,7 @@ export function ProductsPage() {
                 <SelectItem value="L">L</SelectItem>
                 <SelectItem value="BUNDLE">BUNDLE</SelectItem>
               </SelectContent>
-            </Select>
+            </Select> */}
 
             {/* Stock */}
             <Select value={inStock} onValueChange={setInStock}>
@@ -381,9 +381,9 @@ export function ProductsPage() {
                             )}
                             <div className="min-w-0">
                               <p className="font-medium text-sm sm:text-base truncate">{p.name}</p>
-                              <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                              {/* <p className="text-xs sm:text-sm text-muted-foreground truncate">
                                 #{p.id}
-                              </p>
+                              </p> */}
                             </div>
                           </div>
                         </TableCell>
