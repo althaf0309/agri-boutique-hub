@@ -214,8 +214,6 @@ function toCardProduct(p: any): CardProduct {
     image,
     images,
     category: categoryName,
-    // extra fields for filtering
-    // @ts-expect-error extended
     categorySlug,
     weight,
     organic: Boolean(p?.is_organic),
